@@ -32,6 +32,8 @@ The order of cases doesn't matter. A case file is one JSON object, described by 
 | `sessionFile` | string | Instead of `session`: a path to a `.jsonl` session file, relative to the case file. |
 | `tests` | array | The tests (section 3). |
 
+`bundleFile` and `sessionFile` may point into the repository's `examples/` folder, outside `conformance/`, so a library that copies the suite copies `examples/` with it, under its [CC BY 4.0](../spec/LICENSE) license.
+
 Bundles and session headers given as objects leave out `troupe`: before anything else, `check` validation included, the runner sets it to the spec version. If no bundle is given, the bundle is `{"troupe": <the spec version>, "kind": "bundle"}`. Cases that test raw input instead use `parse` tests (section 3.6), which take their input inline.
 
 ## 2. Setup for each test
@@ -130,7 +132,7 @@ A duplicate ID is at the `id` of each one after the first (`/characters/1/id`), 
 | `base64` | Instead of `text`: the input's bytes, in base64. Used for bytes that aren't valid UTF-8 text and for binary formats. |
 | `level` | Optional. `"session"` when `expect` depends on a package's sessions, which a bundle reader may leave unread (Format 15.2). |
 
-The runner parses the bytes, checks the version and validates against the schema, with unknown properties as `UNKNOWN_FIELD` (Format 13). For a package it checks the archive and its `bundle.json` and, for a session reader, every session in it (Format 12.3, 15.2). It runs no other checks; `check` tests cover them.
+The runner parses the bytes, checks the version and, unless the input is `PARSE` or `UNSUPPORTED_VERSION` (Format 15.3), validates against the schema, with unknown properties as `UNKNOWN_FIELD` (Format 13). For a package it checks the archive and its `bundle.json` and, for a session reader, every session in it (Format 12.3, 15.2). It runs no other checks; `check` tests cover them.
 
 `expect.codes` is the sorted list of distinct codes reported, compared exactly. A conforming input has none.
 

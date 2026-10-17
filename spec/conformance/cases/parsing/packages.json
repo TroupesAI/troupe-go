@@ -1,5 +1,5 @@
 {
-  "description": "Packages (Format 12.3, 15.2): bundle.json at the root, sessions under sessions/, which a bundle reader may leave unread; absolute paths, .. segments, backslashes, names equal when compared case-insensitively, encryption and symbolic links are PARSE; a directory entry (a name ending in /) and an unreferenced file outside the path grammar aren't part of the package",
+  "description": "Packages (Format 12.3, 15.2): bundle.json at the root, sessions anywhere under sessions/, subfolders included, which a bundle reader may leave unread; absolute paths, .. segments, backslashes, names equal when compared case-insensitively, encryption and symbolic links are PARSE; a directory entry (a name ending in /) and an unreferenced file outside the path grammar aren't part of the package",
   "tests": [
     {
       "type": "parse",
@@ -18,6 +18,19 @@
       "base64": "UEsDBBQAAAAIAAAAS12WOE4RNwAAADoAAAALAAAAYnVuZGxlLmpzb26rViopyi8tSFWyUjLQMzRR0lHKzsxLAfKSSvNSclKB/OLk1LzEosz8YiWr6GqlTJBcsVJtbC0AUEsDBBQAAAAIAAAAS12EKBbaWQAAAGgAAAAjAAAAc2Vzc2lvbnMvZmlyc3QudHJvdXBlLXNlc3Npb24uanNvbmwViT0KgDAMRneP8c0iCk6ewDuIQ6kRgppIW0Epvbvp9n4yUtDnJkzou2FEi4NlM4sUI6tYiJ7EBdYaUZoMrn+wswe9DO/TfRTMvUoiSZiWjESvAWbuUNbS/FBLAQIUAxQAAAAIAAAAS12WOE4RNwAAADoAAAALAAAAAAAAAAAAAACAgQAAAABidW5kbGUuanNvblBLAQIUAxQAAAAIAAAAS12EKBbaWQAAAGgAAAAjAAAAAAAAAAAAAACAgWAAAABzZXNzaW9ucy9maXJzdC50cm91cGUtc2Vzc2lvbi5qc29ubFBLBQYAAAAAAgACAIoAAAD6AAAAAAA=",
       "expect": {
         "codes": []
+      }
+    },
+    {
+      "type": "parse",
+      "name": "a session in a subfolder of sessions/",
+      "note": "The session has an unreadable line, so it is PARSE only because it is part of the package.",
+      "level": "session",
+      "kind": "package",
+      "base64": "UEsDBBQAAAAIAAAAS12WOE4ROgAAADoAAAALAAAAYnVuZGxlLmpzb26rViopyi8tSFWyUjLQMzRR0lHKzsxLUbJSSirNS8lJVdJRKk5OzUssyswvVrKKrlbKBMkVK9XG1gIAUEsDBBQAAAAIAAAAS112XVvWXwAAAG8AAAAhAAAAc2Vzc2lvbnMvYS9iLnRyb3VwZS1zZXNzaW9uLmpzb25sNcsxCsJAEEDRPsf49RIMWM0JvINYhDiBQZ0JuyMoS+4uKWz/43eyxntThNM4nSk8zO8ITVuzcAptUZ+rxRHZh44dPlFYa7wQtuf81UphCU/1RK6d1E8iXGxkv/2v4QdQSwECFAMUAAAACAAAAEtdljhOEToAAAA6AAAACwAAAAAAAAAAAAAAgIEAAAAAYnVuZGxlLmpzb25QSwECFAMUAAAACAAAAEtddl1b1l8AAABvAAAAIQAAAAAAAAAAAAAAgIFjAAAAc2Vzc2lvbnMvYS9iLnRyb3VwZS1zZXNzaW9uLmpzb25sUEsFBgAAAAACAAIAiAAAAAEBAAAAAA==",
+      "expect": {
+        "codes": [
+          "PARSE"
+        ]
       }
     },
     {

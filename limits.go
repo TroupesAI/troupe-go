@@ -21,7 +21,7 @@ const (
 	maxText           = 1 << 20
 	maxSessionEntries = 10_000
 	maxCEL            = 4 << 10
-	maxCast           = 256
+	maxCast           = 256 // members of a scenario's cast, and characters a session adds
 )
 
 // packagePath is the grammar of a package's file paths (Format 12.3).
@@ -48,10 +48,10 @@ type scan struct {
 	report func(jsontext.Pointer) // reports PARSE
 	// files reports whether a package holds a file; nil outside a package,
 	// where package paths aren't allowed (Format 12.2).
-	files     func(string) bool
-	entries   int
-	variables int
-	cast      int
+	files      func(string) bool
+	entries    int
+	variables  int
+	characters int
 }
 
 func (s *scan) bundle(doc map[string]any) {
@@ -63,6 +63,9 @@ func (s *scan) bundle(doc map[string]any) {
 		s.world(p, w)
 	}
 	for p, sc := range each(doc, "", "scenarios") {
+		if cast, _ := sc["cast"].([]any); len(cast) > maxCast {
+			s.report(p.AppendToken("cast").AppendToken(strconv.Itoa(maxCast)))
+		}
 		s.owner(p, sc)
 		for op, o := range each(sc, p, "openings") {
 			s.content(op, o)
@@ -70,11 +73,9 @@ func (s *scan) bundle(doc map[string]any) {
 	}
 }
 
-// header checks a session's header. The cast's other characters come from
-// the bundle, so only those the session adds are counted here.
 func (s *scan) header(doc map[string]any) {
 	for p, c := range each(doc, "", "characters") {
-		if s.cast++; s.cast == maxCast+1 {
+		if s.characters++; s.characters == maxCast+1 {
 			s.report(p)
 		}
 		s.character(p, c)

@@ -204,8 +204,7 @@ var (
 
 // document reads one document, at its line of a session or 0 for a bundle,
 // and decodes it into v. It reports false when the document fails PARSE or
-// UNSUPPORTED_VERSION, after which no other check runs: the others would judge
-// what can't be read, or another version, by this version's rules.
+// UNSUPPORTED_VERSION, which it is then reported with only (Format 15.3).
 func (rd *reader) document(data []byte, line int, k docKind, v any) bool {
 	at := Diagnostic{Line: line}
 	tree, err := ijson.Decode(data)
@@ -224,13 +223,19 @@ func (rd *reader) document(data []byte, line int, k docKind, v any) bool {
 		rd.report(d)
 	}
 	if k.kind != "" {
-		// A document of another kind isn't one its form holds (Format 15.3).
-		if doc["kind"] != k.kind {
+		// A document with a missing or other kind isn't one its form holds
+		// (Format 15.3).
+		kind := doc["kind"] == k.kind
+		if !kind {
 			report(CodeParse, "")
-			return false
 		}
-		if t, ok := doc["troupe"].(string); ok && version.MatchString(t) && t != Version {
+		t, ok := doc["troupe"].(string)
+		supported := !ok || !version.MatchString(t) || t == Version
+		if !supported {
 			report(CodeUnsupportedVersion, "/troupe")
+		}
+		// The limits are this version's, for this kind of document.
+		if !kind || !supported {
 			return false
 		}
 	}

@@ -432,11 +432,13 @@
         },
         "sticky": {
           "type": "integer",
-          "minimum": 1
+          "minimum": 1,
+          "maximum": 9007199254740991
         },
         "cooldown": {
           "type": "integer",
-          "minimum": 1
+          "minimum": 1,
+          "maximum": 9007199254740991
         },
         "chance": {
           "type": "integer",
@@ -468,7 +470,8 @@
         },
         "depth": {
           "type": "integer",
-          "minimum": 0
+          "minimum": 0,
+          "maximum": 9007199254740991
         },
         "knownBy": {
           "$ref": "#/$defs/knownBy"
@@ -690,10 +693,14 @@
           "minProperties": 1
         },
         "min": {
-          "type": "integer"
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
         },
         "max": {
-          "type": "integer"
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
         },
         "initial": {
           "description": "Validity is checked against the declaration (INVALID_VALUE).",
@@ -746,7 +753,8 @@
         },
         "maxStep": {
           "type": "integer",
-          "minimum": 1
+          "minimum": 1,
+          "maximum": 9007199254740991
         },
         "oneWay": {
           "type": "boolean"

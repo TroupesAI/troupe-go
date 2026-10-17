@@ -115,6 +115,8 @@ func TestReadLimits(t *testing.T) {
 		{"10,001 entries", bundle(`"entries":[` + entries(10_001) + `]`), true},
 		{"1,001 variables", bundle(`"variables":[` + strings.Join(variables, ",") + `]`), true},
 		{"a text over 1 MiB", bundle(`"entries":[{"id":"e","text":"` + strings.Repeat("a", 1<<20+1) + `"}]`), true},
+		{"256 members of a scenario's cast", bundle(`"cast":[` + strings.Repeat(`{},`, 255) + `{}]`), false},
+		{"257 members of a scenario's cast", bundle(`"cast":[` + strings.Repeat(`{},`, 256) + `{}]`), true},
 		{"257 characters a session adds", func() ([]troupe.Diagnostic, error) {
 			header := `{"troupe":"0.14","kind":"session","scenario":"s","characters":[` + strings.Join(characters, ",") + `]}`
 			_, d, err := troupe.ReadSession(strings.NewReader(header))

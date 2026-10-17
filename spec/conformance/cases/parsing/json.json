@@ -1,5 +1,5 @@
 {
-  "description": "A bundle (Format 2.2, 12.1, 15.3): the input must be I-JSON and a Troupe document of the expected kind, or it is PARSE. An escaped surrogate pair is one character. A bundle nested 64 deep is within the limits, and one nested 65 deep is PARSE (Format 14)",
+  "description": "A bundle (Format 2.2, 12.1, 15.3): the input must be I-JSON and a Troupe document of the expected kind, or it is PARSE; a missing kind is PARSE alone, not also SCHEMA. An escaped surrogate pair is one character. A bundle nested 64 deep is within the limits, and one nested 65 deep is PARSE (Format 14)",
   "tests": [
     {
       "type": "parse",
@@ -88,6 +88,17 @@
       "name": "a session header where a bundle is expected",
       "kind": "bundle",
       "text": "{\"troupe\":\"0.14\",\"kind\":\"session\",\"scenario\":\"s\"}",
+      "expect": {
+        "codes": [
+          "PARSE"
+        ]
+      }
+    },
+    {
+      "type": "parse",
+      "name": "a missing kind",
+      "kind": "bundle",
+      "text": "{\"troupe\":\"0.14\"}",
       "expect": {
         "codes": [
           "PARSE"

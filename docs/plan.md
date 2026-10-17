@@ -22,7 +22,7 @@ The cost is that a change touching both the engine and the platform can't land i
 | Target the 0.14 draft, then each tag | Pinning `v0.13` | The spec now changes in response to what implementing it turns up. Problems found here go into the next minor version |
 | Copy the schemas and the suite from a pinned spec commit | A git submodule | Go module zips leave out submodules, so embedded schemas would be missing for anyone who imports the module. A copy with a drift check is pinned just as tightly |
 | Copy the spec's `examples/` too, into `spec/examples` | Skipping the cases that read them | Four cases read their bundle and session from `../../../examples/`, so the same layout keeps those paths working. The examples are CC BY 4.0, as the README's License section says |
-| The first copy comes from `a867d85` | Waiting for a 0.14 tag | It's the commit that starts the 0.14 draft |
+| Copy a commit of the 0.14 draft until it is tagged | Waiting for a tag | Fixes found here land in the draft as commits, and `spec/REF` names the one copied |
 | The drift check downloads `spec/REF` into a temporary directory and diffs it against `spec/` | Overwriting `spec/` and asking git | It never touches the working tree, and it catches added and removed files |
 | Tags `v<spec version>.<patch>`, as `v0.14.2` | Versions of its own | The version shows which spec it reads. Revisit at spec 1.0: an API break during 1.x would then need a `/v2` module path |
 | `go 1.27.0` in `go.mod` | `go 1.27.2` | It's the minimum for everyone who imports the module, and 1.27 is what `encoding/json/v2` needs. mise pins 1.27.2 for development |
@@ -42,13 +42,11 @@ The cost is that a change touching both the engine and the platform can't land i
 | Limits and package paths are checked on the parsed tree, before the schema | On the typed model, after it | Format 14's limits come before the work they bound, and the schema walks what they count |
 | The unpacked size is the sum of the entries' declared sizes, checked before decompressing | Counting while decompressing | `archive/zip` fails an entry whose data doesn't match its declared size, so the sum bounds the work and is known before any is done |
 | A package with an entry that can't be read is `nil`, unless that entry is a session, which is left out | Leaving out any such entry | Sessions are documents of their own, and every other entry belongs to the archive |
-| Every file under `sessions/` with the session extension is a session, at any depth | Only the folder's direct children | Format 12.3 says "under `sessions/`" (spec feedback 7) |
 | A ZIP name starting with a drive letter, such as `C:x`, is absolute | Only a leading `/` | Extracted on Windows, it escapes the target directory |
 | A diagnostic about a ZIP entry names its file only when the name is a package path | Always naming it | Other names may hold anything, and diagnostics hold no document text |
-| A `kind` that is missing or another is `PARSE` | `SCHEMA` | Format 15.3's `PARSE` covers a document of a kind its form doesn't hold (spec feedback 6) |
 | A message line that is I-JSON but not an object is `SCHEMA` | `PARSE` | Messages have no `kind`, and their schema requires an object |
-| Numbers beyond a double's range are `PARSE`; more precision than a double holds is rounded | Rejecting excess precision too, as RFC 7493 does | Spec feedback 5 |
-| The cast limit counts the characters a session adds | Counting the whole cast | The rest comes from the bundle, which `ReadSession` doesn't have (spec feedback 4) |
+| A document whose `kind` or version is wrong isn't checked against the limits | Checking every document against them | The limits are this version's, for that kind of document, and a document that fails `PARSE` or `UNSUPPORTED_VERSION` is reported with those codes only (Format 15.3) |
+| The parsed tree holds each number as the nearest double | The number as written | A number means the nearest double (Format 2.2), so the schema judges `50.000000000000001` an integer |
 | Diagnostics are sorted by file, line, pointer, with indices compared as numbers, and code, without duplicates | Document order | The validator's tree has no member order, and sorting makes the result deterministic |
 | `Diagnostic.Location` gives the suite's form of the location | `Diagnostic.String` | `String` would be expected to describe the whole diagnostic, its code included |
 | A `propertyNames` failure's location is rebuilt from its parent failure | The validator's own | jsonschema v6.0.3 keeps that location without copying it, so later validation overwrites it |
@@ -165,7 +163,6 @@ Prompt assembly, the choice of which active entries reach the model, model calls
 Each of these needs verifying against the suite when its phase starts.
 
 - **Schema error locations need care.** `failures` in `schema.go` follows conformance README section 3.4: the deepest location for an `anyOf` nothing accepts, a failing name at its property. Phase 2's `includes` are the first test of them.
-- **Integers too large for an `int64` read as absent, with no diagnostic,** such as `"max": 1e300`, which the schema accepts. Spec feedback 2 decides which code they get.
 - **ECMAScript and RE2 differ.** Under the `u` flag, ECMAScript's `.` excludes `\r`, U+2028 and U+2029, and RE2's doesn't. ECMAScript's `\s` is Unicode whitespace plus U+FEFF, and RE2's is ASCII only. The `m` flag recognizes different line terminators. With `i` and `u` together, ECMAScript's `\w` and `\b` also match U+017F and U+212A. The translation must produce ECMAScript's meaning.
 - **CEL's defaults are wider than Format 10.2.** cel-go's standard environment has many more functions and macros, as well as `double`, `uint`, `bytes` and `null`. Reject them with AST validators after checking, along with any use of `state`, `own` or `scene` other than a selection, and selecting `char` or `user` from a keyed map. `has()` follows Format 10.2, which isn't quite CEL's presence test. Bound expression size (4 KiB) before parsing.
 - **Timestamps keep their offset.** `hour` and `weekday` are read at the offset written (Format 10.1). Don't convert to UTC or to local time.
@@ -173,17 +170,5 @@ Each of these needs verifying against the suite when its phase starts.
 ## Spec feedback
 
 When the code shows the spec is wrong or unclear, write it up for the user: what the spec says, the case or input where it matters, and a proposed fix. The user decides, and changes the spec repository. Add a conformance case only when apps could disagree on the issue, not for coverage. Then sync the copy here with `task spec`.
-
-Reported, awaiting the spec:
-
-1. **Which checks run after `PARSE` or `UNSUPPORTED_VERSION`.** Format 15.3 says every check runs on the document as written, so a 0.13 file would also be judged against the 0.14 schema, giving `SCHEMA` and `UNKNOWN_FIELD` that mean nothing for it. No case tells the readings apart. Proposed: "A document that fails `PARSE` or `UNSUPPORTED_VERSION` is reported with that code only", with a case of a 0.13 bundle that also fails the 0.14 schema.
-2. **Integer fields outside ±(2^53 − 1).** Format 2.2 lists the range under I-JSON, which makes `"max": 9007199254740993` a `PARSE`. Enforcing that would put the schema's knowledge of which fields are integers into the I-JSON pass, and the schemas set no bound on fields such as `max`, `depth` or `maxStep`. Values of `int` variables are already `INVALID_VALUE` (Format 8.5). Proposed: bound every integer field in the schemas to ±9007199254740991, so it's `SCHEMA`, have Format 2.2 refer to that, and add a case.
-
-3. **The suite depends on `examples/`.** Four cases (`cel/environment`, `examples/first-card`, `examples/card-with-lore`, `examples/lantern-heist`) read files from `../../../examples/`, outside `conformance/`, but conformance README section 1 describes the suite as `conformance/` alone. Proposed: say in section 1 that `bundleFile` and `sessionFile` may point into `examples/`, which a library copying the suite copies too, under its CC BY 4.0 license. No case needed.
-
-4. **The cast limit needs the bundle.** Format 14 limits "characters in a session's cast" to 256, and Format 15.3 makes it `PARSE`. But the cast is the scenario's cast from the bundle plus what the session adds (Format 11.2), so a reader of a session file alone can't check it. Proposed: limit each document on its own, "characters in a scenario's cast, and characters a session adds: 256 each". No case needed beyond one per limit.
-5. **"Numbers that fit an IEEE 754 double" (Format 2.2).** RFC 7493, which 2.2 cites, rules out numbers of greater magnitude *or precision* than a double, such as `3.141592653589793238462643383279`. Read that way, a number with more digits than a double holds isn't I-JSON; read as range only, it is, rounded. Apps could disagree. Proposed: "numbers within a double's range; a number with more precision is rounded to the nearest double", with a case for each side. The library reads it as range only.
-6. **A missing `kind`.** Format 15.3 makes `PARSE` a document that isn't "of the `kind` its form holds", and the schemas require `kind`, which makes it `SCHEMA` too. For `troupe`, Format 15.3 says a missing one is only `SCHEMA`; for `kind` it says nothing. Proposed: "a missing or other `kind` is `PARSE`", with a case `{"troupe":"0.14"}` read as a bundle.
-7. **Sessions in subfolders.** Format 12.3 makes every file "under `sessions/`" with the extension a session. Whether `sessions/a/b.troupe-session.jsonl` is one is a matter of reading "under". Proposed: say "anywhere under `sessions/`", or "directly in"; the library reads it as anywhere.
 
 These open items were deliberately left out of 0.14 and may come back as findings: label keys outside `values`, the loose `language` pattern, codes for nested `null`, and the missing activation test type.

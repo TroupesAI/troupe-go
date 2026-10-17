@@ -11,6 +11,9 @@ import (
 	"strconv"
 )
 
+// maxSafeInteger bounds integer fields and int values (Format 2.2, 8.5).
+const maxSafeInteger = 1<<53 - 1
+
 // lenient decodes into the typed model whatever passed PARSE. Unknown members
 // are ignored, since the schema pass reports them.
 var lenient json.Options
@@ -99,19 +102,16 @@ func expect(dec *jsontext.Decoder, k jsontext.Kind) error {
 	return errors.ErrUnsupported
 }
 
-// readInt reads the next value as an integer, which may be written with a
-// zero fraction or an exponent (Format 2.2), and returns nil for any other
-// value or one too large for an int64.
+// readInt reads the next value as an integer: a number whose nearest double
+// is one within ±(2^53 − 1), however it is written (Format 2.2). It returns
+// nil for any other value, which fails the schema.
 func readInt(dec *jsontext.Decoder) (*int64, error) {
 	val, err := dec.ReadValue()
 	if err != nil || val.Kind() != '0' {
 		return nil, err
 	}
-	if n, err := strconv.ParseInt(string(val), 10, 64); err == nil {
-		return &n, nil
-	}
 	f, _ := strconv.ParseFloat(string(val), 64)
-	if f != math.Trunc(f) || math.Abs(f) >= math.MaxInt64 {
+	if f != math.Trunc(f) || math.Abs(f) > maxSafeInteger {
 		return nil, nil
 	}
 	n := int64(f)

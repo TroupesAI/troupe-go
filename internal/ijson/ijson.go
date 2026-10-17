@@ -4,7 +4,6 @@ package ijson
 
 import (
 	"bytes"
-	"encoding/json"
 	"encoding/json/jsontext"
 	"errors"
 	"io"
@@ -25,8 +24,9 @@ func (e *Error) Error() string {
 }
 
 // Decode reads data as exactly one I-JSON value nested at most MaxDepth deep.
-// It returns the value as map[string]any, []any, string, json.Number, bool or
-// nil, and any other input as an *Error.
+// It returns the value as map[string]any, []any, string, float64, bool or nil,
+// and any other input as an *Error. A number means the nearest double, however
+// precisely it is written (Format 2.2).
 //
 // jsontext already rejects invalid UTF-8, unpaired surrogates, duplicate names
 // and malformed numbers. Decode adds noncharacters, numbers beyond a double's
@@ -60,11 +60,11 @@ func value(dec *jsontext.Decoder) (any, error) {
 		}
 		return s, nil
 	case '0':
-		text := tok.String()
-		if f, _ := strconv.ParseFloat(text, 64); math.IsInf(f, 0) {
+		f, _ := strconv.ParseFloat(tok.String(), 64)
+		if math.IsInf(f, 0) {
 			return nil, fail(dec, nil)
 		}
-		return json.Number(text), nil
+		return f, nil
 	case '{':
 		if dec.StackDepth() > MaxDepth {
 			return nil, fail(dec, nil)
