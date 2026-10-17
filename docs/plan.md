@@ -51,6 +51,15 @@ The cost is that a change touching both the engine and the platform can't land i
 | `Diagnostic.Location` gives the suite's form of the location | `Diagnostic.String` | `String` would be expected to describe the whole diagnostic, its code included |
 | A `propertyNames` failure's location is rebuilt from its parent failure | The validator's own | jsonschema v6.0.3 keeps that location without copying it, so later validation overwrites it |
 | `golang.org/x/text` required at v0.43.0 | v0.14.0, which jsonschema requires | v0.14.0 has known vulnerabilities, and the requirement keeps importers off it |
+| `Check(b, s)` checks a bundle with a session for the session's scenario, and a bundle alone for each of its scenarios, without players | A scenario parameter, or separate functions for bundles and sessions | It is how the suite runs `check` (conformance README section 2), and a session's characters can make a bundle's references valid, so the two are checked together |
+| Checks that don't depend on a scenario run once, and the others once per scope: the keys and values of openings and changes, the openings roots name, and activated entries | Every check per scenario | Repeating the rest would only repeat its diagnostics |
+| A scope is a scenario as a session plays it, or as it is written: without a session, the characters in use are those its cast members name (Format 6.4), and the cast leaves out its seats (conformance README section 2) | One rule for both | The spec gives each its own; phase 3's state reuses the cast |
+| Initial values are checked once, for every variable. An initial object's member for a `"cast"` variable is checked when it names any character | Checking each variable in each scenario that uses it | A character's variable may be in no scenario, and which characters are in a cast depends on the scenario (spec feedback 1) |
+| A disabled bundle entry is still in use, while a disabled session entry is removed | Treating both as removed | Format 11.3 removes only session entries (spec feedback 3) |
+| A message's own session entries apply to its `activated` | Applying from the next message | Format 11.3: they apply "from that message onward" |
+| A change key that doesn't follow the key grammar is `UNKNOWN_VARIABLE` as well as `SCHEMA` | Leaving it to the schema | Every check runs on the document as written (Format 15.3) |
+| With an unknown scenario, the session is checked against an empty one | Skipping the checks that need it | The rest still holds; only what the scenario would make valid fails |
+| The `"*"` map limit waits for phase 3 | A partial state machine now | It depends on the keys left after each change on a path, which is state |
 | A regex parser of our own, emitting RE2 | Compiling keys directly with `regexp` | Format 14 defines a grammar that has to be validated exactly, and keys mean what they mean in ECMAScript, which differs from RE2 in places (see [Pitfalls](#pitfalls)) |
 | Tools pinned with mise, tasks in Task, `golangci-lint` v2 | Whatever is installed | The same setup as the platform, so one toolchain works in both |
 | The platform's lint config without `bodyclose`, `noctx` and `rowserrcheck` | An identical copy | Those linters only check HTTP and database code, which this library has none of |
@@ -79,12 +88,9 @@ conformance_test.go package troupe_test: the runner
 
 ## The public API
 
-The API has to do two things: everything the conformance runner asks for, through exported names only, and everything the platform needs (see [What the platform needs](#what-the-platform-needs)). Reading is built: `ReadBundle`, `ReadSession`, `ReadPackage`, the typed model and `Diagnostic`. The rest is a sketch; its names and signatures get settled when each phase starts.
+The API has to do two things: everything the conformance runner asks for, through exported names only, and everything the platform needs (see [What the platform needs](#what-the-platform-needs)). Reading and checking are built: `ReadBundle`, `ReadSession`, `ReadPackage`, the typed model, `Diagnostic` and `Check`. The rest is a sketch; its names and signatures get settled when each phase starts.
 
 ```go
-// Checks (Format 15.3), on documents that read without PARSE.
-func Check(b *Bundle, s *Session) []Diagnostic
-
 // A story is a bundle played as one scenario, with a session or without one.
 func NewStory(b *Bundle, s *Session) (*Story, error)
 func (st *Story) StateAt(message string) (State, error)  // "" for the initial state
@@ -110,13 +116,9 @@ Flattening a `State` into the suite's keys is the runner's job, unless the platf
 
 Each phase ends with its part of the suite passing, lint clean, and its decisions recorded above. The runner keeps a **pending list** of tests not expected to pass yet: each entry is a test type, such as `cel`, or one test, as `<case path>#<test index>`. A pending test that fails is skipped, and one that passes fails the run, so the list can't go stale. It shrinks to empty by the end of phase 7, and is then deleted.
 
-### 2. Checks
-
-The goal is `check` tests passing, apart from codes that need later phases (`CEL_ERROR`, `REGEX_ERROR`, `UNKNOWN_MACRO`): duplicates, references, scenarios, locations and cycles, openings, entries, variable keys and values, messages and players. Locations follow conformance README section 3.4 exactly, including the order in which duplicates are reported.
-
 ### 3. State at a message
 
-The goal is `state` tests passing (Format 8.6): initial values, keyed variables, normalization and clamping, the scene, and the cast and its joiners (Format 11.2).
+The goal is `state` tests passing (Format 8.6): initial values, keyed variables, normalization and clamping, the scene, and the cast and its joiners (Format 11.2). Also the `"*"` map limit, `INVALID_VALUE` for a change that leaves a map with more than 256 keys (Format 8.5), which `checks/star-map-limit.json` tests.
 
 ### 4. Knowledge
 
@@ -162,7 +164,6 @@ Prompt assembly, the choice of which active entries reach the model, model calls
 
 Each of these needs verifying against the suite when its phase starts.
 
-- **Schema error locations need care.** `failures` in `schema.go` follows conformance README section 3.4: the deepest location for an `anyOf` nothing accepts, a failing name at its property. Phase 2's `includes` are the first test of them.
 - **ECMAScript and RE2 differ.** Under the `u` flag, ECMAScript's `.` excludes `\r`, U+2028 and U+2029, and RE2's doesn't. ECMAScript's `\s` is Unicode whitespace plus U+FEFF, and RE2's is ASCII only. The `m` flag recognizes different line terminators. With `i` and `u` together, ECMAScript's `\w` and `\b` also match U+017F and U+212A. The translation must produce ECMAScript's meaning.
 - **CEL's defaults are wider than Format 10.2.** cel-go's standard environment has many more functions and macros, as well as `double`, `uint`, `bytes` and `null`. Reject them with AST validators after checking, along with any use of `state`, `own` or `scene` other than a selection, and selecting `char` or `user` from a keyed map. `has()` follows Format 10.2, which isn't quite CEL's presence test. Bound expression size (4 KiB) before parsing.
 - **Timestamps keep their offset.** `hour` and `weekday` are read at the offset written (Format 10.1). Don't convert to UTC or to local time.
@@ -170,5 +171,11 @@ Each of these needs verifying against the suite when its phase starts.
 ## Spec feedback
 
 When the code shows the spec is wrong or unclear, write it up for the user: what the spec says, the case or input where it matters, and a proposed fix. The user decides, and changes the spec repository. Add a conformance case only when apps could disagree on the issue, not for coverage. Then sync the copy here with `task spec`.
+
+Reported, awaiting a decision:
+
+1. **An initial value's members for a `"cast"` variable.** Format 8.3 ignores an initial object's members "for keys the variable doesn't have". For `"cast"`, the keys are the cast's characters, which depend on the scenario and its session, while a character's or world's variable may be used by several scenarios or none. So whether `{"kai": "high"}` is `INVALID_VALUE` depends on where the variable is used, and apps could disagree. Proposed: "for `"cast"`, a member is checked when it names a character of the bundle or session", which is what the library does, with a case of a character outside the cast with an invalid value.
+2. **What a `check` test with a session checks.** Conformance README section 2 says a `check` test without a session checks the bundle once for each scenario, but not what one with a session checks. The library checks the bundle for the session's scenario only, so an invalid key in another scenario's opening isn't reported. Proposed: say so in section 2, with a case of a session whose bundle has such an opening.
+3. **A disabled entry in `activated`.** Format 11.3 removes a disabled session entry, so recording it is `UNKNOWN_ENTRY`, and a case says so. A disabled bundle entry "never activates" (Format 7.2) but is still in use, so recording it is valid by Format 15.3. Apps could disagree. Proposed: say whether `activated` may name a disabled entry, with a case.
 
 These open items were deliberately left out of 0.14 and may come back as findings: label keys outside `values`, the loose `language` pattern, codes for nested `null`, and the missing activation test type.

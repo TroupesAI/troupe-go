@@ -10,12 +10,24 @@ import (
 // Code is the code of a check (Format 15.3).
 type Code string
 
-// The codes reading reports.
+// The codes of Format 15.3. Reading reports the first four, and Check the
+// others.
 const (
 	CodeParse              Code = "PARSE"
 	CodeUnsupportedVersion Code = "UNSUPPORTED_VERSION"
 	CodeSchema             Code = "SCHEMA"
 	CodeUnknownField       Code = "UNKNOWN_FIELD"
+	CodeDuplicateID        Code = "DUPLICATE_ID"
+	CodeUnknownScenario    Code = "UNKNOWN_SCENARIO"
+	CodeUnknownCharacter   Code = "UNKNOWN_CHARACTER"
+	CodeUnknownWorld       Code = "UNKNOWN_WORLD"
+	CodeUnknownLocation    Code = "UNKNOWN_LOCATION"
+	CodeUnknownOpening     Code = "UNKNOWN_OPENING"
+	CodeUnknownEntry       Code = "UNKNOWN_ENTRY"
+	CodeUnknownVariable    Code = "UNKNOWN_VARIABLE"
+	CodeInvalidValue       Code = "INVALID_VALUE"
+	CodeUnknownMessage     Code = "UNKNOWN_MESSAGE"
+	CodeInvalidPlayer      Code = "INVALID_PLAYER"
 )
 
 // Diagnostic is a check a document fails, and where. It never holds text from

@@ -127,60 +127,25 @@ func (rd *reader) session(r io.Reader) (*Session, error) {
 }
 
 // sessionEntries checks that no path holds more than maxSessionEntries
-// session entries, counting the latest per ID (Format 11.3, 14). It walks the
-// message tree depth first, counting the IDs on the path to each message.
+// session entries, counting the latest per ID (Format 11.3, 14).
 func (rd *reader) sessionEntries(s *Session) bool {
-	roots := len(s.Messages) // the index whose children are the roots
-	children := make([][]int, roots+1)
-	index := map[string]int{}
-	for i, m := range s.Messages {
-		parent, ok := index[m.Parent]
-		if !ok {
-			parent = roots
-		}
-		children[parent] = append(children[parent], i)
-		if _, dup := index[m.ID]; !dup {
-			index[m.ID] = i
-		}
-	}
-	type visit struct {
-		message int
-		leave   bool
-	}
-	var stack []visit
-	for _, c := range children[roots] {
-		stack = append(stack, visit{c, false})
-	}
 	onPath := map[string]int{}
 	ok := true
-	for len(stack) > 0 {
-		v := stack[len(stack)-1]
-		stack = stack[:len(stack)-1]
-		m := &s.Messages[v.message]
-		if v.leave {
-			for _, e := range m.Entries {
-				if onPath[e.ID]--; onPath[e.ID] == 0 {
-					delete(onPath, e.ID)
-				}
-			}
-			continue
-		}
-		for j, e := range m.Entries {
+	walkPaths(s.Messages, func(i int) {
+		for j, e := range s.Messages[i].Entries {
 			if onPath[e.ID]++; onPath[e.ID] == 1 && len(onPath) == maxSessionEntries+1 {
-				rd.report(Diagnostic{
-					Code:    CodeParse,
-					Line:    v.message + 2,
-					Message: m.ID,
-					Pointer: "/entries/" + strconv.Itoa(j),
-				})
+				at := inMessage(i, &s.Messages[i])
+				rd.report(Diagnostic{Code: CodeParse, Line: at.line, Message: at.message, Pointer: "/entries/" + strconv.Itoa(j)})
 				ok = false
 			}
 		}
-		stack = append(stack, visit{v.message, true})
-		for _, c := range children[v.message] {
-			stack = append(stack, visit{c, false})
+	}, func(i int) {
+		for _, e := range s.Messages[i].Entries {
+			if onPath[e.ID]--; onPath[e.ID] == 0 {
+				delete(onPath, e.ID)
+			}
 		}
-	}
+	})
 	return ok
 }
 

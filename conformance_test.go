@@ -1,6 +1,7 @@
 package troupe_test
 
 import (
+	"archive/zip"
 	"bytes"
 	"encoding/base64"
 	"encoding/json/jsontext"
@@ -9,8 +10,10 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
 	"slices"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/TroupesAI/troupe-go"
@@ -21,14 +24,35 @@ import (
 // the list can't go stale.
 var pending = map[string]bool{
 	"cel":   true,
-	"check": true,
 	"knows": true,
 	"macro": true,
 	"state": true,
+
+	// CEL_ERROR, REGEX_ERROR and UNKNOWN_MACRO come with phases 5 to 7.
+	"checks/bundle.json#0":        true,
+	"checks/per-scenario.json#0":  true,
+	"checks/regex-keys.json#0":    true,
+	"checks/session-text.json#0":  true,
+	"checks/unknown-macro.json#0": true,
+	// A "*" map's keys after a change come with the state, in phase 3.
+	"checks/star-map-limit.json#0": true,
 }
 
+// spec holds the copy of the spec repository's files: the cases are in
+// conformance/cases, and the files they name are relative to theirs.
+var spec = os.DirFS("spec")
+
 type testCase struct {
-	Tests []test `json:"tests"`
+	Bundle     jsontext.Value `json:"bundle"`
+	BundleFile string         `json:"bundleFile"`
+	Session    *struct {
+		Header   jsontext.Value   `json:"header"`
+		Messages []jsontext.Value `json:"messages"`
+	} `json:"session"`
+	SessionFile string `json:"sessionFile"`
+	Tests       []test `json:"tests"`
+
+	path string // relative to conformance/cases
 }
 
 type test struct {
@@ -44,7 +68,10 @@ type test struct {
 
 // TestConformance runs the spec's conformance suite (spec/conformance).
 func TestConformance(t *testing.T) {
-	cases := os.DirFS("spec/conformance/cases")
+	cases, err := fs.Sub(spec, "conformance/cases")
+	if err != nil {
+		t.Fatal(err)
+	}
 	paths, err := fs.Glob(cases, "*/*.json")
 	if err != nil {
 		t.Fatal(err)
@@ -52,29 +79,29 @@ func TestConformance(t *testing.T) {
 	if len(paths) == 0 {
 		t.Fatal("no cases in spec/conformance/cases")
 	}
-	for _, path := range paths {
-		t.Run(path, func(t *testing.T) {
+	for _, name := range paths {
+		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			data, err := fs.ReadFile(cases, path)
+			data, err := fs.ReadFile(cases, name)
 			if err != nil {
 				t.Fatal(err)
 			}
-			var c testCase
+			c := testCase{path: name}
 			if err := json.Unmarshal(data, &c); err != nil {
 				t.Fatal(err)
 			}
 			for i, tc := range c.Tests {
-				name := strconv.Itoa(i)
+				test := strconv.Itoa(i)
 				if tc.Name != "" {
-					name += " " + tc.Name
+					test += " " + tc.Name
 				}
-				t.Run(name, func(t *testing.T) {
+				t.Run(test, func(t *testing.T) {
 					expect, err := decodeExpect(tc)
 					if err != nil {
 						t.Fatalf("suite error: %v", err)
 					}
-					err = run(tc, expect)
-					switch onList := pending[tc.Type] || pending[fmt.Sprintf("%s#%d", path, i)]; {
+					err = run(&c, tc, expect)
+					switch onList := pending[tc.Type] || pending[fmt.Sprintf("%s#%d", name, i)]; {
 					case onList && err != nil:
 						t.Skipf("pending: %v", err)
 					case onList:
@@ -106,13 +133,7 @@ func decodeExpect(tc test) (any, error) {
 			expect = new(bool)
 		}
 	case "check":
-		expect = new(struct {
-			Codes    []string `json:"codes"`
-			Includes []struct {
-				Code string `json:"code"`
-				At   string `json:"at"`
-			} `json:"includes"`
-		})
+		expect = new(checkExpect)
 	case "knows":
 		expect = new([]string)
 	case "parse":
@@ -127,14 +148,156 @@ type codesExpect struct {
 	Codes []string `json:"codes"`
 }
 
+type checkExpect struct {
+	Codes    []string `json:"codes"`
+	Includes []struct {
+		Code string `json:"code"`
+		At   string `json:"at"`
+	} `json:"includes"`
+}
+
 // run performs a test's operation and compares the result with its expect
 // (conformance README section 3).
-func run(tc test, expect any) error {
+func run(c *testCase, tc test, expect any) error {
 	switch tc.Type {
 	case "parse":
 		return runParse(tc, expect.(*codesExpect))
+	case "check":
+		return runCheck(c, expect.(*checkExpect))
 	}
 	return fmt.Errorf("%s tests: %w", tc.Type, errors.ErrUnsupported)
+}
+
+// runCheck validates the case's documents as reading them does, then runs
+// every other check (conformance README section 3.4).
+func runCheck(c *testCase, expect *checkExpect) error {
+	b, s, diags, err := c.read()
+	if err != nil {
+		return err
+	}
+	diags = append(diags, troupe.Check(b, s)...)
+	if err := compareCodes(diags, expect.Codes); err != nil {
+		return err
+	}
+	for _, want := range expect.Includes {
+		if !slices.ContainsFunc(diags, func(d troupe.Diagnostic) bool {
+			return string(d.Code) == want.Code && d.Location() == want.At
+		}) {
+			return fmt.Errorf("no %s at %s; diagnostics %v", want.Code, want.At, diags)
+		}
+	}
+	return nil
+}
+
+// read reads a fresh copy of the case's bundle and session, as conformance
+// README section 1 describes them, with the diagnostics of reading them.
+func (c *testCase) read() (*troupe.Bundle, *troupe.Session, []troupe.Diagnostic, error) {
+	if path.Base(c.BundleFile) == "bundle.json" {
+		return c.readPackage()
+	}
+	var bundle []byte
+	var err error
+	switch {
+	case c.BundleFile != "":
+		bundle, err = fs.ReadFile(spec, c.file(c.BundleFile))
+	case c.Bundle != nil:
+		bundle, err = withVersion(c.Bundle)
+	default:
+		bundle, err = withVersion(jsontext.Value(`{"kind":"bundle"}`))
+	}
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	b, diags, err := troupe.ReadBundle(bytes.NewReader(bundle))
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if b == nil {
+		return nil, nil, nil, fmt.Errorf("the bundle doesn't read: %v", diags)
+	}
+
+	var session []byte
+	switch {
+	case c.SessionFile != "":
+		session, err = fs.ReadFile(spec, c.file(c.SessionFile))
+	case c.Session != nil:
+		header, err := withVersion(c.Session.Header)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		lines := [][]byte{header}
+		for _, m := range c.Session.Messages {
+			line := slices.Clone(m)
+			if err := line.Compact(); err != nil {
+				return nil, nil, nil, err
+			}
+			lines = append(lines, line)
+		}
+		session = bytes.Join(lines, []byte("\n"))
+	default:
+		return b, nil, diags, nil
+	}
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	s, sdiags, err := troupe.ReadSession(bytes.NewReader(session))
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if s == nil {
+		return nil, nil, nil, fmt.Errorf("the session doesn't read: %v", sdiags)
+	}
+	return b, s, append(diags, sdiags...), nil
+}
+
+// readPackage reads the package whose bundle.json the case names, and the
+// session of it the case names (conformance README section 1).
+func (c *testCase) readPackage() (*troupe.Bundle, *troupe.Session, []troupe.Diagnostic, error) {
+	dir := path.Dir(c.file(c.BundleFile))
+	files, err := fs.Sub(spec, dir)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	var buf bytes.Buffer
+	w := zip.NewWriter(&buf)
+	if err := w.AddFS(files); err != nil {
+		return nil, nil, nil, err
+	}
+	if err := w.Close(); err != nil {
+		return nil, nil, nil, err
+	}
+	p, diags, err := troupe.ReadPackage(bytes.NewReader(buf.Bytes()), int64(buf.Len()))
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if p == nil {
+		return nil, nil, nil, fmt.Errorf("the package doesn't read: %v", diags)
+	}
+	if c.SessionFile == "" {
+		return p.Bundle, nil, diags, nil
+	}
+	name := strings.TrimPrefix(c.file(c.SessionFile), dir+"/")
+	s := p.Sessions[name]
+	if s == nil {
+		return nil, nil, nil, fmt.Errorf("no session %s in the package", name)
+	}
+	return p.Bundle, s, diags, nil
+}
+
+// file returns the path within spec of a file the case names.
+func (c *testCase) file(name string) string {
+	return path.Join("conformance/cases", path.Dir(c.path), name)
+}
+
+// withVersion returns the document doc with troupe set to the spec version,
+// as the runner sets it before anything else (conformance README section 1).
+func withVersion(doc jsontext.Value) ([]byte, error) {
+	var members map[string]jsontext.Value
+	if err := json.Unmarshal(doc, &members); err != nil {
+		return nil, err
+	}
+	members["troupe"] = jsontext.Value(strconv.Quote(troupe.Version))
+	return json.Marshal(members)
 }
 
 // runParse reads the input as a session reader (Format 15.2), so tests marked
