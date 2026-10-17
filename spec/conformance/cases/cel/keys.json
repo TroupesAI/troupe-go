@@ -1,6 +1,6 @@
 {
-  "description": "Key matching through hit() (Format 7.2, 10.1, 11.4, 11.5): whole words, so no letter, mark or number (Unicode L, M, N) right before or after a match; case compared by Unicode simple case folding; keys in Han, Hiragana and the other listed scripts match anywhere; regex keys; the speaker's name; knowledge, hidden messages and scanDepth decide what is scanned",
-  "note": "Each root is its own path, so each test scans one message unless it says otherwise. r4 writes café as e followed by U+0301. In r6, Ί (U+038A) folds to ί (U+03AF) and Σ and ς both fold to σ; ß and İ have no simple folding.",
+  "description": "Key matching through hit() (Format 7.2, 10.1, 11.4, 11.5): whole words, so no letter, mark or number (Unicode L, M, N) right before or after a match; case compared by Unicode simple case folding; keys in Han, Hiragana and the other listed scripts match anywhere; regex keys, with every line break in the scanned text written as \\n; the speaker's name; knowledge, hidden messages and scanDepth decide what is scanned",
+  "note": "Each root is its own path, so each test scans one message unless it says otherwise. r4 writes café as e followed by U+0301. In r6, Ί (U+038A) folds to ί (U+03AF) and Σ and ς both fold to σ; ß and İ have no simple folding. r13 separates a and b with CRLF, and r14 with U+2028, so /^b/m matches in both; /a.b/s matches r13 only because its CRLF is one \\n.",
   "bundle": {
     "kind": "bundle",
     "characters": [
@@ -171,6 +171,26 @@
         ]
       },
       {
+        "id": "r13",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "a\r\nb"
+          }
+        ]
+      },
+      {
+        "id": "r14",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "a\u2028b"
+          }
+        ]
+      },
+      {
         "id": "c1",
         "parent": "r12",
         "from": "player",
@@ -324,6 +344,27 @@
       "name": "the flag i ignores case",
       "at": "r9",
       "expr": "hit('/dragons?/i')",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "under m, ^ matches after CRLF",
+      "at": "r13",
+      "expr": "hit('/^b/m')",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "and after U+2028, written as \\n",
+      "at": "r14",
+      "expr": "hit('/^b/m')",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "CRLF is one character, so . with s spans it",
+      "at": "r13",
+      "expr": "hit('/a.b/s')",
       "expect": true
     },
     {

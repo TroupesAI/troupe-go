@@ -7,9 +7,6 @@ import (
 	"unicode"
 )
 
-// lineTerminators are ECMAScript's, as the body of an RE2 class.
-const lineTerminators = `\n\r\x{2028}\x{2029}`
-
 // spaces are ECMAScript's white space and line terminators, which \s matches:
 // tab, vertical tab, form feed, U+FEFF and Unicode's space separators, with
 // the line terminators.

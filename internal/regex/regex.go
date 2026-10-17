@@ -27,7 +27,9 @@ type Regexp struct {
 // foldWord maps ſ and K (Kelvin) to s and k.
 var foldWord = strings.NewReplacer("\u017f", "s", "\u212a", "k")
 
-// MatchString reports whether the key matches anywhere in s.
+// MatchString reports whether the key matches anywhere in s, scanned text
+// whose every line break is \n (Format 7.2). There RE2 reads ., ^ and $ as
+// ECMAScript does.
 func (r *Regexp) MatchString(s string) bool {
 	if r.fold {
 		// Under i, ſ and K are word characters, as s and k are, which RE2's
@@ -58,6 +60,10 @@ func Compile(pattern, flags string) (*Regexp, error) {
 		}
 	}
 	re, size, err := p.alternation()
+	if flags != "" {
+		// The flags mean the same in RE2, on text whose line breaks are \n.
+		flags = "(?" + flags + ")"
+	}
 	if err == nil && p.pos < len(p.src) {
 		err = p.fail("an unescaped )")
 	}
@@ -67,10 +73,7 @@ func Compile(pattern, flags string) (*Regexp, error) {
 	if size > maxSize {
 		return nil, errors.New("regex: longer than 1000 bytes written out")
 	}
-	if p.fold {
-		re = "(?i)" + re
-	}
-	compiled, err := regexp.Compile(re)
+	compiled, err := regexp.Compile(flags + re)
 	if err != nil {
 		return nil, fmt.Errorf("regex: %w", err)
 	}
@@ -156,16 +159,9 @@ func (p *parser) term() (re string, size int, quantifiable bool, err error) {
 	start := p.pos
 	switch r := p.next(); r {
 	case '^', '$':
-		if p.multiline {
-			return "(?m:" + string(r) + ")", 1, false, nil
-		}
 		return string(r), 1, false, nil
 	case '.':
-		if p.dotAll {
-			return "(?s:.)", 1, true, nil
-		}
-		// ECMAScript's . excludes every line terminator, and RE2's only \n.
-		return "[^" + lineTerminators + "]", 1, true, nil
+		return ".", 1, true, nil
 	case '(':
 		return p.group()
 	case '[':

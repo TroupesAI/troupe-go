@@ -19,6 +19,16 @@ var anywhere = []*unicode.RangeTable{
 	unicode.Thai, unicode.Lao, unicode.Khmer, unicode.Myanmar, unicode.Tibetan,
 }
 
+// lineBreaks writes every line break as \n.
+var lineBreaks = strings.NewReplacer("\r\n", "\n", "\r", "\n", "\u2028", "\n", "\u2029", "\n")
+
+// Text returns s as keys match it, with every line break, \r\n, a lone \r,
+// U+2028 and U+2029, written as \n (Format 7.2). The scanned text is
+// converted once, before any key is matched against it.
+func Text(s string) string {
+	return lineBreaks.Replace(s)
+}
+
 // Key is a compiled key.
 type Key struct {
 	matcher interface{ MatchString(string) bool } // nil for the empty key
@@ -48,8 +58,8 @@ func Compile(key string) (*Key, error) {
 	return &Key{regexp.MustCompile(pattern)}, nil
 }
 
-// Match reports whether k matches anywhere in text. An empty plain key
-// matches nothing.
+// Match reports whether k matches anywhere in text, as Text returns it. An
+// empty plain key matches nothing.
 func (k *Key) Match(text string) bool {
 	return k.matcher != nil && k.matcher.MatchString(text)
 }

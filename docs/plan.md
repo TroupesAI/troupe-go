@@ -74,7 +74,8 @@ The cost is that a change touching both the engine and the platform can't land i
 | Under `i`, a key matches the text with ſ and K (Kelvin) as s and k | Lookarounds RE2 doesn't have | ECMAScript's `\w` and `\b` count them as word characters under `i`. Every set a pattern matches under `i` holds a character's case variants with it, so the mapping changes no other match |
 | `\P{…}` under `i` is an explicit class, computed on first use for each category | RE2's `(?i)\P{…}` | RE2 folds the category before taking its complement, and ECMAScript after |
 | Key matching is in `internal/keys`, for `hit()` and entry activation | In package `troupe` | It has no caller until phase 7, and both later callers use it |
-| Tests of the regex translation take their expected results from V8 | Results worked out by hand | ECMAScript's meaning is what the spec requires, and V8 is a reference for it |
+| Tests of regex keys' meaning take their expected results from V8, on text whose line breaks are `\n` | Results worked out by hand | ECMAScript's meaning is what the spec requires, and V8 is a reference for it |
+| `keys.Text` writes every line break as `\n`, and the scanned text is converted once, as it is built | Converting in each match, or translating `.`, `^` and `$` | Format 7.2 matches keys against text whose line breaks are `\n`, where RE2 reads `.`, `^` and `$` as ECMAScript does |
 | A message's own session entries apply to its `activated` | Applying from the next message | Format 11.3: they apply "from that message onward" |
 | A change key that doesn't follow the key grammar is `UNKNOWN_VARIABLE` as well as `SCHEMA` | Leaving it to the schema | Every check runs on the document as written (Format 15.3) |
 | With an unknown scenario, the session is checked against an empty one | Skipping the checks that need it | The rest still holds; only what the scenario would make valid fails |
@@ -169,9 +170,5 @@ Each of these needs verifying against the suite when its phase starts.
 ## Spec feedback
 
 When the code shows the spec is wrong or unclear, write it up for the user: what the spec says, the case or input where it matters, and a proposed fix. The user decides, and changes the spec repository. Add a conformance case only when apps could disagree on the issue, not for coverage. Then sync the copy here with `task spec`.
-
-Reported, awaiting a decision:
-
-1. **The `m` flag at line terminators other than `\n`.** A regex key means what it means in ECMAScript (Format 14), where `^` and `$` under `m` also match at `\r`, U+2028 and U+2029. RE2 matches them only at `\n`, and has no lookbehind to say "after a `\r`" without consuming it, which is wrong where the pattern has something before the `^`. So an app on RE2, such as this library, Rust's `regex` or Go's `regexp`, can't give `/^b/m` its meaning on `"a\rb"`. The library matches `^` and `$` under `m` at `\n` only. Proposed: in Format 7.2, keys match the scanned text with each line break, `\r\n`, `\r`, U+2028 and U+2029, written as `\n`. That ends this difference and the one in `.` for every engine, and changes nothing a person sees. A case of `/^b/m` against a part with `\r`.
 
 These open items were deliberately left out of 0.14 and may come back as findings: label keys outside `values`, the loose `language` pattern, codes for nested `null`, and the missing activation test type.
