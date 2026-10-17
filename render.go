@@ -11,8 +11,8 @@ import (
 	"github.com/TroupesAI/troupe-go/internal/macro"
 )
 
-// Context is where text is rendered (Format 9).
-type Context struct {
+// RenderContext is where author text is rendered (Format 9).
+type RenderContext struct {
 	// State is the state the macros read, a state of the story: at the
 	// message the text is in, or elsewhere at the evaluation point, the
 	// session's head, or the initial state when there is no head (Format 9).
@@ -39,7 +39,7 @@ type Context struct {
 // Text between {{ and }} that is no macro, or that names an undeclared
 // variable, is left as written; a declared variable with nothing to show
 // renders as nothing.
-func (st *Story) Render(text string, c Context, r *rand.Rand) string {
+func (st *Story) Render(text string, c RenderContext, r *rand.Rand) string {
 	sc := st.scope
 	tokens, _ := macro.Parse(text)
 	var b strings.Builder
@@ -84,19 +84,25 @@ func (st *Story) Render(text string, c Context, r *rand.Rand) string {
 	return b.String()
 }
 
-// RenderParts returns m's parts as they are shown (Format 9), given the state
-// at m. In a root made from an opening, their text and alt resolve there, with
-// each part's speaker as {{char}} and own meaning state; r chooses a pick's
-// option, though a root has its picks chosen already (Format 11.1). Any other
-// message is a player's or a model's words, used as written, so no state
-// leaks through model output or prompt attacks (Format Appendix C).
-func (st *Story) RenderParts(m *Message, at State, r *rand.Rand) []Part {
+// RenderParts returns m's parts as they are shown (Format 9), given this
+// story's state before m, as KnownBy and Apply take it. In a root made from
+// an opening, their text and alt resolve at the root, with each part's
+// speaker as {{char}} and own meaning state; r chooses a pick's option,
+// though a root has its picks chosen already (Format 11.1). Any other message
+// is a player's or a model's words, used as written, so no state leaks
+// through model output or prompt attacks (Format Appendix C).
+func (st *Story) RenderParts(before State, m *Message, r *rand.Rand) []Part {
+	return st.renderParts(st.Apply(before, m), m, r)
+}
+
+// renderParts returns m's parts as they are shown, given the state at m.
+func (st *Story) renderParts(at State, m *Message, r *rand.Rand) []Part {
 	parts := slices.Clone(m.Content)
 	if m.Parent != "" || m.Opening == "" {
 		return parts
 	}
 	for i := range parts {
-		c := Context{State: at, Char: parts[i].Speaker, Owner: st.scope.scenario.ID}
+		c := RenderContext{State: at, Char: parts[i].Speaker, Owner: st.scope.scenario.ID}
 		parts[i].Text = st.Render(parts[i].Text, c, r)
 		parts[i].Alt = st.Render(parts[i].Alt, c, r)
 	}
@@ -108,7 +114,7 @@ func (st *Story) RenderParts(m *Message, at State, r *rand.Rand) []Part {
 // and user mean the macros' characters (Format 9). It renders as nothing when
 // there is nothing there: an absent key, a path below a value that isn't a
 // map, or a variable whose owner isn't in use, which the state doesn't hold.
-func (sc *scope) renderAt(c Context, v *Variable, x any, below []string) string {
+func (sc *scope) renderAt(c RenderContext, v *Variable, x any, below []string) string {
 	if x == nil || len(below) > 1 {
 		return ""
 	}

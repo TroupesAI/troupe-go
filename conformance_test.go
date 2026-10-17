@@ -281,7 +281,7 @@ func runKnows(c *testCase, tc test, expect []string) error {
 	if err := json.Unmarshal(tc.Part, &part); err != nil {
 		return err
 	}
-	if got := story.KnownBy(m, before)[part]; !slices.Equal(got, expect) {
+	if got := story.KnownBy(before, m)[part]; !slices.Equal(got, expect) {
 		return fmt.Errorf("known by %q, want %q", got, expect)
 	}
 	return nil
@@ -309,13 +309,16 @@ func runMacro(c *testCase, tc test, expect string) error {
 		if i < 0 {
 			return fmt.Errorf("no message %s", part.Message)
 		}
-		at, err := story.StateAt(part.Message)
-		if err != nil {
-			return err
+		m := &s.Messages[i]
+		before := story.Initial()
+		if m.Parent != "" {
+			if before, err = story.StateAt(m.Parent); err != nil {
+				return err
+			}
 		}
-		got = story.RenderParts(&s.Messages[i], at, r)[part.Index].Text
+		got = story.RenderParts(before, m, r)[part.Index].Text
 	} else {
-		ctx := troupe.Context{Char: tc.Char, Owner: tc.Owner, Narrator: tc.Narrator, State: story.Initial()}
+		ctx := troupe.RenderContext{Char: tc.Char, Owner: tc.Owner, Narrator: tc.Narrator, State: story.Initial()}
 		if tc.At != "" {
 			if ctx.State, err = story.StateAt(tc.At); err != nil {
 				return err

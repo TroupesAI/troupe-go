@@ -22,7 +22,7 @@ func TestRenderPick(t *testing.T) {
 	seen := map[string]bool{}
 	r := rand.New(rand.NewPCG(1, 2)) //nolint:gosec // G404: a seeded source makes the test reproducible
 	for range 100 {
-		seen[story.Render("{{pick::a::b::c}}", troupe.Context{State: story.Initial()}, r)] = true
+		seen[story.Render("{{pick::a::b::c}}", troupe.RenderContext{State: story.Initial()}, r)] = true
 	}
 	if len(seen) != 3 || !seen["a"] || !seen["b"] || !seen["c"] {
 		t.Errorf("a source chose %v, want each option", seen)

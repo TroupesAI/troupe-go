@@ -2,15 +2,6 @@ package troupe
 
 import "encoding/json/jsontext"
 
-// The typed model mirrors the documents as written: an absent field is its
-// zero value, or nil where the zero value means something, and defaults are
-// left for the operations that apply them (Format 2.2). Fields hold strings
-// where the spec has a fixed set of values, such as Rating.
-//
-// A document read with diagnostics doesn't conform, and its model serves only
-// to report them: a value of the wrong type reads as absent, and a list
-// holding an item of the wrong type reads as absent too.
-
 // Bundle is a bundle (Format 3).
 type Bundle struct {
 	Schema     string         `json:"$schema"`
@@ -81,8 +72,8 @@ type Scenario struct {
 	Tagline  string       `json:"tagline"`
 	Premise  string       `json:"premise"`
 	Briefing string       `json:"briefing"`
-	Mode     string       `json:"mode"` // "characters" or "narrator"
-	Narrator string       `json:"narrator"`
+	Mode     string       `json:"mode"`     // "characters" or "narrator"; "" for characters
+	Narrator string       `json:"narrator"` // "" for "the narrator"
 	Cast     []CastMember `json:"cast"`
 	// Worlds is nil when absent, which means every bundle world, and points to
 	// an empty list for none.
@@ -119,17 +110,17 @@ type Entry struct {
 	Keys      []string       `json:"keys"`
 	Pull      bool           `json:"pull"`
 	When      string         `json:"when"`
-	ScanDepth *int           `json:"scanDepth"`
+	ScanDepth *int           `json:"scanDepth"` // nil for 4
 	Once      bool           `json:"once"`
-	Sticky    int64          `json:"sticky"`
-	Cooldown  int64          `json:"cooldown"`
-	Chance    *int           `json:"chance"`
+	Sticky    int64          `json:"sticky"`   // 0 for none
+	Cooldown  int64          `json:"cooldown"` // 0 for none
+	Chance    *int           `json:"chance"`   // a percent; nil for 100
 	Group     string         `json:"group"`
-	Weight    int            `json:"weight"`
-	Priority  *int           `json:"priority"`
-	Position  string         `json:"position"` // "system" or "context"
+	Weight    int            `json:"weight"`   // 0 for 1
+	Priority  *int           `json:"priority"` // nil for 50
+	Position  string         `json:"position"` // "system" or "context"; "" for context, unless Depth is set
 	Depth     *int64         `json:"depth"`
-	KnownBy   []string       `json:"knownBy"`
+	KnownBy   []string       `json:"knownBy"` // nil for everyone
 	Disabled  bool           `json:"disabled"`
 	Ext       jsontext.Value `json:"ext"`
 }
@@ -142,7 +133,7 @@ type Variable struct {
 	Labels      map[string]string `json:"labels"`
 	Min         *int64            `json:"min"`
 	Max         *int64            `json:"max"`
-	Initial     jsontext.Value    `json:"initial"`
+	Initial     jsontext.Value    `json:"initial"` // nil for the type's default
 	Of          Keys              `json:"of"`
 	Description string            `json:"description"`
 	By          []string          `json:"by"` // "player" and "model"
@@ -212,7 +203,7 @@ type Part struct {
 	Src     string         `json:"src"`
 	Alt     string         `json:"alt"`
 	Speaker string         `json:"speaker"` // "" for narration
-	KnownBy []string       `json:"knownBy"`
+	KnownBy []string       `json:"knownBy"` // nil for the witness rule (Format 11.5)
 	Ext     jsontext.Value `json:"ext"`
 }
 

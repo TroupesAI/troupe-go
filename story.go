@@ -9,6 +9,8 @@ import (
 )
 
 // Story is a bundle's scenario as a session plays it, or played on its own.
+// The states it gives are its own: a method that takes a State takes one this
+// story gave.
 type Story struct {
 	scope    *scope
 	messages []Message
@@ -22,8 +24,9 @@ type Story struct {
 // no players (conformance README section 2). A session without messages, such
 // as one read from its header alone, serves to compute states with Apply.
 //
-// b and s are documents that pass Check. The results for others are only
-// bounded: the spec gives them no meaning (Format 15.1).
+// It fails when b has no scenario, or s's scenario isn't one of b's. b and s
+// are documents that pass Check; the results for others are only bounded,
+// since the spec gives them no meaning (Format 15.1).
 func NewStory(b *Bundle, s *Session) (*Story, error) {
 	st := &Story{index: map[string]int{}}
 	if s == nil {

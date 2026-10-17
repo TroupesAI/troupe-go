@@ -29,8 +29,8 @@ type Point struct {
 
 // PointAt returns the evaluation point at the last of recent, for a message
 // written for char, or for the narrator when char is "". recent are the last
-// messages of the path to the point, oldest first, and before is the state
-// before the first of them: the initial state when it is a root. recent
+// messages of the path to the point, oldest first, and before is this story's
+// state before the first of them: the initial state when it is a root. recent
 // needs only as many messages as the deepest scan reaches: at most 100 that
 // aren't hidden and have content (Format 7.2). With no messages, the point is
 // before any message, at before.
@@ -53,7 +53,7 @@ func (st *Story) PointAt(before State, recent []Message, char string) *Point {
 		known := st.knownBy(m, prior, p.state)
 		// A root's picks are chosen already (Format 11.1), so any source
 		// will do.
-		parts := st.RenderParts(m, State{st.scope, p.state}, rand.New(rand.NewPCG(0, 0))) //nolint:gosec // G404: see above
+		parts := st.renderParts(State{st.scope, p.state}, m, rand.New(rand.NewPCG(0, 0))) //nolint:gosec // G404: see above
 		texts := []string{}
 		for j, part := range parts {
 			if part.Type == "image" || !slices.Contains(known[j], knower) {
@@ -75,10 +75,11 @@ func (p *Point) State() State {
 	return State{p.story.scope, p.state}
 }
 
-// Eval evaluates the condition expr of an entry that scans scanDepth
-// messages, owned by self: a character, world or scenario ID, or "session"
-// (Format 7.2, 10). It returns an error only when expr is a CEL_ERROR; a
-// runtime error makes the condition false.
+// Eval evaluates the condition expr of an entry owned by self, a character,
+// world or scenario ID, or "session" for a session entry, which scans
+// scanDepth messages: the entry's, 4 when it has none (Format 7.2, 10). It
+// returns an error only when expr is a CEL_ERROR; a runtime error makes the
+// condition false.
 func (p *Point) Eval(expr, self string, scanDepth int) (bool, error) {
 	prg, err := p.story.program(expr, self)
 	if err != nil {
