@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/TroupesAI/troupe-go/internal/keys"
 	"github.com/TroupesAI/troupe-go/internal/macro"
 )
 
@@ -366,10 +367,16 @@ func (c *checker) ownIDs(at place, p jsontext.Pointer, entries []Entry, variable
 	}
 }
 
-// entries checks the knownBy of the entries of the owner at p.
+// entries checks the knownBy and keys of the entries of the owner at p: a
+// regex key that isn't valid is REGEX_ERROR (Format 14).
 func (c *checker) entries(at place, p jsontext.Pointer, entries []Entry) {
 	for i, e := range entries {
 		c.knownBy(at, ptr(p, "entries", i, "knownBy"), e.KnownBy)
+		for j, k := range e.Keys {
+			if _, err := keys.Compile(k); err != nil {
+				c.report(CodeRegexError, at, ptr(p, "entries", i, "keys", j))
+			}
+		}
 	}
 }
 

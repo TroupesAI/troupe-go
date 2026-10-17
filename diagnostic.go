@@ -11,7 +11,7 @@ import (
 type Code string
 
 // The codes of Format 15.3. Reading reports the first four, and Check the
-// others; later phases add CEL_ERROR and REGEX_ERROR.
+// others; a later phase adds CEL_ERROR.
 const (
 	CodeParse              Code = "PARSE"
 	CodeUnsupportedVersion Code = "UNSUPPORTED_VERSION"
@@ -29,6 +29,7 @@ const (
 	CodeUnknownMessage     Code = "UNKNOWN_MESSAGE"
 	CodeInvalidPlayer      Code = "INVALID_PLAYER"
 	CodeUnknownMacro       Code = "UNKNOWN_MACRO"
+	CodeRegexError         Code = "REGEX_ERROR"
 )
 
 // Diagnostic is a check a document fails, and where. It never holds text from

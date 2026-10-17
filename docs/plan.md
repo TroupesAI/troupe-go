@@ -70,6 +70,11 @@ The cost is that a change touching both the engine and the platform can't land i
 | A pick's option comes from `r`, a `math/rand/v2` source every call to `Render` and `RenderParts` takes | An optional field in `Context` | Forgetting the source doesn't compile, and rendering stays deterministic, as the README promises |
 | `Story.RenderParts(m, at, r)` returns a message's parts as shown: resolved in a root made from an opening, as written in a player or model message, and `Render` is for author text | Leaving it to callers to use player and model text as written | A caller who forgot would let state leak through model output or prompt attacks (Format Appendix C) |
 | Macros are parsed in `internal/macro`, and one resolver decides which variable a path names, for `Render` and for `UNKNOWN_MACRO` | Each doing its own | Rendering and checking can't disagree on what's declared |
+| Regex keys are parsed by recursive descent over Format 14's grammar, which yields the translation to RE2 and the size written out in the same pass | Checking the grammar and translating separately | One walk over the pattern decides validity, the size limit and the meaning |
+| Under `i`, a key matches the text with ſ and K (Kelvin) as s and k | Lookarounds RE2 doesn't have | ECMAScript's `\w` and `\b` count them as word characters under `i`. Every set a pattern matches under `i` holds a character's case variants with it, so the mapping changes no other match |
+| `\P{…}` under `i` is an explicit class, computed on first use for each category | RE2's `(?i)\P{…}` | RE2 folds the category before taking its complement, and ECMAScript after |
+| Key matching is in `internal/keys`, for `hit()` and entry activation | In package `troupe` | It has no caller until phase 7, and both later callers use it |
+| Tests of the regex translation take their expected results from V8 | Results worked out by hand | ECMAScript's meaning is what the spec requires, and V8 is a reference for it |
 | A message's own session entries apply to its `activated` | Applying from the next message | Format 11.3: they apply "from that message onward" |
 | A change key that doesn't follow the key grammar is `UNKNOWN_VARIABLE` as well as `SCHEMA` | Leaving it to the schema | Every check runs on the document as written (Format 15.3) |
 | With an unknown scenario, the session is checked against an empty one | Skipping the checks that need it | The rest still holds; only what the scenario would make valid fails |
@@ -89,6 +94,7 @@ A starting point. Change it once the code argues for something else.
 troupe.go, *.go     package troupe: the public API
 internal/ijson/     strict reading: I-JSON, depth, number text (Format 2.2, 14)
 internal/regex/     regex keys: grammar, limits, translation to RE2 (Format 14)
+internal/keys/      key matching: plain keys and regex keys (Format 7.2)
 internal/cel/       the condition environment and the Format 10.2 validators
 internal/macro/     macro parsing and rendering (Format 9)
 spec/               copied from the spec repository; never edited by hand
@@ -124,13 +130,9 @@ A case whose `bundleFile` is a package's `bundle.json` is read by zipping its di
 
 Each phase ends with its part of the suite passing, lint clean, and its decisions recorded above. The runner keeps a **pending list** of tests not expected to pass yet: each entry is a test type, such as `cel`, or one test, as `<case path>#<test index>`. A pending test that fails is skipped, and one that passes fails the run, so the list can't go stale. It shrinks to empty by the end of phase 7, and is then deleted.
 
-### 6. Regex keys and key matching
-
-The goal is `REGEX_ERROR`, and matching ready for `hit()`. Regex keys get the grammar and limits of Format 14, translated to RE2 with ECMAScript's meaning. Plain keys get whole-word matching with simple case folding, and the scripts that match anywhere (Format 7.2).
-
 ### 7. Conditions
 
-The goal is `cel` tests passing, plus `CEL_ERROR`. That covers the environment (Format 10.1), the rules (Format 10.2), and `hit()` over the scanned text. At the end of this phase the whole suite passes and the pending list is gone.
+The goal is `cel` tests passing, plus `CEL_ERROR`. That covers the environment (Format 10.1), the rules (Format 10.2), and `hit()` over the scanned text, with `internal/keys`, whose plain keys the `hit()` cases test. At the end of this phase the whole suite passes and the pending list is gone.
 
 ### 8. Beyond the suite
 
@@ -161,12 +163,15 @@ Prompt assembly, the choice of which active entries reach the model, model calls
 
 Each of these needs verifying against the suite when its phase starts.
 
-- **ECMAScript and RE2 differ.** Under the `u` flag, ECMAScript's `.` excludes `\r`, U+2028 and U+2029, and RE2's doesn't. ECMAScript's `\s` is Unicode whitespace plus U+FEFF, and RE2's is ASCII only. The `m` flag recognizes different line terminators. With `i` and `u` together, ECMAScript's `\w` and `\b` also match U+017F and U+212A. The translation must produce ECMAScript's meaning.
 - **CEL's defaults are wider than Format 10.2.** cel-go's standard environment has many more functions and macros, as well as `double`, `uint`, `bytes` and `null`. Reject them with AST validators after checking, along with any use of `state`, `own` or `scene` other than a selection, and selecting `char` or `user` from a keyed map. `has()` follows Format 10.2, which isn't quite CEL's presence test. Bound expression size (4 KiB) before parsing.
 - **Timestamps keep their offset.** `hour` and `weekday` are read at the offset written (Format 10.1). Don't convert to UTC or to local time.
 
 ## Spec feedback
 
 When the code shows the spec is wrong or unclear, write it up for the user: what the spec says, the case or input where it matters, and a proposed fix. The user decides, and changes the spec repository. Add a conformance case only when apps could disagree on the issue, not for coverage. Then sync the copy here with `task spec`.
+
+Reported, awaiting a decision:
+
+1. **The `m` flag at line terminators other than `\n`.** A regex key means what it means in ECMAScript (Format 14), where `^` and `$` under `m` also match at `\r`, U+2028 and U+2029. RE2 matches them only at `\n`, and has no lookbehind to say "after a `\r`" without consuming it, which is wrong where the pattern has something before the `^`. So an app on RE2, such as this library, Rust's `regex` or Go's `regexp`, can't give `/^b/m` its meaning on `"a\rb"`. The library matches `^` and `$` under `m` at `\n` only. Proposed: in Format 7.2, keys match the scanned text with each line break, `\r\n`, `\r`, U+2028 and U+2029, written as `\n`. That ends this difference and the one in `.` for every engine, and changes nothing a person sees. A case of `/^b/m` against a part with `\r`.
 
 These open items were deliberately left out of 0.14 and may come back as findings: label keys outside `values`, the loose `language` pattern, codes for nested `null`, and the missing activation test type.

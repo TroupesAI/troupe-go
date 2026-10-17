@@ -28,10 +28,9 @@ import (
 var pending = map[string]bool{
 	"cel": true,
 
-	// CEL_ERROR and REGEX_ERROR come with phases 6 and 7.
+	// CEL_ERROR comes with phase 7.
 	"checks/bundle.json#0":       true,
 	"checks/per-scenario.json#0": true,
-	"checks/regex-keys.json#0":   true,
 	"checks/session-text.json#0": true,
 }
 
