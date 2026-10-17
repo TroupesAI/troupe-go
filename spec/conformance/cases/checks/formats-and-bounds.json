@@ -1,0 +1,61 @@
+{
+  "description": "Session lines are validated with format asserted (Format 15.3): a malformed timestamp is SCHEMA, and an unknown message field is UNKNOWN_FIELD",
+  "bundle": {
+    "kind": "bundle",
+    "scenarios": [
+      {
+        "id": "s"
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        }
+      ],
+      "players": [
+        "p"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "player",
+        "at": "yesterday",
+        "content": [
+          {
+            "text": "x"
+          }
+        ],
+        "mood": "odd"
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "expect": {
+        "codes": [
+          "SCHEMA",
+          "UNKNOWN_FIELD"
+        ],
+        "includes": [
+          {
+            "code": "SCHEMA",
+            "at": "message:1/at"
+          },
+          {
+            "code": "UNKNOWN_FIELD",
+            "at": "message:1/mood"
+          }
+        ]
+      }
+    }
+  ]
+}

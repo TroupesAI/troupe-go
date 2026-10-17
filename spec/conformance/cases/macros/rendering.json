@@ -1,0 +1,179 @@
+{
+  "description": "Macro resolution and rendering (Format 9): undeclared variables are left as written, while absent keys, paths below non-maps and owners not in use render as nothing; map keys in declared order, cast order for characters, and \"*\" keys in code point order",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Ann."
+      },
+      {
+        "id": "b",
+        "name": "Bea",
+        "description": "Bea."
+      },
+      {
+        "id": "zed",
+        "name": "Zed",
+        "description": "Not in the cast.",
+        "variables": [
+          {
+            "id": "mood",
+            "type": "string",
+            "initial": "calm",
+            "description": "d"
+          }
+        ]
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "cast": [
+          {},
+          {
+            "character": "a"
+          },
+          {
+            "character": "b"
+          }
+        ],
+        "variables": [
+          {
+            "id": "trust",
+            "type": "int",
+            "of": "cast",
+            "description": "d"
+          },
+          {
+            "id": "rep",
+            "type": "int",
+            "of": [
+              "watch",
+              "guild",
+              "crown"
+            ],
+            "description": "d"
+          },
+          {
+            "id": "inv",
+            "type": "int",
+            "of": "*",
+            "description": "d"
+          },
+          {
+            "id": "hp",
+            "type": "int",
+            "initial": 5,
+            "description": "d"
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        }
+      ],
+      "players": [
+        "p"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "x"
+          }
+        ],
+        "changes": [
+          {
+            "by": "player",
+            "set": {
+              "state.trust.b": 40,
+              "state.trust.a": 90,
+              "state.rep.crown": 3,
+              "state.rep.watch": 1,
+              "state.inv.rope": 1,
+              "state.inv.axe": 2
+            }
+          }
+        ]
+      },
+      {
+        "id": "3",
+        "parent": "1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "y"
+          }
+        ],
+        "changes": [
+          {
+            "by": "player",
+            "set": {
+              "state.inv.cup": 1
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "macro",
+      "name": "elsewhere {{char}} is the character the text is used for, or the narrator",
+      "narrator": true,
+      "text": "{{char}}",
+      "expect": "the narrator"
+    },
+    {
+      "type": "macro",
+      "name": "undeclared: left as written",
+      "at": "1",
+      "owner": "s",
+      "text": "[{{state.nothing_here}}] [{{own.nope}}]",
+      "expect": "[{{state.nothing_here}}] [{{own.nope}}]"
+    },
+    {
+      "type": "macro",
+      "name": "declared but nothing to render: an absent key of a \"*\" map, a path below a non-map, an owner not in use",
+      "at": "1",
+      "text": "[{{state.inv.lamp}}] [{{state.hp.x}}] [{{state.zed.mood}}]",
+      "expect": "[] [] []"
+    },
+    {
+      "type": "macro",
+      "name": "character keys in cast order, by name; list keys in declared order, whatever order the changes used",
+      "at": "1",
+      "text": "{{state.trust}} | {{state.rep}}",
+      "expect": "Pat: 0, Ann: 90, Bea: 40 | watch: 1, guild: 0, crown: 3"
+    },
+    {
+      "type": "macro",
+      "name": "\"*\" keys in code point order, whatever order the changes used",
+      "at": "3",
+      "text": "{{state.inv}}",
+      "expect": "axe: 2, cup: 1, rope: 1"
+    },
+    {
+      "type": "check",
+      "expect": {
+        "codes": []
+      }
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "description": "Map rendering (Format 9): keys that are character IDs show the character's name, in any keyed variable; other keys show underscores as spaces, in declared order",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "bea",
+        "name": "Bea",
+        "description": "Bea."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "cast": [
+          {},
+          {
+            "character": "bea"
+          }
+        ],
+        "variables": [
+          {
+            "id": "met",
+            "type": "int",
+            "of": [
+              "watch_post",
+              "bea"
+            ],
+            "initial": 1,
+            "description": "d"
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "macro",
+      "text": "{{state.met}}",
+      "expect": "watch post: 1, Bea: 1"
+    },
+    {
+      "type": "check",
+      "expect": {
+        "codes": []
+      }
+    }
+  ]
+}

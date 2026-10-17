@@ -1,0 +1,402 @@
+{
+  "description": "Key matching through hit() (Format 7.2, 10.1, 11.4, 11.5): whole words, so no letter, mark or number (Unicode L, M, N) right before or after a match; case compared by Unicode simple case folding; keys in Han, Hiragana and the other listed scripts match anywhere; regex keys; the speaker's name; knowledge, hidden messages and scanDepth decide what is scanned",
+  "note": "Each root is its own path, so each test scans one message unless it says otherwise. r4 writes café as e followed by U+0301. In r6, Ί (U+038A) folds to ί (U+03AF) and Σ and ς both fold to σ; ß and İ have no simple folding.",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Ann."
+      },
+      {
+        "id": "b",
+        "name": "Bea",
+        "description": "Bea."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "cast": [
+          {},
+          {
+            "character": "a"
+          },
+          {
+            "character": "b"
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        }
+      ],
+      "players": [
+        "p"
+      ]
+    },
+    "messages": [
+      {
+        "id": "r1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "Kai's boat is late."
+          }
+        ]
+      },
+      {
+        "id": "r2",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "Kaiden waves."
+          }
+        ]
+      },
+      {
+        "id": "r3",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "KAI_ROOM is locked."
+          }
+        ]
+      },
+      {
+        "id": "r4",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "café au lait"
+          }
+        ]
+      },
+      {
+        "id": "r5",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "女王様がいる"
+          }
+        ]
+      },
+      {
+        "id": "r6",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "ΣΊΣΥΦΟΣ pushes the stone."
+          }
+        ]
+      },
+      {
+        "id": "r7",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "Down the STRASSE."
+          }
+        ]
+      },
+      {
+        "id": "r8",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "İstanbul at dawn."
+          }
+        ]
+      },
+      {
+        "id": "r9",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "Dragons sleep below."
+          }
+        ]
+      },
+      {
+        "id": "r10",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "I whisper the vault code.",
+            "knownBy": [
+              "a"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "r11",
+        "from": "player",
+        "hidden": true,
+        "content": [
+          {
+            "speaker": "p",
+            "text": "I hide the rope."
+          }
+        ]
+      },
+      {
+        "id": "r12",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "Where is the lantern?"
+          }
+        ]
+      },
+      {
+        "id": "c1",
+        "parent": "r12",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "Hello?"
+          }
+        ]
+      },
+      {
+        "id": "c2",
+        "parent": "c1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "Anyone?"
+          }
+        ]
+      },
+      {
+        "id": "h1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "The beacon is lit."
+          }
+        ]
+      },
+      {
+        "id": "h2",
+        "parent": "h1",
+        "from": "player",
+        "hidden": true,
+        "content": [
+          {
+            "speaker": "p",
+            "text": "I hide."
+          }
+        ]
+      },
+      {
+        "id": "h3",
+        "parent": "h2",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "Now what?"
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "cel",
+      "name": "a key matches before an apostrophe",
+      "at": "r1",
+      "expr": "hit('Kai')",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "case is ignored",
+      "at": "r1",
+      "expr": "hit('kai') && hit('BOAT')",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "a key never matches part of a word",
+      "at": "r1",
+      "expr": "hit('boa')",
+      "expect": false
+    },
+    {
+      "type": "cel",
+      "name": "the speaker's name is scanned",
+      "at": "r1",
+      "expr": "hit('Pat')",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "a longer word doesn't match",
+      "at": "r2",
+      "expr": "hit('Kai')",
+      "expect": false
+    },
+    {
+      "type": "cel",
+      "name": "an underscore isn't a letter, mark or number, so the word ends there",
+      "at": "r3",
+      "expr": "hit('kai')",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "a combining mark continues the word",
+      "at": "r4",
+      "expr": "hit('cafe')",
+      "expect": false
+    },
+    {
+      "type": "cel",
+      "name": "a key in Han or Hiragana matches anywhere",
+      "at": "r5",
+      "expr": "hit('女王')",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "simple case folding folds final sigma and accented capitals",
+      "at": "r6",
+      "expr": "hit('σίσυφος')",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "simple case folding doesn't turn ß into ss",
+      "at": "r7",
+      "expr": "hit('straße')",
+      "expect": false
+    },
+    {
+      "type": "cel",
+      "name": "simple case folding leaves a capital dotted I alone",
+      "at": "r8",
+      "expr": "hit('istanbul')",
+      "expect": false
+    },
+    {
+      "type": "cel",
+      "name": "a regex key matches anywhere",
+      "at": "r9",
+      "expr": "hit('/ragon/')",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "and case-sensitively without i",
+      "at": "r9",
+      "expr": "hit('/dragons?/')",
+      "expect": false
+    },
+    {
+      "type": "cel",
+      "name": "the flag i ignores case",
+      "at": "r9",
+      "expr": "hit('/dragons?/i')",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "the empty key never matches",
+      "at": "r9",
+      "expr": "hit('')",
+      "expect": false
+    },
+    {
+      "type": "cel",
+      "name": "a part is scanned for whoever knows it",
+      "at": "r10",
+      "expr": "hit('vault')",
+      "expect": true,
+      "char": "a"
+    },
+    {
+      "type": "cel",
+      "name": "a part isn't scanned for whoever doesn't",
+      "at": "r10",
+      "expr": "hit('vault')",
+      "expect": false,
+      "char": "b"
+    },
+    {
+      "type": "cel",
+      "name": "nor for the narrator, whom its knownBy leaves out",
+      "at": "r10",
+      "expr": "hit('vault')",
+      "expect": false
+    },
+    {
+      "type": "cel",
+      "name": "hidden messages aren't scanned",
+      "at": "r11",
+      "expr": "hit('rope')",
+      "expect": false
+    },
+    {
+      "type": "cel",
+      "name": "four messages are scanned by default",
+      "at": "c2",
+      "expr": "hit('lantern')",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "scanDepth limits the messages scanned",
+      "at": "c2",
+      "expr": "hit('lantern')",
+      "expect": false,
+      "scanDepth": 2
+    },
+    {
+      "type": "cel",
+      "name": "hidden messages don't count toward scanDepth",
+      "at": "h3",
+      "expr": "hit('beacon')",
+      "scanDepth": 2,
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "without at nothing is scanned",
+      "expr": "hit('Kai')",
+      "expect": false
+    },
+    {
+      "type": "check",
+      "expect": {
+        "codes": []
+      }
+    }
+  ]
+}

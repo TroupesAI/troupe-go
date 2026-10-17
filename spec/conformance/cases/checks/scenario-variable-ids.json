@@ -1,0 +1,61 @@
+{
+  "description": "A scenario variable can't take a character's or world's ID (Format 2.3): DUPLICATE_ID",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Ann."
+      }
+    ],
+    "worlds": [
+      {
+        "id": "w",
+        "name": "W"
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "variables": [
+          {
+            "id": "time",
+            "type": "int",
+            "description": "d"
+          },
+          {
+            "id": "w",
+            "type": "bool",
+            "description": "clashes with the world's ID"
+          },
+          {
+            "id": "a",
+            "type": "bool",
+            "description": "clashes with the character's ID"
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "expect": {
+        "codes": [
+          "DUPLICATE_ID"
+        ],
+        "includes": [
+          {
+            "code": "DUPLICATE_ID",
+            "at": "/scenarios/0/variables/1/id"
+          },
+          {
+            "code": "DUPLICATE_ID",
+            "at": "/scenarios/0/variables/2/id"
+          }
+        ]
+      }
+    }
+  ]
+}

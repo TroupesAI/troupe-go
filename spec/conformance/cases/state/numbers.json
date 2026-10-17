@@ -1,0 +1,153 @@
+{
+  "description": "Integers (Format 2.2, 8.5, 9): int values within ±(2^53 − 1) are valid and render as decimal integers, and a number written with a zero fraction, such as 8.0, is an integer",
+  "bundle": {
+    "kind": "bundle",
+    "scenarios": [
+      {
+        "id": "s",
+        "variables": [
+          {
+            "id": "x",
+            "type": "int",
+            "by": [
+              "player"
+            ],
+            "description": "d"
+          },
+          {
+            "id": "big",
+            "type": "int",
+            "initial": 9007199254740991,
+            "description": "d"
+          },
+          {
+            "id": "small",
+            "type": "int",
+            "initial": -9007199254740991,
+            "description": "d"
+          },
+          {
+            "id": "whole",
+            "type": "int",
+            "initial": 8.0,
+            "description": "d"
+          },
+          {
+            "id": "bounded",
+            "type": "int",
+            "min": -9007199254740991,
+            "max": 9007199254740991,
+            "initial": 0,
+            "description": "d"
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        }
+      ],
+      "players": [
+        "p"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "set 1"
+          }
+        ],
+        "changes": [
+          {
+            "by": "player",
+            "set": {
+              "state.x": 3.0
+            }
+          }
+        ]
+      },
+      {
+        "id": "2",
+        "parent": "1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "set 2"
+          }
+        ],
+        "changes": [
+          {
+            "by": "player",
+            "set": {
+              "state.x": -9007199254740991,
+              "state.bounded": 9007199254740991
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "state",
+      "expect": {
+        "state.big": 9007199254740991,
+        "state.small": -9007199254740991,
+        "state.whole": 8,
+        "state.bounded": 0
+      }
+    },
+    {
+      "type": "state",
+      "name": "a recorded 3.0 is the integer 3",
+      "at": "1",
+      "expect": {
+        "state.x": 3
+      }
+    },
+    {
+      "type": "state",
+      "at": "2",
+      "expect": {
+        "state.x": -9007199254740991,
+        "state.bounded": 9007199254740991
+      }
+    },
+    {
+      "type": "macro",
+      "name": "ints render as decimal integers; 8.0 renders as 8",
+      "text": "{{state.big}} {{state.small}} {{state.whole}}",
+      "expect": "9007199254740991 -9007199254740991 8"
+    },
+    {
+      "type": "macro",
+      "at": "1",
+      "text": "{{state.x}}",
+      "expect": "3"
+    },
+    {
+      "type": "cel",
+      "expr": "state.whole == 8 && state.big == 9007199254740991 && state.small < 0",
+      "expect": true
+    },
+    {
+      "type": "check",
+      "expect": {
+        "codes": []
+      }
+    }
+  ]
+}

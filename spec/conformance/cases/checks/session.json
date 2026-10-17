@@ -1,0 +1,220 @@
+{
+  "description": "Reference checks on a session (Format 11, 15.3): openings on roots, the message forest, players, recorded values and activations",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Ann.",
+        "entries": [
+          {
+            "id": "e",
+            "text": "x"
+          }
+        ]
+      },
+      {
+        "id": "b",
+        "name": "Bea",
+        "description": "Bea."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "cast": [
+          {},
+          {
+            "character": "a"
+          },
+          {
+            "character": "b"
+          }
+        ],
+        "variables": [
+          {
+            "id": "hp",
+            "type": "int",
+            "min": 0,
+            "max": 10,
+            "description": "d"
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        },
+        {
+          "id": "q",
+          "name": "Quinn",
+          "description": "Quinn."
+        }
+      ],
+      "players": [
+        "p",
+        "ghost",
+        "b"
+      ],
+      "head": "zz"
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "system",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "x"
+          }
+        ],
+        "opening": "missing",
+        "changes": [
+          {
+            "by": "opening",
+            "set": {
+              "state.hp": 2.5,
+              "state.mp": 3
+            }
+          }
+        ]
+      },
+      {
+        "id": "2",
+        "parent": "9",
+        "from": "player",
+        "content": [
+          {
+            "text": "orphan"
+          }
+        ]
+      },
+      {
+        "id": "3",
+        "parent": "1",
+        "from": "model",
+        "char": "a",
+        "activated": [
+          "a/e",
+          "a/nope",
+          "session/later"
+        ],
+        "content": [
+          {
+            "speaker": "ghost",
+            "text": "x"
+          }
+        ],
+        "changes": [
+          {
+            "by": "model",
+            "set": {
+              "state.hp": "lots",
+              "scene.present": [
+                "a",
+                "zed"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "id": "4",
+        "parent": "3",
+        "from": "player",
+        "content": [
+          {
+            "text": "y"
+          }
+        ],
+        "entries": [
+          {
+            "id": "later",
+            "text": "added here"
+          }
+        ]
+      },
+      {
+        "id": "r2",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "q",
+            "text": "A second root is fine."
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "expect": {
+        "codes": [
+          "INVALID_PLAYER",
+          "INVALID_VALUE",
+          "UNKNOWN_CHARACTER",
+          "UNKNOWN_ENTRY",
+          "UNKNOWN_MESSAGE",
+          "UNKNOWN_OPENING",
+          "UNKNOWN_VARIABLE"
+        ],
+        "includes": [
+          {
+            "code": "UNKNOWN_OPENING",
+            "at": "message:1/opening"
+          },
+          {
+            "code": "INVALID_PLAYER",
+            "at": "header/players/1"
+          },
+          {
+            "code": "UNKNOWN_MESSAGE",
+            "at": "message:2/parent"
+          },
+          {
+            "code": "UNKNOWN_MESSAGE",
+            "at": "header/head"
+          },
+          {
+            "code": "INVALID_VALUE",
+            "at": "message:1/changes/0/set/state.hp"
+          },
+          {
+            "code": "UNKNOWN_VARIABLE",
+            "at": "message:1/changes/0/set/state.mp"
+          },
+          {
+            "code": "INVALID_VALUE",
+            "at": "message:3/changes/0/set/state.hp"
+          },
+          {
+            "code": "UNKNOWN_CHARACTER",
+            "at": "message:3/changes/0/set/scene.present/1"
+          },
+          {
+            "code": "UNKNOWN_CHARACTER",
+            "at": "message:3/content/0/speaker"
+          },
+          {
+            "code": "UNKNOWN_ENTRY",
+            "at": "message:3/activated/1"
+          },
+          {
+            "code": "UNKNOWN_ENTRY",
+            "at": "message:3/activated/2"
+          }
+        ]
+      }
+    }
+  ]
+}

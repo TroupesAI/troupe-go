@@ -1,0 +1,100 @@
+{
+  "description": "Credits and spoilers (Format 3, 6): bundle credits and a spoiler cast member are valid, and a spoiler cast member is an ordinary cast member in the state, present from the start (Format 8.6)",
+  "bundle": {
+    "kind": "bundle",
+    "name": "The Cellar",
+    "authors": [
+      "Sakura"
+    ],
+    "credits": "Based on [The Cellar](https://example.com/cellar) by Sakura. CC BY 4.0.",
+    "characters": [
+      {
+        "id": "ann",
+        "name": "Ann",
+        "description": "A guide."
+      },
+      {
+        "id": "ghost",
+        "name": "The Ghost",
+        "description": "A ghost in the cellar."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "cast": [
+          {},
+          {
+            "character": "ann"
+          },
+          {
+            "character": "ghost",
+            "spoiler": true,
+            "notes": "Hidden from the cast list until first present."
+          }
+        ],
+        "openings": [
+          {
+            "id": "o",
+            "content": [
+              {
+                "speaker": "ann",
+                "text": "Mind the stairs."
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        }
+      ],
+      "players": [
+        "p"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "opening": "o",
+        "from": "system",
+        "content": [
+          {
+            "speaker": "ann",
+            "text": "Mind the stairs."
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "name": "credits and spoiler validate",
+      "expect": {
+        "codes": []
+      }
+    },
+    {
+      "type": "state",
+      "name": "a spoiler cast member is an ordinary cast member",
+      "at": "1",
+      "expect": {
+        "scene.present": [
+          "p",
+          "ann",
+          "ghost"
+        ]
+      }
+    }
+  ]
+}

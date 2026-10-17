@@ -1,0 +1,163 @@
+{
+  "description": "turn counts player messages on the path, inclusive (Format 10.1, 11.1): an opening root is round 0, a system message adds none, and a hidden player message still counts (Format 11.4)",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Ann."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "cast": [
+          {},
+          {
+            "character": "a"
+          }
+        ],
+        "variables": [
+          {
+            "id": "n",
+            "type": "int",
+            "by": [
+              "player"
+            ],
+            "description": "d"
+          }
+        ],
+        "openings": [
+          {
+            "id": "o",
+            "content": [
+              {
+                "text": "Begin."
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        }
+      ],
+      "players": [
+        "p"
+      ]
+    },
+    "messages": [
+      {
+        "id": "r",
+        "opening": "o",
+        "from": "system",
+        "content": [
+          {
+            "text": "Begin."
+          }
+        ]
+      },
+      {
+        "id": "2",
+        "parent": "r",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "x"
+          }
+        ]
+      },
+      {
+        "id": "3",
+        "parent": "2",
+        "from": "model",
+        "char": "a",
+        "content": [
+          {
+            "speaker": "a",
+            "text": "y"
+          }
+        ]
+      },
+      {
+        "id": "4",
+        "parent": "3",
+        "from": "system",
+        "content": [],
+        "changes": [
+          {
+            "by": "player",
+            "set": {
+              "state.n": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "5",
+        "parent": "4",
+        "from": "player",
+        "hidden": true,
+        "content": [
+          {
+            "speaker": "p",
+            "text": "z"
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "cel",
+      "name": "an opening root is round 0",
+      "at": "r",
+      "expr": "turn == 0",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "at": "2",
+      "expr": "turn == 1",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "a model message has its parent's round",
+      "at": "3",
+      "expr": "turn == 1",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "a records-only system message adds no round",
+      "at": "4",
+      "expr": "turn == 1 && state.n == 1",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "a hidden player message counts",
+      "at": "5",
+      "expr": "turn == 2",
+      "expect": true
+    },
+    {
+      "type": "check",
+      "expect": {
+        "codes": []
+      }
+    }
+  ]
+}

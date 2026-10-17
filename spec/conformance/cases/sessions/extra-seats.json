@@ -1,0 +1,90 @@
+{
+  "description": "Players beyond the seats (Format 8.3, 8.6, 11.2): a header character listed in players when every seat is filled gets a seat after the scenario cast, before the joiners; added players are in the cast, present from the start and keys of cast maps",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Ann."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "cast": [
+          {},
+          {
+            "character": "a"
+          }
+        ],
+        "variables": [
+          {
+            "id": "trust",
+            "type": "int",
+            "of": "cast",
+            "initial": 50,
+            "description": "d"
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        },
+        {
+          "id": "q",
+          "name": "Quinn",
+          "description": "Quinn."
+        },
+        {
+          "id": "j",
+          "name": "Jo",
+          "description": "A stranger."
+        }
+      ],
+      "players": [
+        "p",
+        "q"
+      ]
+    },
+    "messages": []
+  },
+  "tests": [
+    {
+      "type": "cel",
+      "name": "both are players, in the order players lists them",
+      "expr": "players == ['p', 'q']",
+      "expect": true
+    },
+    {
+      "type": "state",
+      "name": "the whole cast but the joiner is present at first, in cast order: p's seat, a, q's new seat; every cast character, the joiner too, is a key of a cast map",
+      "expect": {
+        "scene.present": [
+          "p",
+          "a",
+          "q"
+        ],
+        "state.trust.p": 50,
+        "state.trust.a": 50,
+        "state.trust.q": 50,
+        "state.trust.j": 50
+      }
+    },
+    {
+      "type": "check",
+      "expect": {
+        "codes": []
+      }
+    }
+  ]
+}

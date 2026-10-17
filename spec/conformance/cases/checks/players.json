@@ -1,0 +1,75 @@
+{
+  "description": "A cast member marked player that players doesn't list is a seat no player fills, left out of the cast (Format 6.1, 8.6, 11.2): here a person plays b instead, which is valid",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Ann."
+      },
+      {
+        "id": "b",
+        "name": "Bea",
+        "description": "Bea."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "cast": [
+          {
+            "character": "a",
+            "player": true
+          },
+          {
+            "character": "b"
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "players": [
+        "b"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "b",
+            "text": "Hi."
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "expect": {
+        "codes": []
+      }
+    },
+    {
+      "type": "state",
+      "name": "a isn't in the cast, so only b is present",
+      "expect": {
+        "scene.present": [
+          "b"
+        ]
+      }
+    },
+    {
+      "type": "cel",
+      "expr": "players == ['b'] && user == 'b'",
+      "expect": true
+    }
+  ]
+}

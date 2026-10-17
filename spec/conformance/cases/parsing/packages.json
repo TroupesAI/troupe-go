@@ -1,0 +1,130 @@
+{
+  "description": "Packages (Format 12.3, 15.2): bundle.json at the root, sessions under sessions/, which a bundle reader may leave unread; absolute paths, .. segments, backslashes, names equal when compared case-insensitively, encryption and symbolic links are PARSE; a directory entry (a name ending in /) and an unreferenced file outside the path grammar aren't part of the package",
+  "tests": [
+    {
+      "type": "parse",
+      "name": "a package",
+      "kind": "package",
+      "base64": "UEsDBBQAAAAIAAAAS1111nDGIQAAACEAAAALAAAAYnVuZGxlLmpzb26rViopyi8tSFWyUjLQMzRR0lHKzsxLAfKSSvNSclKVagFQSwECFAMUAAAACAAAAEtdddZwxiEAAAAhAAAACwAAAAAAAAAAAAAAgIEAAAAAYnVuZGxlLmpzb25QSwUGAAAAAAEAAQA5AAAASgAAAAAA",
+      "expect": {
+        "codes": []
+      }
+    },
+    {
+      "type": "parse",
+      "name": "a package with a session",
+      "note": "A bundle reader accepts it too, and may leave the session unread (Format 15.2).",
+      "kind": "package",
+      "base64": "UEsDBBQAAAAIAAAAS12WOE4RNwAAADoAAAALAAAAYnVuZGxlLmpzb26rViopyi8tSFWyUjLQMzRR0lHKzsxLAfKSSvNSclKB/OLk1LzEosz8YiWr6GqlTJBcsVJtbC0AUEsDBBQAAAAIAAAAS12EKBbaWQAAAGgAAAAjAAAAc2Vzc2lvbnMvZmlyc3QudHJvdXBlLXNlc3Npb24uanNvbmwViT0KgDAMRneP8c0iCk6ewDuIQ6kRgppIW0Epvbvp9n4yUtDnJkzou2FEi4NlM4sUI6tYiJ7EBdYaUZoMrn+wswe9DO/TfRTMvUoiSZiWjESvAWbuUNbS/FBLAQIUAxQAAAAIAAAAS12WOE4RNwAAADoAAAALAAAAAAAAAAAAAACAgQAAAABidW5kbGUuanNvblBLAQIUAxQAAAAIAAAAS12EKBbaWQAAAGgAAAAjAAAAAAAAAAAAAACAgWAAAABzZXNzaW9ucy9maXJzdC50cm91cGUtc2Vzc2lvbi5qc29ubFBLBQYAAAAAAgACAIoAAAD6AAAAAAA=",
+      "expect": {
+        "codes": []
+      }
+    },
+    {
+      "type": "parse",
+      "name": "a directory entry isn't part of the package",
+      "kind": "package",
+      "base64": "UEsDBBQAAAAAAAAAS10AAAAAAAAAAAAAAAAJAAAAc2Vzc2lvbnMvUEsDBBQAAAAIAAAAS12WOE4RNwAAADoAAAALAAAAYnVuZGxlLmpzb26rViopyi8tSFWyUjLQMzRR0lHKzsxLAfKSSvNSclKB/OLk1LzEosz8YiWr6GqlTJBcsVJtbC0AUEsBAhQDFAAAAAAAAABLXQAAAAAAAAAAAAAAAAkAAAAAAAAAAAAAAMBBAAAAAHNlc3Npb25zL1BLAQIUAxQAAAAIAAAAS12WOE4RNwAAADoAAAALAAAAAAAAAAAAAACAgScAAABidW5kbGUuanNvblBLBQYAAAAAAgACAHAAAACHAAAAAAA=",
+      "expect": {
+        "codes": []
+      }
+    },
+    {
+      "type": "parse",
+      "name": "no bundle.json",
+      "kind": "package",
+      "base64": "UEsDBBQAAAAIAAAAS12EKBbaWQAAAGgAAAAjAAAAc2Vzc2lvbnMvZmlyc3QudHJvdXBlLXNlc3Npb24uanNvbmwViT0KgDAMRneP8c0iCk6ewDuIQ6kRgppIW0Epvbvp9n4yUtDnJkzou2FEi4NlM4sUI6tYiJ7EBdYaUZoMrn+wswe9DO/TfRTMvUoiSZiWjESvAWbuUNbS/FBLAQIUAxQAAAAIAAAAS12EKBbaWQAAAGgAAAAjAAAAAAAAAAAAAACAgQAAAABzZXNzaW9ucy9maXJzdC50cm91cGUtc2Vzc2lvbi5qc29ubFBLBQYAAAAAAQABAFEAAACaAAAAAAA=",
+      "expect": {
+        "codes": [
+          "PARSE"
+        ]
+      }
+    },
+    {
+      "type": "parse",
+      "name": "a .. segment",
+      "kind": "package",
+      "base64": "UEsDBBQAAAAIAAAAS1111nDGIQAAACEAAAALAAAAYnVuZGxlLmpzb26rViopyi8tSFWyUjLQMzRR0lHKzsxLAfKSSvNSclKVagFQSwMEFAAAAAgAAABLXUO/pqMEAAAAAgAAAAwAAAAuLi9ldmlsLmpzb26rrgUAUEsBAhQDFAAAAAgAAABLXXXWcMYhAAAAIQAAAAsAAAAAAAAAAAAAAICBAAAAAGJ1bmRsZS5qc29uUEsBAhQDFAAAAAgAAABLXUO/pqMEAAAAAgAAAAwAAAAAAAAAAAAAAICBSgAAAC4uL2V2aWwuanNvblBLBQYAAAAAAgACAHMAAAB4AAAAAAA=",
+      "expect": {
+        "codes": [
+          "PARSE"
+        ]
+      }
+    },
+    {
+      "type": "parse",
+      "name": "an absolute path",
+      "kind": "package",
+      "base64": "UEsDBBQAAAAIAAAAS1111nDGIQAAACEAAAALAAAAYnVuZGxlLmpzb26rViopyi8tSFWyUjLQMzRR0lHKzsxLAfKSSvNSclKVagFQSwMEFAAAAAgAAABLXUO/pqMEAAAAAgAAAAoAAAAvZXZpbC5qc29uq64FAFBLAQIUAxQAAAAIAAAAS1111nDGIQAAACEAAAALAAAAAAAAAAAAAACAgQAAAABidW5kbGUuanNvblBLAQIUAxQAAAAIAAAAS11Dv6ajBAAAAAIAAAAKAAAAAAAAAAAAAACAgUoAAAAvZXZpbC5qc29uUEsFBgAAAAACAAIAcQAAAHYAAAAAAA==",
+      "expect": {
+        "codes": [
+          "PARSE"
+        ]
+      }
+    },
+    {
+      "type": "parse",
+      "name": "a backslash",
+      "kind": "package",
+      "base64": "UEsDBBQAAAAIAAAAS1111nDGIQAAACEAAAALAAAAYnVuZGxlLmpzb26rViopyi8tSFWyUjLQMzRR0lHKzsxLAfKSSvNSclKVagFQSwMEFAAAAAgAAABLXYMW3IwDAAAAAQAAAAsAAABtZWRpYVxhLnBuZ6sAAFBLAQIUAxQAAAAIAAAAS1111nDGIQAAACEAAAALAAAAAAAAAAAAAACAgQAAAABidW5kbGUuanNvblBLAQIUAxQAAAAIAAAAS12DFtyMAwAAAAEAAAALAAAAAAAAAAAAAACAgUoAAABtZWRpYVxhLnBuZ1BLBQYAAAAAAgACAHIAAAB2AAAAAAA=",
+      "expect": {
+        "codes": [
+          "PARSE"
+        ]
+      }
+    },
+    {
+      "type": "parse",
+      "name": "an unreferenced entry outside the path grammar isn't part of the package",
+      "kind": "package",
+      "base64": "UEsDBBQAAAAIAAAAS1111nDGIQAAACEAAAALAAAAYnVuZGxlLmpzb26rViopyi8tSFWyUjLQMzRR0lHKzsxLAfKSSvNSclKVagFQSwMEFAAAAAgAAABLXYMW3IwDAAAAAQAAAA0AAABtZWRpYS8uaGlkZGVuqwAAUEsBAhQDFAAAAAgAAABLXXXWcMYhAAAAIQAAAAsAAAAAAAAAAAAAAICBAAAAAGJ1bmRsZS5qc29uUEsBAhQDFAAAAAgAAABLXYMW3IwDAAAAAQAAAA0AAAAAAAAAAAAAAICBSgAAAG1lZGlhLy5oaWRkZW5QSwUGAAAAAAIAAgB0AAAAeAAAAAAA",
+      "expect": {
+        "codes": []
+      }
+    },
+    {
+      "type": "parse",
+      "name": "names that differ only in case",
+      "kind": "package",
+      "base64": "UEsDBBQAAAAIAAAAS1111nDGIQAAACEAAAALAAAAYnVuZGxlLmpzb26rViopyi8tSFWyUjLQMzRR0lHKzsxLAfKSSvNSclKVagFQSwMEFAAAAAgAAABLXXXWcMYhAAAAIQAAAAsAAABCdW5kbGUuanNvbqtWKinKLy1IVbJSMtAzNFHSUcrOzEsB8pJK81JyUpVqAVBLAQIUAxQAAAAIAAAAS1111nDGIQAAACEAAAALAAAAAAAAAAAAAACAgQAAAABidW5kbGUuanNvblBLAQIUAxQAAAAIAAAAS1111nDGIQAAACEAAAALAAAAAAAAAAAAAACAgUoAAABCdW5kbGUuanNvblBLBQYAAAAAAgACAHIAAACUAAAAAAA=",
+      "expect": {
+        "codes": [
+          "PARSE"
+        ]
+      }
+    },
+    {
+      "type": "parse",
+      "name": "an encrypted entry",
+      "kind": "package",
+      "base64": "UEsDBBQAAQAIAAAAS10+XU6MIQAAACEAAAALAAAAYnVuZGxlLmpzb26rViopyi8tSFWyUjLQMzRW0lHKzsxLAfKSSvNSclKVagFQSwECFAMUAAEACAAAAEtdPl1OjCEAAAAhAAAACwAAAAAAAAAAAAAAgIEAAAAAYnVuZGxlLmpzb25QSwUGAAAAAAEAAQA5AAAASgAAAAAA",
+      "expect": {
+        "codes": [
+          "PARSE"
+        ]
+      }
+    },
+    {
+      "type": "parse",
+      "name": "a symbolic link",
+      "kind": "package",
+      "base64": "UEsDBBQAAAAIAAAAS1111nDGIQAAACEAAAALAAAAYnVuZGxlLmpzb26rViopyi8tSFWyUjLQMzRR0lHKzsxLAfKSSvNSclKVagFQSwMEFAAAAAgAAABLXQq5HykNAAAACwAAAAoAAABtZWRpYS9saW5r008tSdYvSCwuLk8BAFBLAQIUAxQAAAAIAAAAS1111nDGIQAAACEAAAALAAAAAAAAAAAAAACAgQAAAABidW5kbGUuanNvblBLAQIUAxQAAAAIAAAAS10KuR8pDQAAAAsAAAAKAAAAAAAAAAAAAAD/oUoAAABtZWRpYS9saW5rUEsFBgAAAAACAAIAcQAAAH8AAAAAAA==",
+      "expect": {
+        "codes": [
+          "PARSE"
+        ]
+      }
+    },
+    {
+      "type": "parse",
+      "name": "not a ZIP archive",
+      "kind": "package",
+      "base64": "UEsDBCBub3QgcmVhbGx5",
+      "expect": {
+        "codes": [
+          "PARSE"
+        ]
+      }
+    }
+  ]
+}

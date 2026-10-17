@@ -1,0 +1,78 @@
+{
+  "description": "Recorded values of a keyed variable (Format 8.3, 8.5, 15.3): each key's value is checked against the variable; an int outside min and max is still valid, since it is clamped (Format 8.6), and a value of another type is INVALID_VALUE",
+  "bundle": {
+    "kind": "bundle",
+    "scenarios": [
+      {
+        "id": "s",
+        "variables": [
+          {
+            "id": "bond",
+            "type": "int",
+            "of": [
+              "north",
+              "south"
+            ],
+            "initial": 3,
+            "min": 0,
+            "max": 5,
+            "description": "d"
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        }
+      ],
+      "players": [
+        "p"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "Hi."
+          }
+        ],
+        "changes": [
+          {
+            "by": "player",
+            "set": {
+              "state.bond.north": 9,
+              "state.bond.south": "x"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "expect": {
+        "codes": [
+          "INVALID_VALUE"
+        ],
+        "includes": [
+          {
+            "code": "INVALID_VALUE",
+            "at": "message:1/changes/0/set/state.bond.south"
+          }
+        ]
+      }
+    }
+  ]
+}

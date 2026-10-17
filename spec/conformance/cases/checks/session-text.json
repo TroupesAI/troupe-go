@@ -1,0 +1,87 @@
+{
+  "description": "A session's characters and entries are checked as a bundle's are (Format 9, 10.2, 15.3): an unknown macro in a header character or a session entry is UNKNOWN_MACRO, and a session entry's condition is checked with its scenario, without own",
+  "bundle": {
+    "kind": "bundle",
+    "scenarios": [
+      {
+        "id": "s",
+        "variables": [
+          {
+            "id": "v",
+            "type": "int",
+            "description": "d"
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat, {{nope}}."
+        }
+      ],
+      "players": [
+        "p"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "Note this."
+          }
+        ],
+        "entries": [
+          {
+            "id": "fine",
+            "when": "state.v > 0",
+            "text": "Pat has noted it."
+          },
+          {
+            "id": "no_own",
+            "when": "own.v > 0",
+            "text": "No own here."
+          },
+          {
+            "id": "macro",
+            "text": "{{state.nope}}"
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "expect": {
+        "codes": [
+          "CEL_ERROR",
+          "UNKNOWN_MACRO"
+        ],
+        "includes": [
+          {
+            "code": "UNKNOWN_MACRO",
+            "at": "header/characters/0/description"
+          },
+          {
+            "code": "CEL_ERROR",
+            "at": "message:1/entries/1/when"
+          },
+          {
+            "code": "UNKNOWN_MACRO",
+            "at": "message:1/entries/2/text"
+          }
+        ]
+      }
+    }
+  ]
+}

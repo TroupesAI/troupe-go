@@ -1,0 +1,258 @@
+{
+  "description": "CEL rules (Format 10.2): list and map literals hold one type; type names and whole state objects aren't values; state isn't indexed by computed strings; selecting char or user from a keyed variable is a CEL_ERROR; CEL's runtime errors (overflow, division by zero) make a condition false, and && and || absorb them; selecting an absent value is a runtime error, and has() is true exactly when the selection isn't one (Format 8.3, 10.2); hit() takes a valid literal key; own is a CEL_ERROR in a session entry's condition (Format 8.2); with no player, user is \"\"",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "zed",
+        "name": "Zed",
+        "description": "Not in the cast.",
+        "variables": [
+          {
+            "id": "mood",
+            "type": "string",
+            "initial": "calm",
+            "description": "d"
+          }
+        ]
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "cast": [
+          {}
+        ],
+        "variables": [
+          {
+            "id": "order",
+            "type": "int",
+            "of": [
+              "alpha",
+              "zeta"
+            ],
+            "initial": 1,
+            "description": "d"
+          },
+          {
+            "id": "inv",
+            "type": "int",
+            "of": "*",
+            "by": [
+              "player"
+            ],
+            "description": "d"
+          },
+          {
+            "id": "bell",
+            "type": "int",
+            "initial": 7,
+            "description": "d"
+          },
+          {
+            "id": "zero",
+            "type": "int",
+            "description": "d"
+          },
+          {
+            "id": "crew",
+            "type": "set",
+            "description": "d"
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "cel",
+      "name": "a mixed list literal is a CEL_ERROR",
+      "expr": "size([1, 'a']) == 2",
+      "expect": {
+        "checkError": true
+      }
+    },
+    {
+      "type": "cel",
+      "name": "a mixed map literal is a CEL_ERROR",
+      "expr": "size({'a': 1, 'b': 'x'}) == 2",
+      "expect": {
+        "checkError": true
+      }
+    },
+    {
+      "type": "cel",
+      "name": "type names aren't values",
+      "expr": "int == int",
+      "expect": {
+        "checkError": true
+      }
+    },
+    {
+      "type": "cel",
+      "name": "state is only selected from",
+      "expr": "state == state",
+      "expect": {
+        "checkError": true
+      }
+    },
+    {
+      "type": "cel",
+      "name": "scene is only selected from",
+      "expr": "size(scene) > 0",
+      "expect": {
+        "checkError": true
+      }
+    },
+    {
+      "type": "cel",
+      "name": "state isn't indexed by computed strings",
+      "expr": "state['bell'] == 7",
+      "expect": {
+        "checkError": true
+      }
+    },
+    {
+      "type": "cel",
+      "name": "a keyed variable is a map, selected or indexed",
+      "expr": "state.order['alpha'] == 1 && state.order.zeta == 1",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "selecting char from a keyed variable is a CEL_ERROR",
+      "expr": "state.order.char == 1",
+      "expect": {
+        "checkError": true
+      }
+    },
+    {
+      "type": "cel",
+      "expr": "state.order.user == 1",
+      "expect": {
+        "checkError": true
+      }
+    },
+    {
+      "type": "cel",
+      "name": "char is \"\", which names no key: a runtime error",
+      "expr": "state.order[char] == 1",
+      "expect": false
+    },
+    {
+      "type": "cel",
+      "name": "integer overflow is a runtime error",
+      "expr": "9223372036854775807 + 1 > 0",
+      "expect": false
+    },
+    {
+      "type": "cel",
+      "name": "division by zero is a runtime error, negated too",
+      "expr": "!(1 / 0 == 0)",
+      "expect": false
+    },
+    {
+      "type": "cel",
+      "name": "|| absorbs a runtime error when its other operand is true",
+      "expr": "1 / 0 == 0 || true",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "&& absorbs a runtime error when its other operand is false",
+      "expr": "!(1 / 0 == 0 && false)",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "int division truncates toward zero",
+      "expr": "state.bell / 2 == 3 && -7 / 2 == -3 && -7 % 2 == -1",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "the conditional operator",
+      "expr": "(state.bell > 100 ? 1 : 2) == 2",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "an absent key of a \"*\" map is absent",
+      "expr": "!has(state.inv.torch) && !('torch' in state.inv)",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "reading an absent key is a runtime error, not the default",
+      "expr": "state.inv.torch == 0",
+      "expect": false
+    },
+    {
+      "type": "cel",
+      "name": "has() is true for a present value, even zero or empty",
+      "expr": "has(state.zero) && has(state.crew)",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "selecting a variable whose owner isn't in use is a runtime error",
+      "expr": "state.zed.mood == 'calm'",
+      "expect": false
+    },
+    {
+      "type": "cel",
+      "name": "negated too",
+      "expr": "!(state.zed.mood == 'calm')",
+      "expect": false
+    },
+    {
+      "type": "cel",
+      "name": "has() of it is false, never an error",
+      "expr": "!has(state.zed.mood)",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "with no player, user is \"\" and players is []",
+      "expr": "user == '' && players == []",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "hit() takes a string literal",
+      "expr": "hit(user)",
+      "expect": {
+        "checkError": true
+      }
+    },
+    {
+      "type": "cel",
+      "name": "an invalid regex in hit() is a CEL_ERROR",
+      "expr": "hit('/(/')",
+      "expect": {
+        "checkError": true
+      }
+    },
+    {
+      "type": "cel",
+      "name": "hit() is available in every expression",
+      "expr": "hit('rope')",
+      "expect": false
+    },
+    {
+      "type": "cel",
+      "name": "a session entry's condition has no own",
+      "self": "session",
+      "expr": "own.bell == 7",
+      "expect": {
+        "checkError": true
+      }
+    },
+    {
+      "type": "check",
+      "expect": {
+        "codes": []
+      }
+    }
+  ]
+}

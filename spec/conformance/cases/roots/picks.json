@@ -1,0 +1,75 @@
+{
+  "description": "A root made from an opening holds the opening's content with each {{pick}} replaced by the option chosen (Format 9, 11.1), so the first message reads the same every time it is shown; its other macros still resolve at the root",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "ann",
+        "name": "Ann",
+        "description": "An innkeeper."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "openings": [
+          {
+            "id": "o",
+            "content": [
+              {
+                "speaker": "ann",
+                "text": "{{pick::Rain::Fog}} again, {{user}}."
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        }
+      ],
+      "players": [
+        "p"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "opening": "o",
+        "from": "system",
+        "content": [
+          {
+            "speaker": "ann",
+            "text": "Fog again, {{user}}."
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "expect": {
+        "codes": []
+      }
+    },
+    {
+      "type": "macro",
+      "name": "the chosen option, with {{user}} resolved at the root",
+      "part": {
+        "message": "1",
+        "index": 0
+      },
+      "expect": "Fog again, Pat."
+    }
+  ]
+}

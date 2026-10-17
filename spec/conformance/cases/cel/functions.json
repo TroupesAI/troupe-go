@@ -1,0 +1,165 @@
+{
+  "description": "CEL functions (Format 10.2): only size, has, in, contains, startsWith, endsWith and hit() are available; the comprehension macros, conversions, min, max, abs, matches() and the strings extension are a CEL_ERROR",
+  "bundle": {
+    "kind": "bundle",
+    "scenarios": [
+      {
+        "id": "s",
+        "variables": [
+          {
+            "id": "inv",
+            "type": "set",
+            "initial": [
+              "rope",
+              "torch"
+            ],
+            "description": "d"
+          },
+          {
+            "id": "rep",
+            "type": "int",
+            "of": [
+              "watch",
+              "guild"
+            ],
+            "initial": 2,
+            "description": "d"
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "cel",
+      "expr": "size('lantern') == 7 && size([1, 2]) == 2 && size({'a': 1}) == 1 && size(state.inv) == 2",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "expr": "has(state.inv) && has(state.rep.watch)",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "in tests list members and map keys",
+      "expr": "'rope' in state.inv && 'watch' in state.rep && !('crown' in state.rep)",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "expr": "'lantern'.contains('ter') && 'lantern'.startsWith('lan') && 'lantern'.endsWith('tern')",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "startsWith is case-sensitive",
+      "expr": "'Lantern'.startsWith('lan')",
+      "expect": false
+    },
+    {
+      "type": "cel",
+      "expr": "[1, 2].all(x, x > 0)",
+      "expect": {
+        "checkError": true
+      }
+    },
+    {
+      "type": "cel",
+      "expr": "[1, 2].exists(x, x > 1)",
+      "expect": {
+        "checkError": true
+      }
+    },
+    {
+      "type": "cel",
+      "expr": "[1, 2].exists_one(x, x > 1)",
+      "expect": {
+        "checkError": true
+      }
+    },
+    {
+      "type": "cel",
+      "expr": "[1, 2].map(x, x + 1) == [2, 3]",
+      "expect": {
+        "checkError": true
+      }
+    },
+    {
+      "type": "cel",
+      "expr": "[1, 2].filter(x, x > 1) == [2]",
+      "expect": {
+        "checkError": true
+      }
+    },
+    {
+      "type": "cel",
+      "expr": "int(2) == 2",
+      "expect": {
+        "checkError": true
+      }
+    },
+    {
+      "type": "cel",
+      "expr": "double(3) > 2",
+      "expect": {
+        "checkError": true
+      }
+    },
+    {
+      "type": "cel",
+      "expr": "string(42) == '42'",
+      "expect": {
+        "checkError": true
+      }
+    },
+    {
+      "type": "cel",
+      "expr": "bool(true)",
+      "expect": {
+        "checkError": true
+      }
+    },
+    {
+      "type": "cel",
+      "expr": "min(2, 5) == 2",
+      "expect": {
+        "checkError": true
+      }
+    },
+    {
+      "type": "cel",
+      "expr": "max(2, 5) == 5",
+      "expect": {
+        "checkError": true
+      }
+    },
+    {
+      "type": "cel",
+      "expr": "abs(-3) == 3",
+      "expect": {
+        "checkError": true
+      }
+    },
+    {
+      "type": "cel",
+      "expr": "'kai'.matches('k')",
+      "expect": {
+        "checkError": true
+      }
+    },
+    {
+      "type": "cel",
+      "expr": "'abc'.indexOf('b') == 1",
+      "expect": {
+        "checkError": true
+      }
+    },
+    {
+      "type": "check",
+      "expect": {
+        "codes": []
+      }
+    }
+  ]
+}

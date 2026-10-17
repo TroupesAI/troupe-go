@@ -1,0 +1,219 @@
+{
+  "description": "Keyed and owned variables (Format 8.2, 8.3, 9, 10.1): of cast (every cast character, players included), a list and \"*\" (open keys); character-owned variables read as state.<owner>.<id> and own.<id>; computed keys by brackets in CEL",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Ann.",
+        "variables": [
+          {
+            "id": "feelings",
+            "type": "int",
+            "of": "cast",
+            "initial": {
+              "*": 0,
+              "b": 3
+            },
+            "by": [
+              "model"
+            ],
+            "description": "How {{char}} feels about each person."
+          }
+        ]
+      },
+      {
+        "id": "b",
+        "name": "Bea",
+        "description": "Bea."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "variables": [
+          {
+            "id": "trust",
+            "type": "int",
+            "of": "cast",
+            "initial": {
+              "*": 50,
+              "a": 70
+            },
+            "min": 0,
+            "max": 100,
+            "by": [
+              "model"
+            ],
+            "description": "d"
+          },
+          {
+            "id": "hp",
+            "type": "int",
+            "of": "cast",
+            "initial": 10,
+            "description": "players included"
+          },
+          {
+            "id": "rep",
+            "type": "int",
+            "of": [
+              "watch",
+              "guild"
+            ],
+            "initial": {
+              "guild": 3
+            },
+            "description": "d"
+          },
+          {
+            "id": "inv",
+            "type": "int",
+            "of": "*",
+            "min": 0,
+            "description": "open keys appear when a change sets them"
+          },
+          {
+            "id": "mood",
+            "type": "enum",
+            "values": [
+              "calm",
+              "upset"
+            ],
+            "of": "cast",
+            "initial": "upset",
+            "description": "one value for every key"
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        }
+      ],
+      "players": [
+        "p"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "Start."
+          }
+        ],
+        "changes": [
+          {
+            "by": "model",
+            "set": {
+              "state.trust.b": 90,
+              "state.rep.watch": 2,
+              "state.mood.a": "calm"
+            }
+          },
+          {
+            "by": "player",
+            "set": {
+              "state.hp.p": 7,
+              "state.inv.torch": 2,
+              "state.a.feelings.p": 5
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "state",
+      "name": "initial values; open maps start empty",
+      "expect": {
+        "scene.present": [
+          "p",
+          "a",
+          "b"
+        ],
+        "state.trust.p": 50,
+        "state.trust.a": 70,
+        "state.trust.b": 50,
+        "state.hp.p": 10,
+        "state.hp.a": 10,
+        "state.hp.b": 10,
+        "state.rep.watch": 0,
+        "state.rep.guild": 3,
+        "state.mood.p": "upset",
+        "state.mood.a": "upset",
+        "state.mood.b": "upset",
+        "state.a.feelings.p": 0,
+        "state.a.feelings.a": 0,
+        "state.a.feelings.b": 3
+      },
+      "absent": [
+        "state.inv.torch"
+      ]
+    },
+    {
+      "type": "state",
+      "at": "1",
+      "expect": {
+        "state.trust.b": 90,
+        "state.rep.watch": 2,
+        "state.mood.a": "calm",
+        "state.hp.p": 7,
+        "state.inv.torch": 2,
+        "state.a.feelings.p": 5
+      }
+    },
+    {
+      "type": "cel",
+      "name": "own, state.<owner>.<id>, computed keys with brackets, and open keys",
+      "at": "1",
+      "char": "a",
+      "self": "a",
+      "expr": "own.feelings[user] == 5 && state.a.feelings.b == 3 && state.trust[char] == 70 && state.hp[user] == 7 && 'torch' in state.inv && state.inv.torch == 2 && !('lamp' in state.inv)",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "every cast character, the player too, is a key of a cast map",
+      "at": "1",
+      "char": "a",
+      "expr": "user in state.trust && user in state.hp && char in state.trust",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "own is typed per owner: the scenario has no own.feelings",
+      "expr": "own.feelings.b == 3",
+      "expect": {
+        "checkError": true
+      }
+    },
+    {
+      "type": "macro",
+      "name": "owner paths and char and user segments in macros; maps render with names, in cast order",
+      "at": "1",
+      "char": "a",
+      "text": "{{state.a.feelings.b}} {{state.trust.char}} {{state.hp.user}} | {{state.trust}} | {{state.inv}}",
+      "expect": "3 70 7 | Pat: 50, Ann: 70, Bea: 90 | torch: 2"
+    },
+    {
+      "type": "check",
+      "expect": {
+        "codes": []
+      }
+    }
+  ]
+}

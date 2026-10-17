@@ -1,0 +1,110 @@
+{
+  "description": "A takeover (Format 8.3, 11.2): a cast character listed in players is played by a person, and stays a key of cast maps, so recorded values stay valid",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Ann."
+      },
+      {
+        "id": "b",
+        "name": "Bea",
+        "description": "Bea."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "cast": [
+          {},
+          {
+            "character": "a"
+          },
+          {
+            "character": "b"
+          }
+        ],
+        "variables": [
+          {
+            "id": "trust",
+            "type": "int",
+            "of": "cast",
+            "initial": 50,
+            "by": [
+              "model"
+            ],
+            "description": "d"
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        }
+      ],
+      "players": [
+        "p",
+        "b"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "Hi."
+          }
+        ],
+        "changes": [
+          {
+            "by": "model",
+            "set": {
+              "state.trust.b": 90
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "cel",
+      "name": "b is a player",
+      "expr": "players == ['p', 'b']",
+      "expect": true
+    },
+    {
+      "type": "state",
+      "name": "trust keeps b's key and its recorded value",
+      "at": "1",
+      "expect": {
+        "state.trust.p": 50,
+        "state.trust.a": 50,
+        "state.trust.b": 90,
+        "scene.present": [
+          "p",
+          "a",
+          "b"
+        ]
+      }
+    },
+    {
+      "type": "check",
+      "expect": {
+        "codes": []
+      }
+    }
+  ]
+}

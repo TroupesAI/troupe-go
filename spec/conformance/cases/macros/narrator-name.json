@@ -1,0 +1,28 @@
+{
+  "description": "The narrator's name (Format 6, 9): {{char}} for the narrator renders as the scenario's narrator, so a story in any language names it naturally",
+  "bundle": {
+    "kind": "bundle",
+    "language": "es",
+    "scenarios": [
+      {
+        "id": "s",
+        "narrator": "el narrador"
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "macro",
+      "name": "for the narrator",
+      "text": "{{char}} describe la escena.",
+      "narrator": true,
+      "expect": "el narrador describe la escena."
+    },
+    {
+      "type": "check",
+      "expect": {
+        "codes": []
+      }
+    }
+  ]
+}

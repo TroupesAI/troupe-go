@@ -1,0 +1,109 @@
+{
+  "description": "A bundle (Format 2.2, 12.1, 15.3): the input must be I-JSON and a Troupe document of the expected kind, or it is PARSE. An escaped surrogate pair is one character. A bundle nested 64 deep is within the limits, and one nested 65 deep is PARSE (Format 14)",
+  "tests": [
+    {
+      "type": "parse",
+      "name": "the smallest bundle",
+      "kind": "bundle",
+      "text": "{\"troupe\":\"0.14\",\"kind\":\"bundle\"}",
+      "expect": {
+        "codes": []
+      }
+    },
+    {
+      "type": "parse",
+      "name": "not JSON",
+      "kind": "bundle",
+      "text": "{\"troupe\":",
+      "expect": {
+        "codes": [
+          "PARSE"
+        ]
+      }
+    },
+    {
+      "type": "parse",
+      "name": "invalid UTF-8",
+      "kind": "bundle",
+      "base64": "eyJ0cm91cGUiOiIwLjE0Iiwia2luZCI6ImJ1bmRsZSIsInRhZ3MiOlsi/yJdfQ==",
+      "expect": {
+        "codes": [
+          "PARSE"
+        ]
+      }
+    },
+    {
+      "type": "parse",
+      "name": "an escaped surrogate pair is a character",
+      "kind": "bundle",
+      "text": "{\"troupe\":\"0.14\",\"kind\":\"bundle\",\"tags\":[\"\\ud83d\\ude00\"]}",
+      "expect": {
+        "codes": []
+      }
+    },
+    {
+      "type": "parse",
+      "name": "depth 64",
+      "kind": "bundle",
+      "text": "{\"troupe\":\"0.14\",\"kind\":\"bundle\",\"ext\":{\"a.b\":[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}}",
+      "expect": {
+        "codes": []
+      }
+    },
+    {
+      "type": "parse",
+      "name": "depth 65",
+      "kind": "bundle",
+      "text": "{\"troupe\":\"0.14\",\"kind\":\"bundle\",\"ext\":{\"a.b\":[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}}",
+      "expect": {
+        "codes": [
+          "PARSE"
+        ]
+      }
+    },
+    {
+      "type": "parse",
+      "name": "a JSON array isn't a Troupe document",
+      "kind": "bundle",
+      "text": "[]",
+      "expect": {
+        "codes": [
+          "PARSE"
+        ]
+      }
+    },
+    {
+      "type": "parse",
+      "name": "an unknown kind",
+      "kind": "bundle",
+      "text": "{\"troupe\":\"0.14\",\"kind\":\"deck\"}",
+      "expect": {
+        "codes": [
+          "PARSE"
+        ]
+      }
+    },
+    {
+      "type": "parse",
+      "name": "a session header where a bundle is expected",
+      "kind": "bundle",
+      "text": "{\"troupe\":\"0.14\",\"kind\":\"session\",\"scenario\":\"s\"}",
+      "expect": {
+        "codes": [
+          "PARSE"
+        ]
+      }
+    },
+    {
+      "type": "parse",
+      "name": "a missing version fails the schema",
+      "kind": "bundle",
+      "text": "{\"kind\":\"bundle\"}",
+      "expect": {
+        "codes": [
+          "SCHEMA"
+        ]
+      }
+    }
+  ]
+}

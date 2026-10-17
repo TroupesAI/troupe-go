@@ -1,0 +1,78 @@
+{
+  "description": "Sessions (Format 11, 15.3): session lines end with LF or CRLF and the last newline is optional; an unreadable line is PARSE",
+  "tests": [
+    {
+      "type": "parse",
+      "name": "a session",
+      "kind": "session",
+      "text": "{\"troupe\":\"0.14\",\"kind\":\"session\",\"scenario\":\"s\"}\n{\"id\":\"1\",\"from\":\"player\",\"content\":[{\"text\":\"Hi.\"}]}\n{\"id\":\"2\",\"parent\":\"1\",\"from\":\"model\",\"content\":[{\"text\":\"Hello.\"}]}\n",
+      "expect": {
+        "codes": []
+      }
+    },
+    {
+      "type": "parse",
+      "name": "CRLF and no final newline",
+      "kind": "session",
+      "text": "{\"troupe\":\"0.14\",\"kind\":\"session\",\"scenario\":\"s\"}\r\n{\"id\":\"1\",\"from\":\"player\",\"content\":[{\"text\":\"Hi.\"}]}\r\n{\"id\":\"2\",\"parent\":\"1\",\"from\":\"model\",\"content\":[{\"text\":\"Hello.\"}]}",
+      "expect": {
+        "codes": []
+      }
+    },
+    {
+      "type": "parse",
+      "name": "an unreadable line is PARSE",
+      "kind": "session",
+      "text": "{\"troupe\":\"0.14\",\"kind\":\"session\",\"scenario\":\"s\"}\n{\"id\":\"1\",\"from\":\"player\",\"content\":[{\"text\":\"Hi.\"}]}\n{\"id\":\n{\"id\":\"2\",\"parent\":\"1\",\"from\":\"model\",\"content\":[{\"text\":\"Hello.\"}]}\n",
+      "expect": {
+        "codes": [
+          "PARSE"
+        ]
+      }
+    },
+    {
+      "type": "parse",
+      "name": "an unreadable header",
+      "kind": "session",
+      "text": "{\"troupe\":\"0.14\",\n{\"id\":\"1\",\"from\":\"player\",\"content\":[{\"text\":\"Hi.\"}]}\n",
+      "expect": {
+        "codes": [
+          "PARSE"
+        ]
+      }
+    },
+    {
+      "type": "parse",
+      "name": "an empty file",
+      "kind": "session",
+      "text": "",
+      "expect": {
+        "codes": [
+          "PARSE"
+        ]
+      }
+    },
+    {
+      "type": "parse",
+      "name": "a bundle where a session is expected",
+      "kind": "session",
+      "text": "{\"troupe\":\"0.14\",\"kind\":\"bundle\"}\n",
+      "expect": {
+        "codes": [
+          "PARSE"
+        ]
+      }
+    },
+    {
+      "type": "parse",
+      "name": "a message failing the schema at one value",
+      "kind": "session",
+      "text": "{\"troupe\":\"0.14\",\"kind\":\"session\",\"scenario\":\"s\"}\n{\"id\":\"1\",\"from\":\"player\",\"at\":\"yesterday\",\"content\":[{\"text\":\"x\"}]}\n{\"id\":\"2\",\"parent\":\"1\",\"from\":\"model\",\"content\":[{\"text\":\"y\"}]}\n",
+      "expect": {
+        "codes": [
+          "SCHEMA"
+        ]
+      }
+    }
+  ]
+}

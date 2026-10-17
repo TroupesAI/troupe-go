@@ -1,0 +1,104 @@
+{
+  "description": "Versions (Format 13, 15.3), against this 0.14 document: a file of any other version, minor or major, is UNSUPPORTED_VERSION; a troupe value that isn't major.minor fails the schema instead",
+  "tests": [
+    {
+      "type": "parse",
+      "name": "a newer minor",
+      "kind": "bundle",
+      "text": "{\"troupe\":\"0.15\",\"kind\":\"bundle\"}",
+      "expect": {
+        "codes": [
+          "UNSUPPORTED_VERSION"
+        ]
+      }
+    },
+    {
+      "type": "parse",
+      "name": "an older minor",
+      "kind": "bundle",
+      "text": "{\"troupe\":\"0.13\",\"kind\":\"bundle\"}",
+      "expect": {
+        "codes": [
+          "UNSUPPORTED_VERSION"
+        ]
+      }
+    },
+    {
+      "type": "parse",
+      "name": "0.9 is another minor, not 0.90",
+      "kind": "bundle",
+      "text": "{\"troupe\":\"0.9\",\"kind\":\"bundle\"}",
+      "expect": {
+        "codes": [
+          "UNSUPPORTED_VERSION"
+        ]
+      }
+    },
+    {
+      "type": "parse",
+      "name": "another major",
+      "kind": "bundle",
+      "text": "{\"troupe\":\"1.0\",\"kind\":\"bundle\"}",
+      "expect": {
+        "codes": [
+          "UNSUPPORTED_VERSION"
+        ]
+      }
+    },
+    {
+      "type": "parse",
+      "name": "another major with the same minor",
+      "kind": "bundle",
+      "text": "{\"troupe\":\"1.14\",\"kind\":\"bundle\"}",
+      "expect": {
+        "codes": [
+          "UNSUPPORTED_VERSION"
+        ]
+      }
+    },
+    {
+      "type": "parse",
+      "name": "a session of another minor",
+      "kind": "session",
+      "text": "{\"troupe\":\"0.15\",\"kind\":\"session\",\"scenario\":\"s\"}\n{\"id\":\"1\",\"from\":\"player\",\"content\":[{\"text\":\"Hi.\"}]}\n",
+      "expect": {
+        "codes": [
+          "UNSUPPORTED_VERSION"
+        ]
+      }
+    },
+    {
+      "type": "parse",
+      "name": "troupe with three parts",
+      "kind": "bundle",
+      "text": "{\"troupe\":\"0.14.0\",\"kind\":\"bundle\"}",
+      "expect": {
+        "codes": [
+          "SCHEMA"
+        ]
+      }
+    },
+    {
+      "type": "parse",
+      "name": "troupe as a number",
+      "kind": "bundle",
+      "text": "{\"troupe\":0.14,\"kind\":\"bundle\"}",
+      "expect": {
+        "codes": [
+          "SCHEMA"
+        ]
+      }
+    },
+    {
+      "type": "parse",
+      "name": "a session of another major version",
+      "kind": "session",
+      "text": "{\"troupe\":\"1.0\",\"kind\":\"session\",\"scenario\":\"s\"}\n{\"id\":\"1\",\"from\":\"player\",\"content\":[{\"text\":\"Hi.\"}]}\n",
+      "expect": {
+        "codes": [
+          "UNSUPPORTED_VERSION"
+        ]
+      }
+    }
+  ]
+}

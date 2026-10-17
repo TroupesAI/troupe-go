@@ -1,0 +1,225 @@
+{
+  "description": "A regex key that isn't valid is REGEX_ERROR (Format 7.2, 14, 15.3): one that doesn't compile; one with a form outside the shared syntax, such as an inline flag, a lookahead, a backreference, an unescaped bracket, an empty class, a range out of order, a quantifier after a boundary, a zero count or the category Cn; one with a flag other than i, m and s or a repeated flag; one nesting groups more than 100 deep; and one longer than 1000 bytes written out in full. checks/valid-regex-keys.json has the valid keys next to these limits",
+  "note": "Written out, (a{10}){n} is (aaaaaaaaaa) n times, 12n bytes: 1008 for n = 84 and 2400 for 200. a{999,} is 999 copies of a then a*, 1001 bytes. The slashes around a key aren't part of its pattern.",
+  "bundle": {
+    "kind": "bundle",
+    "scenarios": [
+      {
+        "id": "s",
+        "entries": [
+          {
+            "id": "bad",
+            "keys": [
+              "/[/"
+            ],
+            "text": "doesn't compile"
+          },
+          {
+            "id": "big",
+            "keys": [
+              "/(a{10}){200}/"
+            ],
+            "text": "2400 bytes written out"
+          },
+          {
+            "id": "mixed",
+            "keys": [
+              "/[/",
+              "lamp"
+            ],
+            "text": "one good key"
+          },
+          {
+            "id": "over",
+            "keys": [
+              "/(a{10}){84}/"
+            ],
+            "text": "1008 bytes written out"
+          },
+          {
+            "id": "open_over",
+            "keys": [
+              "/a{999,}/"
+            ],
+            "text": "1001 bytes written out"
+          },
+          {
+            "id": "deeper",
+            "keys": [
+              "/(((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((a)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))/"
+            ],
+            "text": "groups nested 101 deep"
+          },
+          {
+            "id": "inline_flag",
+            "keys": [
+              "/(?i)lamp/"
+            ],
+            "text": "an inline flag"
+          },
+          {
+            "id": "lookahead",
+            "keys": [
+              "/lamp(?=s)/"
+            ],
+            "text": "a lookahead"
+          },
+          {
+            "id": "backreference",
+            "keys": [
+              "/(a)\\1/"
+            ],
+            "text": "a backreference"
+          },
+          {
+            "id": "lone_bracket",
+            "keys": [
+              "/a]/"
+            ],
+            "text": "an unescaped ] outside a class"
+          },
+          {
+            "id": "bracket_in_class",
+            "keys": [
+              "/[[:alpha:]]/"
+            ],
+            "text": "an unescaped [ in a class"
+          },
+          {
+            "id": "empty_class",
+            "keys": [
+              "/[]/"
+            ],
+            "text": "an empty class"
+          },
+          {
+            "id": "reversed_range",
+            "keys": [
+              "/[z-a]/"
+            ],
+            "text": "a range out of order"
+          },
+          {
+            "id": "repeated_boundary",
+            "keys": [
+              "/\\b+/"
+            ],
+            "text": "a quantifier after \\b"
+          },
+          {
+            "id": "zero_count",
+            "keys": [
+              "/(a{40}){0}/"
+            ],
+            "text": "a zero count"
+          },
+          {
+            "id": "unassigned",
+            "keys": [
+              "/\\p{Cn}/"
+            ],
+            "text": "the category Cn"
+          },
+          {
+            "id": "unknown_flag",
+            "keys": [
+              "/lamp/x"
+            ],
+            "text": "a flag other than i, m and s"
+          },
+          {
+            "id": "repeated_flag",
+            "keys": [
+              "/lamp/ii"
+            ],
+            "text": "a repeated flag"
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "expect": {
+        "codes": [
+          "REGEX_ERROR"
+        ],
+        "includes": [
+          {
+            "code": "REGEX_ERROR",
+            "at": "/scenarios/0/entries/0/keys/0"
+          },
+          {
+            "code": "REGEX_ERROR",
+            "at": "/scenarios/0/entries/1/keys/0"
+          },
+          {
+            "code": "REGEX_ERROR",
+            "at": "/scenarios/0/entries/2/keys/0"
+          },
+          {
+            "code": "REGEX_ERROR",
+            "at": "/scenarios/0/entries/3/keys/0"
+          },
+          {
+            "code": "REGEX_ERROR",
+            "at": "/scenarios/0/entries/4/keys/0"
+          },
+          {
+            "code": "REGEX_ERROR",
+            "at": "/scenarios/0/entries/5/keys/0"
+          },
+          {
+            "code": "REGEX_ERROR",
+            "at": "/scenarios/0/entries/6/keys/0"
+          },
+          {
+            "code": "REGEX_ERROR",
+            "at": "/scenarios/0/entries/7/keys/0"
+          },
+          {
+            "code": "REGEX_ERROR",
+            "at": "/scenarios/0/entries/8/keys/0"
+          },
+          {
+            "code": "REGEX_ERROR",
+            "at": "/scenarios/0/entries/9/keys/0"
+          },
+          {
+            "code": "REGEX_ERROR",
+            "at": "/scenarios/0/entries/10/keys/0"
+          },
+          {
+            "code": "REGEX_ERROR",
+            "at": "/scenarios/0/entries/11/keys/0"
+          },
+          {
+            "code": "REGEX_ERROR",
+            "at": "/scenarios/0/entries/12/keys/0"
+          },
+          {
+            "code": "REGEX_ERROR",
+            "at": "/scenarios/0/entries/13/keys/0"
+          },
+          {
+            "code": "REGEX_ERROR",
+            "at": "/scenarios/0/entries/14/keys/0"
+          },
+          {
+            "code": "REGEX_ERROR",
+            "at": "/scenarios/0/entries/15/keys/0"
+          },
+          {
+            "code": "REGEX_ERROR",
+            "at": "/scenarios/0/entries/16/keys/0"
+          },
+          {
+            "code": "REGEX_ERROR",
+            "at": "/scenarios/0/entries/17/keys/0"
+          }
+        ]
+      }
+    }
+  ]
+}

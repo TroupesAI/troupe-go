@@ -1,0 +1,130 @@
+{
+  "description": "Characters who join during the session (Format 8.3, 8.6, 11.2): in the cast after the scenario cast, keys of cast maps, not present until a change adds them",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Ann."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "cast": [
+          {},
+          {
+            "character": "a"
+          }
+        ],
+        "variables": [
+          {
+            "id": "trust",
+            "type": "int",
+            "of": "cast",
+            "initial": 50,
+            "description": "d"
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        },
+        {
+          "id": "j",
+          "name": "Jo",
+          "description": "A stranger.",
+          "variables": [
+            {
+              "id": "jo_mood",
+              "type": "string",
+              "initial": "wary",
+              "description": "travels with Jo"
+            }
+          ]
+        }
+      ],
+      "players": [
+        "p"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "Who's there?"
+          }
+        ]
+      },
+      {
+        "id": "2",
+        "parent": "1",
+        "from": "model",
+        "char": "a",
+        "content": [
+          {
+            "speaker": "j",
+            "text": "Just me."
+          }
+        ],
+        "changes": [
+          {
+            "by": "model",
+            "set": {
+              "scene.present": [
+                "j",
+                "p",
+                "a"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "state",
+      "at": "1",
+      "expect": {
+        "scene.present": [
+          "p",
+          "a"
+        ],
+        "state.trust.j": 50,
+        "state.j.jo_mood": "wary"
+      }
+    },
+    {
+      "type": "state",
+      "name": "present after a change adds Jo, in cast order",
+      "at": "2",
+      "expect": {
+        "scene.present": [
+          "p",
+          "a",
+          "j"
+        ]
+      }
+    },
+    {
+      "type": "check",
+      "expect": {
+        "codes": []
+      }
+    }
+  ]
+}

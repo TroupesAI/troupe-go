@@ -1,0 +1,86 @@
+{
+  "description": "Empty values: null, \"\" and [] in optional fields fail the schema (Format 2.2); state/empty-values.json covers the fields where they are values",
+  "bundle": {
+    "kind": "bundle",
+    "tagline": "",
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Ann.",
+        "aliases": [],
+        "summary": null,
+        "entries": [
+          {
+            "id": "e",
+            "keys": [],
+            "when": null,
+            "knownBy": [],
+            "text": "x"
+          },
+          {
+            "id": "f",
+            "keys": null,
+            "text": "y"
+          }
+        ]
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "openings": [
+          {
+            "id": "o",
+            "title": "Anywhere",
+            "content": []
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "expect": {
+        "codes": [
+          "SCHEMA"
+        ],
+        "includes": [
+          {
+            "code": "SCHEMA",
+            "at": "/tagline"
+          },
+          {
+            "code": "SCHEMA",
+            "at": "/characters/0/aliases"
+          },
+          {
+            "code": "SCHEMA",
+            "at": "/characters/0/summary"
+          },
+          {
+            "code": "SCHEMA",
+            "at": "/characters/0/entries/0/keys"
+          },
+          {
+            "code": "SCHEMA",
+            "at": "/characters/0/entries/0/when"
+          },
+          {
+            "code": "SCHEMA",
+            "at": "/characters/0/entries/0/knownBy"
+          },
+          {
+            "code": "SCHEMA",
+            "at": "/characters/0/entries/1/keys"
+          },
+          {
+            "code": "SCHEMA",
+            "at": "/scenarios/0/openings/0/content"
+          }
+        ]
+      }
+    }
+  ]
+}

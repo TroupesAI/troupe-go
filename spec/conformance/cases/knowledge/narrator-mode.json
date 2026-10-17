@@ -1,0 +1,115 @@
+{
+  "description": "In narrator mode the narrator writes every character's lines and knows everything (Format 6.2, 7.2, 7.4, 11.4, 11.5): it knows a part whose knownBy leaves it out, so hit() scans that part for it, but nobody knows a hidden message's parts",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Ann."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "mode": "narrator"
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        }
+      ],
+      "players": [
+        "p"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "Hello."
+          }
+        ]
+      },
+      {
+        "id": "2",
+        "parent": "1",
+        "from": "model",
+        "content": [
+          {
+            "speaker": "a",
+            "knownBy": [
+              "a"
+            ],
+            "text": "Psst, the vault."
+          },
+          {
+            "text": "The lamp flickers."
+          }
+        ]
+      },
+      {
+        "id": "3",
+        "parent": "2",
+        "from": "player",
+        "hidden": true,
+        "content": [
+          {
+            "speaker": "p",
+            "text": "I pocket the key."
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "expect": {
+        "codes": []
+      }
+    },
+    {
+      "type": "knows",
+      "name": "the narrator knows a part whose knownBy leaves it out",
+      "message": "2",
+      "part": 0,
+      "expect": [
+        "a",
+        "narrator"
+      ]
+    },
+    {
+      "type": "cel",
+      "name": "the narrator scans a part only Ann knows",
+      "at": "2",
+      "expr": "hit('vault')",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "but not a hidden message's",
+      "at": "3",
+      "expr": "hit('pocket')",
+      "expect": false
+    },
+    {
+      "type": "knows",
+      "name": "nobody knows a hidden message's part",
+      "message": "3",
+      "part": 0,
+      "expect": []
+    }
+  ]
+}

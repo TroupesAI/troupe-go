@@ -1,0 +1,174 @@
+{
+  "description": "Macros in message parts (Format 9, 11.1): only roots made from openings resolve. There {{char}} is the part's speaker, else it is left as written; {{user}} follows the path to the message; own means state; parts resolve against the state at their message.",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Ann."
+      },
+      {
+        "id": "b",
+        "name": "Bea",
+        "description": "Bea."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "cast": [
+          {},
+          {},
+          {
+            "character": "a"
+          },
+          {
+            "character": "b"
+          }
+        ],
+        "variables": [
+          {
+            "id": "bell",
+            "type": "int",
+            "initial": 6,
+            "by": [
+              "player"
+            ],
+            "description": "The last bell."
+          }
+        ],
+        "openings": [
+          {
+            "id": "o",
+            "set": {
+              "state.bell": 7
+            },
+            "content": [
+              {
+                "text": "{{char}} waits. Bell {{own.bell}}."
+              },
+              {
+                "speaker": "a",
+                "text": "I'm {{char}}, and you are {{user}}."
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        },
+        {
+          "id": "q",
+          "name": "Quin",
+          "description": "Quin."
+        }
+      ],
+      "players": [
+        "p",
+        "q"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "opening": "o",
+        "from": "system",
+        "content": [
+          {
+            "text": "{{char}} waits. Bell {{own.bell}}."
+          },
+          {
+            "speaker": "a",
+            "text": "I'm {{char}}, and you are {{user}}."
+          }
+        ],
+        "changes": [
+          {
+            "by": "opening",
+            "set": {
+              "state.bell": 7
+            }
+          }
+        ]
+      },
+      {
+        "id": "2",
+        "parent": "1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "q",
+            "text": "Hi, {{char}}. Bell {{state.bell}}?"
+          }
+        ],
+        "changes": [
+          {
+            "by": "player",
+            "set": {
+              "state.bell": 8
+            }
+          }
+        ]
+      },
+      {
+        "id": "3",
+        "parent": "2",
+        "from": "model",
+        "char": "a",
+        "content": [
+          {
+            "text": "{{char}} shrugs at {{user}}."
+          },
+          {
+            "speaker": "b",
+            "text": "{{char}} again."
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "expect": {
+        "codes": []
+      }
+    },
+    {
+      "type": "macro",
+      "name": "a root's narration: no speaker and no char, so {{char}} is left as written; own means state, at the root",
+      "part": {
+        "message": "1",
+        "index": 0
+      },
+      "expect": "{{char}} waits. Bell 7."
+    },
+    {
+      "type": "macro",
+      "name": "a part's speaker; {{user}} before any player message is the first player",
+      "part": {
+        "message": "1",
+        "index": 1
+      },
+      "expect": "I'm Ann, and you are Pat."
+    },
+    {
+      "type": "macro",
+      "name": "author text at message 3",
+      "at": "3",
+      "text": "Bell {{state.bell}} for {{user}}.",
+      "expect": "Bell 8 for Quin."
+    }
+  ]
+}

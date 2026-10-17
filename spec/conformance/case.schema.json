@@ -1,0 +1,458 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Troupe conformance case",
+  "description": "The shape of a case file (conformance/README.md). Checked by bun run check.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "description",
+    "tests"
+  ],
+  "properties": {
+    "description": {
+      "type": "string"
+    },
+    "note": {
+      "type": "string"
+    },
+    "bundle": {
+      "type": "object"
+    },
+    "bundleFile": {
+      "type": "string"
+    },
+    "session": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "header",
+        "messages"
+      ],
+      "properties": {
+        "header": {
+          "type": "object"
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "sessionFile": {
+      "type": "string"
+    },
+    "tests": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "state",
+              "macro",
+              "cel",
+              "check",
+              "parse",
+              "knows"
+            ]
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "state"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "additionalProperties": false,
+              "required": [
+                "expect"
+              ],
+              "properties": {
+                "type": {
+                  "const": "state"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "note": {
+                  "type": "string"
+                },
+                "expect": {
+                  "type": "object"
+                },
+                "at": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "absent": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "macro"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "additionalProperties": false,
+              "required": [
+                "expect"
+              ],
+              "properties": {
+                "type": {
+                  "const": "macro"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "note": {
+                  "type": "string"
+                },
+                "expect": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "at": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "char": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "owner": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "narrator": {
+                  "type": "boolean"
+                },
+                "part": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "message",
+                    "index"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "index": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  }
+                }
+              },
+              "oneOf": [
+                {
+                  "required": [
+                    "text"
+                  ]
+                },
+                {
+                  "required": [
+                    "part"
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "cel"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "additionalProperties": false,
+              "required": [
+                "expect",
+                "expr"
+              ],
+              "properties": {
+                "type": {
+                  "const": "cel"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "note": {
+                  "type": "string"
+                },
+                "expect": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "checkError"
+                      ],
+                      "properties": {
+                        "checkError": {
+                          "const": true
+                        }
+                      }
+                    }
+                  ]
+                },
+                "expr": {
+                  "type": "string"
+                },
+                "at": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "char": {
+                  "type": "string"
+                },
+                "self": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "scanDepth": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "check"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "additionalProperties": false,
+              "required": [
+                "expect"
+              ],
+              "properties": {
+                "type": {
+                  "const": "check"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "note": {
+                  "type": "string"
+                },
+                "expect": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "codes"
+                  ],
+                  "properties": {
+                    "codes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "includes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "code",
+                          "at"
+                        ],
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "at": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "parse"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "additionalProperties": false,
+              "required": [
+                "expect",
+                "kind"
+              ],
+              "properties": {
+                "type": {
+                  "const": "parse"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "note": {
+                  "type": "string"
+                },
+                "level": {
+                  "const": "session"
+                },
+                "expect": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "codes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "codes"
+                  ]
+                },
+                "kind": {
+                  "enum": [
+                    "bundle",
+                    "session",
+                    "package"
+                  ]
+                },
+                "text": {
+                  "type": "string"
+                },
+                "base64": {
+                  "type": "string"
+                }
+              },
+              "oneOf": [
+                {
+                  "required": [
+                    "text"
+                  ]
+                },
+                {
+                  "required": [
+                    "base64"
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "knows"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "additionalProperties": false,
+              "required": [
+                "expect",
+                "message",
+                "part"
+              ],
+              "properties": {
+                "type": {
+                  "const": "knows"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "note": {
+                  "type": "string"
+                },
+                "expect": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "message": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "part": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "not": {
+    "anyOf": [
+      {
+        "required": [
+          "bundle",
+          "bundleFile"
+        ]
+      },
+      {
+        "required": [
+          "session",
+          "sessionFile"
+        ]
+      }
+    ]
+  }
+}

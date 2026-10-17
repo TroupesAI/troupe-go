@@ -1,0 +1,46 @@
+{
+  "description": "A keyed variable is written one key at a time (Format 8.3, 8.5): a key without a map key is UNKNOWN_VARIABLE, and its value, having no valid key, is no INVALID_VALUE (Format 15.3)",
+  "bundle": {
+    "kind": "bundle",
+    "scenarios": [
+      {
+        "id": "s",
+        "variables": [
+          {
+            "id": "rep",
+            "type": "int",
+            "of": [
+              "watch",
+              "guild"
+            ],
+            "description": "Standing with each faction."
+          }
+        ],
+        "openings": [
+          {
+            "id": "o",
+            "set": {
+              "state.rep": 3
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "expect": {
+        "codes": [
+          "UNKNOWN_VARIABLE"
+        ],
+        "includes": [
+          {
+            "code": "UNKNOWN_VARIABLE",
+            "at": "/scenarios/0/openings/0/set/state.rep"
+          }
+        ]
+      }
+    }
+  ]
+}

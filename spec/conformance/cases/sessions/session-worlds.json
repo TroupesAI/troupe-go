@@ -1,0 +1,105 @@
+{
+  "description": "Session worlds (Format 6.4, 11): a world added to the session is in use with the scenario's worlds; its locations are valid scene locations",
+  "bundle": {
+    "kind": "bundle",
+    "worlds": [
+      {
+        "id": "w",
+        "name": "W",
+        "variables": [
+          {
+            "id": "k",
+            "type": "int",
+            "description": "d"
+          }
+        ]
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "variables": [
+          {
+            "id": "g",
+            "type": "int",
+            "description": "d"
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        }
+      ],
+      "players": [
+        "p"
+      ],
+      "worlds": [
+        {
+          "id": "pack",
+          "name": "Pack",
+          "locations": [
+            {
+              "id": "crypt",
+              "name": "Crypt"
+            }
+          ],
+          "variables": [
+            {
+              "id": "n",
+              "type": "int",
+              "description": "d"
+            }
+          ]
+        }
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "Down we go."
+          }
+        ],
+        "changes": [
+          {
+            "by": "player",
+            "set": {
+              "scene.location": "crypt",
+              "state.pack.n": 2
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "expect": {
+        "codes": []
+      }
+    },
+    {
+      "type": "state",
+      "at": "1",
+      "expect": {
+        "scene.location": "crypt",
+        "state.pack.n": 2,
+        "state.w.k": 0,
+        "state.g": 0
+      }
+    }
+  ]
+}

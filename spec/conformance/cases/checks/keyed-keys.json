@@ -1,0 +1,105 @@
+{
+  "description": "A change key naming a key a keyed variable doesn't allow is UNKNOWN_VARIABLE (Format 8.3, 8.5, 15.3); of: \"cast\" has a key for every cast character, the player's included (Format 11.2)",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Ann."
+      },
+      {
+        "id": "zed",
+        "name": "Zed",
+        "description": "Not in the cast."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "cast": [
+          {},
+          {
+            "character": "a"
+          }
+        ],
+        "variables": [
+          {
+            "id": "trust",
+            "type": "int",
+            "of": "cast",
+            "initial": 50,
+            "description": "d"
+          },
+          {
+            "id": "rep",
+            "type": "int",
+            "of": [
+              "watch"
+            ],
+            "description": "d"
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        }
+      ],
+      "players": [
+        "p"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "x"
+          }
+        ],
+        "changes": [
+          {
+            "by": "player",
+            "set": {
+              "state.trust.zed": 90,
+              "state.trust.p": 90,
+              "state.rep.guild": 3,
+              "state.trust.a": 80
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "expect": {
+        "codes": [
+          "UNKNOWN_VARIABLE"
+        ],
+        "includes": [
+          {
+            "code": "UNKNOWN_VARIABLE",
+            "at": "message:1/changes/0/set/state.trust.zed"
+          },
+          {
+            "code": "UNKNOWN_VARIABLE",
+            "at": "message:1/changes/0/set/state.rep.guild"
+          }
+        ]
+      }
+    }
+  ]
+}

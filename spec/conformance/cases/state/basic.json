@@ -1,0 +1,268 @@
+{
+  "description": "State (Format 8.1, 8.6): defaults, initial, changes in path order and array order, branches, the scene",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Ann."
+      }
+    ],
+    "worlds": [
+      {
+        "id": "w",
+        "name": "W",
+        "locations": [
+          {
+            "id": "hall",
+            "name": "Hall"
+          },
+          {
+            "id": "yard",
+            "name": "Yard"
+          }
+        ]
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "cast": [
+          {},
+          {
+            "character": "a"
+          }
+        ],
+        "variables": [
+          {
+            "id": "flag",
+            "type": "bool",
+            "description": "d"
+          },
+          {
+            "id": "lvl",
+            "type": "int",
+            "min": 3,
+            "description": "default 0 raised to min"
+          },
+          {
+            "id": "debt",
+            "type": "int",
+            "max": -1,
+            "description": "default 0 lowered to max"
+          },
+          {
+            "id": "name",
+            "type": "string",
+            "description": "d"
+          },
+          {
+            "id": "phase",
+            "type": "enum",
+            "values": [
+              "setup",
+              "heist"
+            ],
+            "description": "default: the first value"
+          },
+          {
+            "id": "inv",
+            "type": "set",
+            "description": "free-form set, default []"
+          },
+          {
+            "id": "gold",
+            "type": "int",
+            "initial": 5,
+            "by": [
+              "player"
+            ],
+            "description": "d"
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        }
+      ],
+      "players": [
+        "p"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "player",
+        "content": [
+          {
+            "text": "Start."
+          }
+        ],
+        "changes": [
+          {
+            "by": "player",
+            "set": {
+              "state.gold": 6,
+              "scene.location": "hall"
+            }
+          },
+          {
+            "by": "player",
+            "set": {
+              "state.gold": 7
+            }
+          }
+        ]
+      },
+      {
+        "id": "2",
+        "parent": "1",
+        "from": "model",
+        "char": "a",
+        "content": [
+          {
+            "text": "A."
+          }
+        ],
+        "changes": [
+          {
+            "by": "model",
+            "set": {
+              "state.inv": [
+                "rope"
+              ],
+              "scene.location": "yard"
+            }
+          },
+          {
+            "by": "model",
+            "set": {
+              "state.phase": "heist"
+            }
+          }
+        ]
+      },
+      {
+        "id": "3",
+        "parent": "2",
+        "from": "player",
+        "content": [
+          {
+            "text": "B."
+          }
+        ],
+        "changes": [
+          {
+            "by": "player",
+            "set": {
+              "state.gold": 8
+            }
+          },
+          {
+            "by": "player",
+            "set": {
+              "state.gold": 9
+            }
+          }
+        ]
+      },
+      {
+        "id": "2b",
+        "parent": "1",
+        "from": "model",
+        "char": "a",
+        "content": [
+          {
+            "text": "Other."
+          }
+        ],
+        "changes": [
+          {
+            "by": "model",
+            "set": {
+              "scene.present": [
+                "a"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "state",
+      "name": "initial state, before any message",
+      "expect": {
+        "state.flag": false,
+        "state.lvl": 3,
+        "state.debt": -1,
+        "state.name": "",
+        "state.phase": "setup",
+        "state.inv": [],
+        "state.gold": 5,
+        "scene.location": "",
+        "scene.present": [
+          "p",
+          "a"
+        ]
+      }
+    },
+    {
+      "type": "state",
+      "name": "a message's state includes its own changes",
+      "at": "1",
+      "expect": {
+        "state.gold": 7,
+        "scene.location": "hall"
+      }
+    },
+    {
+      "type": "state",
+      "name": "changes apply in path order and array order",
+      "at": "3",
+      "expect": {
+        "state.gold": 9,
+        "state.inv": [
+          "rope"
+        ],
+        "state.phase": "heist",
+        "scene.location": "yard",
+        "scene.present": [
+          "p",
+          "a"
+        ]
+      }
+    },
+    {
+      "type": "state",
+      "name": "branches never share state",
+      "at": "2b",
+      "expect": {
+        "state.gold": 7,
+        "state.inv": [],
+        "state.phase": "setup",
+        "scene.location": "hall",
+        "scene.present": [
+          "a"
+        ]
+      }
+    },
+    {
+      "type": "check",
+      "expect": {
+        "codes": []
+      }
+    }
+  ]
+}

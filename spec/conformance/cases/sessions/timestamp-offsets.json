@@ -1,0 +1,158 @@
+{
+  "description": "Timestamps (Format 2.5): an at is in UTC with an uppercase T and Z, or carries a numeric offset; a lowercase t or z, or an offset that isn't +hh:mm or -hh:mm with hours 00-23 and minutes 00-59, is SCHEMA",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Ann."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "cast": [
+          {},
+          {
+            "character": "a"
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        }
+      ],
+      "players": [
+        "p"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "player",
+        "at": "2026-10-17T21:04:00+02:00",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "Evening."
+          }
+        ]
+      },
+      {
+        "id": "2",
+        "parent": "1",
+        "from": "model",
+        "char": "a",
+        "at": "2026-10-17T15:05:30-05:30",
+        "content": [
+          {
+            "speaker": "a",
+            "text": "Morning, here."
+          }
+        ]
+      },
+      {
+        "id": "3",
+        "parent": "2",
+        "from": "player",
+        "at": "2026-10-17T20:35:30Z",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "Same moment."
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "name": "offsets and Z validate",
+      "expect": {
+        "codes": []
+      }
+    },
+    {
+      "type": "parse",
+      "kind": "session",
+      "name": "a valid offset with minutes",
+      "text": "{\"troupe\":\"0.14\",\"kind\":\"session\",\"scenario\":\"s\"}\n{\"id\":\"1\",\"from\":\"player\",\"at\":\"2026-10-17T21:04:00+05:45\",\"content\":[{\"text\":\"Hi.\"}]}\n",
+      "expect": {
+        "codes": []
+      }
+    },
+    {
+      "type": "parse",
+      "kind": "session",
+      "name": "an offset without a colon",
+      "text": "{\"troupe\":\"0.14\",\"kind\":\"session\",\"scenario\":\"s\"}\n{\"id\":\"1\",\"from\":\"player\",\"at\":\"2026-10-17T21:04:00+0200\",\"content\":[{\"text\":\"Hi.\"}]}\n",
+      "expect": {
+        "codes": [
+          "SCHEMA"
+        ]
+      }
+    },
+    {
+      "type": "parse",
+      "kind": "session",
+      "name": "an offset hour past 23",
+      "text": "{\"troupe\":\"0.14\",\"kind\":\"session\",\"scenario\":\"s\"}\n{\"id\":\"1\",\"from\":\"player\",\"at\":\"2026-10-17T21:04:00+24:00\",\"content\":[{\"text\":\"Hi.\"}]}\n",
+      "expect": {
+        "codes": [
+          "SCHEMA"
+        ]
+      }
+    },
+    {
+      "type": "parse",
+      "name": "a timestamp in UTC",
+      "kind": "session",
+      "text": "{\"troupe\":\"0.14\",\"kind\":\"session\",\"scenario\":\"s\"}\n{\"id\":\"1\",\"from\":\"player\",\"at\":\"2026-10-11T09:00:00Z\",\"content\":[{\"text\":\"Hi.\"}]}\n",
+      "expect": {
+        "codes": []
+      }
+    },
+    {
+      "type": "parse",
+      "name": "a timestamp with an offset",
+      "kind": "session",
+      "text": "{\"troupe\":\"0.14\",\"kind\":\"session\",\"scenario\":\"s\"}\n{\"id\":\"1\",\"from\":\"player\",\"at\":\"2026-10-11T12:00:00.250+03:00\",\"content\":[{\"text\":\"Hi.\"}]}\n",
+      "expect": {
+        "codes": []
+      }
+    },
+    {
+      "type": "parse",
+      "name": "a lowercase z",
+      "kind": "session",
+      "text": "{\"troupe\":\"0.14\",\"kind\":\"session\",\"scenario\":\"s\"}\n{\"id\":\"1\",\"from\":\"player\",\"at\":\"2026-10-11T09:00:00z\",\"content\":[{\"text\":\"Hi.\"}]}\n",
+      "expect": {
+        "codes": [
+          "SCHEMA"
+        ]
+      }
+    },
+    {
+      "type": "parse",
+      "name": "a lowercase t",
+      "kind": "session",
+      "text": "{\"troupe\":\"0.14\",\"kind\":\"session\",\"scenario\":\"s\"}\n{\"id\":\"1\",\"from\":\"player\",\"at\":\"2026-10-11t09:00:00Z\",\"content\":[{\"text\":\"Hi.\"}]}\n",
+      "expect": {
+        "codes": [
+          "SCHEMA"
+        ]
+      }
+    }
+  ]
+}

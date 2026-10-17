@@ -1,0 +1,87 @@
+{
+  "description": "A cast member marked player (Format 6.1, 8.3, 11.2): a bundle character played by a person as written, listed in players; it stays a cast character, so it is a key of cast maps",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "hero",
+        "name": "Hero",
+        "description": "The story's hero."
+      },
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Ann."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "cast": [
+          {
+            "character": "hero",
+            "player": true
+          },
+          {
+            "character": "a"
+          }
+        ],
+        "variables": [
+          {
+            "id": "trust",
+            "type": "int",
+            "of": "cast",
+            "initial": 50,
+            "description": "d"
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "players": [
+        "hero"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "hero",
+            "text": "Hi."
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "state",
+      "expect": {
+        "scene.present": [
+          "hero",
+          "a"
+        ],
+        "state.trust.hero": 50,
+        "state.trust.a": 50
+      }
+    },
+    {
+      "type": "cel",
+      "at": "1",
+      "expr": "players == ['hero'] && user == 'hero' && 'hero' in state.trust",
+      "expect": true
+    },
+    {
+      "type": "check",
+      "expect": {
+        "codes": []
+      }
+    }
+  ]
+}

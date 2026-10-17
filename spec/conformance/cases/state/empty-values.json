@@ -1,0 +1,169 @@
+{
+  "description": "Empty values that are values (Format 2.2, 6, 8.5): scenario.worlds [] means no world is in use; \"\" and [] are state values, in initial values, an opening's set and recorded changes",
+  "bundle": {
+    "kind": "bundle",
+    "worlds": [
+      {
+        "id": "w",
+        "name": "W",
+        "variables": [
+          {
+            "id": "lamp",
+            "type": "bool",
+            "description": "d"
+          }
+        ]
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "worlds": [],
+        "variables": [
+          {
+            "id": "inv",
+            "type": "set",
+            "initial": [],
+            "description": "d"
+          },
+          {
+            "id": "note",
+            "type": "string",
+            "initial": "",
+            "description": "d"
+          }
+        ],
+        "openings": [
+          {
+            "id": "o",
+            "set": {
+              "scene.location": "",
+              "state.inv": [],
+              "state.note": ""
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        }
+      ],
+      "players": [
+        "p"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "system",
+        "content": [],
+        "changes": [
+          {
+            "by": "opening",
+            "set": {
+              "scene.location": "",
+              "state.inv": [],
+              "state.note": ""
+            }
+          }
+        ],
+        "opening": "o"
+      },
+      {
+        "id": "2",
+        "parent": "1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "Take it."
+          }
+        ],
+        "changes": [
+          {
+            "by": "player",
+            "set": {
+              "state.inv": [
+                "lamp"
+              ],
+              "state.note": "taken"
+            }
+          }
+        ]
+      },
+      {
+        "id": "3",
+        "parent": "2",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "Drop it."
+          }
+        ],
+        "changes": [
+          {
+            "by": "player",
+            "set": {
+              "state.inv": [],
+              "state.note": ""
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "name": "worlds [], initial [] and \"\", and \"\" and [] in set and changes are valid",
+      "expect": {
+        "codes": []
+      }
+    },
+    {
+      "type": "state",
+      "name": "no world is in use; empty initial values",
+      "expect": {
+        "state.inv": [],
+        "state.note": "",
+        "scene.location": ""
+      },
+      "absent": [
+        "state.w.lamp"
+      ]
+    },
+    {
+      "type": "state",
+      "at": "2",
+      "expect": {
+        "state.inv": [
+          "lamp"
+        ],
+        "state.note": "taken"
+      }
+    },
+    {
+      "type": "state",
+      "name": "[] and \"\" set values back to empty",
+      "at": "3",
+      "expect": {
+        "state.inv": [],
+        "state.note": "",
+        "scene.location": "",
+        "scene.present": [
+          "p"
+        ]
+      }
+    }
+  ]
+}

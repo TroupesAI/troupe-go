@@ -1,0 +1,572 @@
+{
+  "description": "Reference checks on a bundle (Format 15.3): each broken reference reports its code; invalid initial and opening values and values beyond the value limits are INVALID_VALUE (Format 8.5, 14); comprehensions, double literals and selecting char from a keyed variable are CEL_ERROR (Format 10.2); a tagline isn't text where macros resolve, so {{dark}} in it is no UNKNOWN_MACRO (Format 9)",
+  "note": "The opening's set holds a set of 257 distinct members and a string of 4097 bytes, one past each value limit.",
+  "bundle": {
+    "kind": "bundle",
+    "tagline": "Into the {{dark}}.",
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Hi {{zed}}.",
+        "examples": [
+          [
+            {
+              "speaker": "zed",
+              "text": "?"
+            }
+          ]
+        ],
+        "entries": [
+          {
+            "id": "e1",
+            "knownBy": [
+              "ghost"
+            ],
+            "text": "x"
+          },
+          {
+            "id": "e2",
+            "keys": [
+              "/[/"
+            ],
+            "text": "bad regex"
+          },
+          {
+            "id": "e3",
+            "when": "state.n + 1",
+            "text": "not a bool"
+          },
+          {
+            "id": "e4",
+            "when": "state.trust.char > 0",
+            "text": "char selected from a keyed variable"
+          },
+          {
+            "id": "e1",
+            "text": "duplicate entry"
+          },
+          {
+            "id": "e5",
+            "knownBy": [
+              "narrator",
+              "a"
+            ],
+            "text": "narrator is a valid knownBy ID"
+          },
+          {
+            "id": "e6",
+            "when": "[1].all(x, x > 0)",
+            "text": "a comprehension"
+          },
+          {
+            "id": "e7",
+            "when": "state.n > 1.5",
+            "text": "a double literal"
+          }
+        ]
+      },
+      {
+        "id": "b",
+        "name": "Bea",
+        "description": "Bea."
+      }
+    ],
+    "worlds": [
+      {
+        "id": "w",
+        "name": "W",
+        "locations": [
+          {
+            "id": "l1",
+            "name": "L1",
+            "parent": "l2"
+          },
+          {
+            "id": "l2",
+            "name": "L2",
+            "parent": "l1"
+          },
+          {
+            "id": "l3",
+            "name": "L3",
+            "parent": "nowhere"
+          }
+        ]
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "cast": [
+          {},
+          {
+            "character": "a"
+          },
+          {
+            "character": "b"
+          },
+          {
+            "character": "ghost"
+          }
+        ],
+        "worlds": [
+          "w",
+          "atlantis"
+        ],
+        "variables": [
+          {
+            "id": "trust",
+            "type": "int",
+            "of": "cast",
+            "min": 0,
+            "max": 100,
+            "initial": {
+              "a": "high",
+              "ghost": 50
+            },
+            "description": "d"
+          },
+          {
+            "id": "phase",
+            "type": "enum",
+            "values": [
+              "one",
+              "two"
+            ],
+            "initial": "three",
+            "description": "d"
+          },
+          {
+            "id": "bag",
+            "type": "set",
+            "description": "free-form"
+          },
+          {
+            "id": "note",
+            "type": "string",
+            "description": "d"
+          },
+          {
+            "id": "n",
+            "type": "int",
+            "description": "d"
+          }
+        ],
+        "openings": [
+          {
+            "id": "o",
+            "set": {
+              "scene.present": [
+                "a",
+                "zed"
+              ],
+              "scene.location": "mars",
+              "state.phase": "five",
+              "state.nope": 1,
+              "state.bag": [
+                "item0",
+                "item1",
+                "item2",
+                "item3",
+                "item4",
+                "item5",
+                "item6",
+                "item7",
+                "item8",
+                "item9",
+                "item10",
+                "item11",
+                "item12",
+                "item13",
+                "item14",
+                "item15",
+                "item16",
+                "item17",
+                "item18",
+                "item19",
+                "item20",
+                "item21",
+                "item22",
+                "item23",
+                "item24",
+                "item25",
+                "item26",
+                "item27",
+                "item28",
+                "item29",
+                "item30",
+                "item31",
+                "item32",
+                "item33",
+                "item34",
+                "item35",
+                "item36",
+                "item37",
+                "item38",
+                "item39",
+                "item40",
+                "item41",
+                "item42",
+                "item43",
+                "item44",
+                "item45",
+                "item46",
+                "item47",
+                "item48",
+                "item49",
+                "item50",
+                "item51",
+                "item52",
+                "item53",
+                "item54",
+                "item55",
+                "item56",
+                "item57",
+                "item58",
+                "item59",
+                "item60",
+                "item61",
+                "item62",
+                "item63",
+                "item64",
+                "item65",
+                "item66",
+                "item67",
+                "item68",
+                "item69",
+                "item70",
+                "item71",
+                "item72",
+                "item73",
+                "item74",
+                "item75",
+                "item76",
+                "item77",
+                "item78",
+                "item79",
+                "item80",
+                "item81",
+                "item82",
+                "item83",
+                "item84",
+                "item85",
+                "item86",
+                "item87",
+                "item88",
+                "item89",
+                "item90",
+                "item91",
+                "item92",
+                "item93",
+                "item94",
+                "item95",
+                "item96",
+                "item97",
+                "item98",
+                "item99",
+                "item100",
+                "item101",
+                "item102",
+                "item103",
+                "item104",
+                "item105",
+                "item106",
+                "item107",
+                "item108",
+                "item109",
+                "item110",
+                "item111",
+                "item112",
+                "item113",
+                "item114",
+                "item115",
+                "item116",
+                "item117",
+                "item118",
+                "item119",
+                "item120",
+                "item121",
+                "item122",
+                "item123",
+                "item124",
+                "item125",
+                "item126",
+                "item127",
+                "item128",
+                "item129",
+                "item130",
+                "item131",
+                "item132",
+                "item133",
+                "item134",
+                "item135",
+                "item136",
+                "item137",
+                "item138",
+                "item139",
+                "item140",
+                "item141",
+                "item142",
+                "item143",
+                "item144",
+                "item145",
+                "item146",
+                "item147",
+                "item148",
+                "item149",
+                "item150",
+                "item151",
+                "item152",
+                "item153",
+                "item154",
+                "item155",
+                "item156",
+                "item157",
+                "item158",
+                "item159",
+                "item160",
+                "item161",
+                "item162",
+                "item163",
+                "item164",
+                "item165",
+                "item166",
+                "item167",
+                "item168",
+                "item169",
+                "item170",
+                "item171",
+                "item172",
+                "item173",
+                "item174",
+                "item175",
+                "item176",
+                "item177",
+                "item178",
+                "item179",
+                "item180",
+                "item181",
+                "item182",
+                "item183",
+                "item184",
+                "item185",
+                "item186",
+                "item187",
+                "item188",
+                "item189",
+                "item190",
+                "item191",
+                "item192",
+                "item193",
+                "item194",
+                "item195",
+                "item196",
+                "item197",
+                "item198",
+                "item199",
+                "item200",
+                "item201",
+                "item202",
+                "item203",
+                "item204",
+                "item205",
+                "item206",
+                "item207",
+                "item208",
+                "item209",
+                "item210",
+                "item211",
+                "item212",
+                "item213",
+                "item214",
+                "item215",
+                "item216",
+                "item217",
+                "item218",
+                "item219",
+                "item220",
+                "item221",
+                "item222",
+                "item223",
+                "item224",
+                "item225",
+                "item226",
+                "item227",
+                "item228",
+                "item229",
+                "item230",
+                "item231",
+                "item232",
+                "item233",
+                "item234",
+                "item235",
+                "item236",
+                "item237",
+                "item238",
+                "item239",
+                "item240",
+                "item241",
+                "item242",
+                "item243",
+                "item244",
+                "item245",
+                "item246",
+                "item247",
+                "item248",
+                "item249",
+                "item250",
+                "item251",
+                "item252",
+                "item253",
+                "item254",
+                "item255",
+                "item256"
+              ],
+              "state.note": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+            },
+            "content": [
+              {
+                "speaker": "zed",
+                "text": "{{unknown}}"
+              }
+            ]
+          }
+        ],
+        "entries": [
+          {
+            "id": "hint",
+            "knownBy": [
+              "ghost_voice"
+            ],
+            "text": "Only the ghost voice knows."
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "expect": {
+        "codes": [
+          "CEL_ERROR",
+          "DUPLICATE_ID",
+          "INVALID_VALUE",
+          "REGEX_ERROR",
+          "UNKNOWN_CHARACTER",
+          "UNKNOWN_LOCATION",
+          "UNKNOWN_MACRO",
+          "UNKNOWN_VARIABLE",
+          "UNKNOWN_WORLD"
+        ],
+        "includes": [
+          {
+            "code": "UNKNOWN_CHARACTER",
+            "at": "/scenarios/0/cast/3/character"
+          },
+          {
+            "code": "UNKNOWN_CHARACTER",
+            "at": "/characters/0/entries/0/knownBy/0"
+          },
+          {
+            "code": "UNKNOWN_CHARACTER",
+            "at": "/scenarios/0/variables/0/initial/ghost"
+          },
+          {
+            "code": "UNKNOWN_CHARACTER",
+            "at": "/scenarios/0/openings/0/content/0/speaker"
+          },
+          {
+            "code": "UNKNOWN_CHARACTER",
+            "at": "/characters/0/examples/0/0/speaker"
+          },
+          {
+            "code": "UNKNOWN_CHARACTER",
+            "at": "/scenarios/0/entries/0/knownBy/0"
+          },
+          {
+            "code": "UNKNOWN_CHARACTER",
+            "at": "/scenarios/0/openings/0/set/scene.present/1"
+          },
+          {
+            "code": "UNKNOWN_WORLD",
+            "at": "/scenarios/0/worlds/1"
+          },
+          {
+            "code": "UNKNOWN_LOCATION",
+            "at": "/worlds/0/locations/2/parent"
+          },
+          {
+            "code": "UNKNOWN_LOCATION",
+            "at": "/worlds/0/locations/0/parent"
+          },
+          {
+            "code": "UNKNOWN_LOCATION",
+            "at": "/worlds/0/locations/1/parent"
+          },
+          {
+            "code": "UNKNOWN_LOCATION",
+            "at": "/scenarios/0/openings/0/set/scene.location"
+          },
+          {
+            "code": "DUPLICATE_ID",
+            "at": "/characters/0/entries/4/id"
+          },
+          {
+            "code": "REGEX_ERROR",
+            "at": "/characters/0/entries/1/keys/0"
+          },
+          {
+            "code": "CEL_ERROR",
+            "at": "/characters/0/entries/2/when"
+          },
+          {
+            "code": "CEL_ERROR",
+            "at": "/characters/0/entries/3/when"
+          },
+          {
+            "code": "CEL_ERROR",
+            "at": "/characters/0/entries/6/when"
+          },
+          {
+            "code": "CEL_ERROR",
+            "at": "/characters/0/entries/7/when"
+          },
+          {
+            "code": "INVALID_VALUE",
+            "at": "/scenarios/0/variables/0/initial/a"
+          },
+          {
+            "code": "INVALID_VALUE",
+            "at": "/scenarios/0/variables/1/initial"
+          },
+          {
+            "code": "INVALID_VALUE",
+            "at": "/scenarios/0/openings/0/set/state.phase"
+          },
+          {
+            "code": "INVALID_VALUE",
+            "at": "/scenarios/0/openings/0/set/state.bag"
+          },
+          {
+            "code": "INVALID_VALUE",
+            "at": "/scenarios/0/openings/0/set/state.note"
+          },
+          {
+            "code": "UNKNOWN_VARIABLE",
+            "at": "/scenarios/0/openings/0/set/state.nope"
+          },
+          {
+            "code": "UNKNOWN_MACRO",
+            "at": "/characters/0/description"
+          },
+          {
+            "code": "UNKNOWN_MACRO",
+            "at": "/scenarios/0/openings/0/content/0/text"
+          }
+        ]
+      }
+    }
+  ]
+}

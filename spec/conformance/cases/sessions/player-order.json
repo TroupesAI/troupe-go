@@ -1,0 +1,181 @@
+{
+  "description": "Players and seats (Format 6.1, 8.3, 8.6, 11.2): each listed header character fills the next seat without a character, in the order players lists them; one left over gets a seat after the scenario cast; a listed cast character is played by a person; other header characters are joiners after the new seats; scene.location takes a location of any bundle world, even one the scenario doesn't use (Format 8.5)",
+  "bundle": {
+    "kind": "bundle",
+    "worlds": [
+      {
+        "id": "w1",
+        "name": "Port",
+        "locations": [
+          {
+            "id": "dock",
+            "name": "Dock"
+          }
+        ]
+      },
+      {
+        "id": "w2",
+        "name": "Elsewhere",
+        "locations": [
+          {
+            "id": "moon",
+            "name": "Moon"
+          }
+        ]
+      }
+    ],
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Ann."
+      },
+      {
+        "id": "b",
+        "name": "Bea",
+        "description": "Bea."
+      },
+      {
+        "id": "c",
+        "name": "Cy",
+        "description": "Cy."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "worlds": [
+          "w1"
+        ],
+        "cast": [
+          {},
+          {
+            "character": "a",
+            "player": true
+          },
+          {},
+          {
+            "character": "b"
+          },
+          {
+            "character": "c"
+          }
+        ],
+        "variables": [
+          {
+            "id": "trust",
+            "type": "int",
+            "of": "cast",
+            "initial": 50,
+            "description": "d"
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "r",
+          "name": "Rae",
+          "description": "Rae."
+        },
+        {
+          "id": "j",
+          "name": "Jo",
+          "description": "A stranger."
+        },
+        {
+          "id": "q",
+          "name": "Quinn",
+          "description": "Quinn."
+        },
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        }
+      ],
+      "players": [
+        "p",
+        "a",
+        "q",
+        "b",
+        "r"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "Ready?"
+          }
+        ]
+      },
+      {
+        "id": "2",
+        "parent": "1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "b",
+            "text": "To the moon."
+          }
+        ],
+        "changes": [
+          {
+            "by": "player",
+            "set": {
+              "scene.location": "moon"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "cel",
+      "name": "every character people control, as listed",
+      "expr": "players == ['p', 'a', 'q', 'b', 'r']",
+      "expect": true
+    },
+    {
+      "type": "state",
+      "name": "p fills the first seat and q the second, in players order, not header order; r gets a seat after the scenario cast; the joiner j comes last and isn't present",
+      "expect": {
+        "scene.present": [
+          "p",
+          "a",
+          "q",
+          "b",
+          "c",
+          "r"
+        ],
+        "state.trust.p": 50,
+        "state.trust.r": 50,
+        "state.trust.j": 50
+      }
+    },
+    {
+      "type": "state",
+      "name": "a location of a world the scenario doesn't use",
+      "at": "2",
+      "expect": {
+        "scene.location": "moon"
+      }
+    },
+    {
+      "type": "check",
+      "expect": {
+        "codes": []
+      }
+    }
+  ]
+}

@@ -1,0 +1,183 @@
+{
+  "description": "Openings are roots (Format 6.3, 11.1): each opening played is a root that records its opening's set; opening, turn and state belong to the path's root",
+  "bundleFile": "../../../examples/lantern-heist/bundle.json",
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "heist",
+      "characters": [
+        {
+          "id": "mara",
+          "name": "Mara",
+          "description": "A retired smuggler with a debt to settle."
+        }
+      ],
+      "players": [
+        "mara"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "system",
+        "content": [
+          {
+            "text": "Rain hammers the slate roofs above the Duke's manor."
+          },
+          {
+            "speaker": "elena",
+            "text": "*Elena unrolls a soaked map.* Two guards on the east stair. We go at the eighth bell."
+          },
+          {
+            "speaker": "kai",
+            "text": "Or we go now, while they're drunk. *He grins at {{user}}.* Your call, boss."
+          }
+        ],
+        "changes": [
+          {
+            "by": "opening",
+            "set": {
+              "scene.location": "rooftops"
+            }
+          }
+        ],
+        "opening": "rooftop_briefing"
+      },
+      {
+        "id": "2",
+        "parent": "1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "mara",
+            "text": "We wait for the eighth bell. Kai, you take the east stair."
+          }
+        ],
+        "changes": [
+          {
+            "by": "player",
+            "set": {
+              "state.approach": "quiet"
+            }
+          }
+        ]
+      },
+      {
+        "id": "4",
+        "parent": "2",
+        "from": "model",
+        "char": "kai",
+        "content": [
+          {
+            "text": "The seventh bell rolls across the harbor."
+          }
+        ],
+        "changes": [
+          {
+            "by": "model",
+            "set": {
+              "state.bell": 7,
+              "state.trust.kai": 50
+            }
+          }
+        ]
+      },
+      {
+        "id": "c1",
+        "from": "system",
+        "content": [
+          {
+            "text": "Water laps at your knees. The vault door has slammed shut behind you, and Kai is nowhere to be seen."
+          },
+          {
+            "speaker": "elena",
+            "text": "He was supposed to hold that door. *She doesn't look surprised.*"
+          }
+        ],
+        "changes": [
+          {
+            "by": "opening",
+            "set": {
+              "scene.location": "vault",
+              "state.bell": 11
+            }
+          }
+        ],
+        "opening": "caught"
+      },
+      {
+        "id": "c2",
+        "parent": "c1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "mara",
+            "text": "Where is he?"
+          }
+        ],
+        "changes": [
+          {
+            "by": "player",
+            "set": {
+              "state.approach": "loud"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "state",
+      "name": "the second root starts in the vault at the eleventh bell, with the whole cast present",
+      "at": "c1",
+      "expect": {
+        "scene.location": "vault",
+        "state.bell": 11,
+        "scene.present": [
+          "mara",
+          "elena",
+          "kai"
+        ],
+        "state.approach": "quiet",
+        "state.trust.kai": 40
+      }
+    },
+    {
+      "type": "state",
+      "at": "c2",
+      "expect": {
+        "state.approach": "loud"
+      }
+    },
+    {
+      "type": "state",
+      "name": "the first root's path is untouched",
+      "at": "4",
+      "expect": {
+        "scene.location": "rooftops",
+        "state.bell": 7,
+        "state.approach": "quiet",
+        "state.trust.kai": 50
+      }
+    },
+    {
+      "type": "cel",
+      "at": "c2",
+      "expr": "opening == 'caught' && turn == 1 && state.bell == 11",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "at": "2",
+      "expr": "opening == 'rooftop_briefing' && turn == 1 && state.bell == 6",
+      "expect": true
+    },
+    {
+      "type": "check",
+      "expect": {
+        "codes": []
+      }
+    }
+  ]
+}

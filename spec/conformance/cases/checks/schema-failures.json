@@ -1,0 +1,167 @@
+{
+  "description": "Schema failures (Format 8, 15.3): a chance that isn't an integer from 0 to 100, an out-of-range priority, a position other than system or context, an entry with both position and depth, oneWay on a string variable, an entry without text, an empty key, a knownBy item that isn't an ID, an of list item that isn't a key, a duplicate in by, and a max naming a variable are each SCHEMA; every check runs on the document as written, so the knownBy item is also UNKNOWN_CHARACTER (Format 15.3)",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Ann."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "entries": [
+          {
+            "id": "lucky",
+            "chance": 0.5,
+            "text": "Lucky."
+          },
+          {
+            "id": "blank",
+            "when": "true"
+          },
+          {
+            "id": "plain",
+            "priority": 150,
+            "text": "Plain."
+          },
+          {
+            "id": "secret",
+            "knownBy": [
+              "Ann"
+            ],
+            "text": "A secret."
+          },
+          {
+            "id": "badkey",
+            "keys": [
+              ""
+            ],
+            "text": "An empty key."
+          },
+          {
+            "id": "sure",
+            "chance": 101,
+            "text": "More than certain."
+          },
+          {
+            "id": "placed",
+            "position": "system",
+            "depth": 2,
+            "text": "Both."
+          },
+          {
+            "id": "fourth",
+            "position": 4,
+            "text": "A numbered position."
+          }
+        ],
+        "cast": [
+          {},
+          {
+            "character": "a"
+          }
+        ],
+        "variables": [
+          {
+            "id": "label",
+            "type": "string",
+            "oneWay": true,
+            "description": "d"
+          },
+          {
+            "id": "rep",
+            "type": "int",
+            "of": [
+              "Watch",
+              "guild"
+            ],
+            "description": "d"
+          },
+          {
+            "id": "dup",
+            "type": "int",
+            "by": [
+              "model",
+              "model"
+            ],
+            "description": "d"
+          },
+          {
+            "id": "bound",
+            "type": "int",
+            "max": "rep",
+            "description": "a bound naming a variable"
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "expect": {
+        "codes": [
+          "SCHEMA",
+          "UNKNOWN_CHARACTER"
+        ],
+        "includes": [
+          {
+            "code": "SCHEMA",
+            "at": "/scenarios/0/entries/0/chance"
+          },
+          {
+            "code": "SCHEMA",
+            "at": "/scenarios/0/entries/1"
+          },
+          {
+            "code": "SCHEMA",
+            "at": "/scenarios/0/entries/2/priority"
+          },
+          {
+            "code": "SCHEMA",
+            "at": "/scenarios/0/entries/3/knownBy/0"
+          },
+          {
+            "code": "UNKNOWN_CHARACTER",
+            "at": "/scenarios/0/entries/3/knownBy/0"
+          },
+          {
+            "code": "SCHEMA",
+            "at": "/scenarios/0/entries/4/keys/0"
+          },
+          {
+            "code": "SCHEMA",
+            "at": "/scenarios/0/entries/5/chance"
+          },
+          {
+            "code": "SCHEMA",
+            "at": "/scenarios/0/entries/6"
+          },
+          {
+            "code": "SCHEMA",
+            "at": "/scenarios/0/entries/7/position"
+          },
+          {
+            "code": "SCHEMA",
+            "at": "/scenarios/0/variables/0/oneWay"
+          },
+          {
+            "code": "SCHEMA",
+            "at": "/scenarios/0/variables/1/of/0"
+          },
+          {
+            "code": "SCHEMA",
+            "at": "/scenarios/0/variables/2/by"
+          },
+          {
+            "code": "SCHEMA",
+            "at": "/scenarios/0/variables/3/max"
+          }
+        ]
+      }
+    }
+  ]
+}

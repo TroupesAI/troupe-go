@@ -1,0 +1,9 @@
+# Go test artifacts
+*.test
+*.out
+coverage.*
+
+# OS and editors
+.DS_Store
+.idea/
+.vscode/

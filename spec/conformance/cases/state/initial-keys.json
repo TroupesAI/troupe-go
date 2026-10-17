@@ -1,0 +1,44 @@
+{
+  "description": "A keyed initial object (Format 8.3): keys outside the key set are ignored, and a key without a value or \"*\" takes the type's default",
+  "bundle": {
+    "kind": "bundle",
+    "scenarios": [
+      {
+        "id": "s",
+        "variables": [
+          {
+            "id": "rep",
+            "type": "int",
+            "of": [
+              "watch",
+              "guild"
+            ],
+            "initial": {
+              "watch": 3,
+              "pirates": 9
+            },
+            "description": "d"
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "state",
+      "expect": {
+        "state.rep.watch": 3,
+        "state.rep.guild": 0
+      },
+      "absent": [
+        "state.rep.pirates"
+      ]
+    },
+    {
+      "type": "check",
+      "expect": {
+        "codes": []
+      }
+    }
+  ]
+}

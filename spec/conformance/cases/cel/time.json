@@ -1,0 +1,166 @@
+{
+  "description": "Time in CEL (Format 2.5, 10.1): hour and weekday read the local time of the evaluation point's at, at its offset, and are −1 without at; elapsed is whole seconds between instants; user is the latest player message's speaker",
+  "note": "23:40 at +02:00 and 21:40Z are the same instant on Saturday 17 October 2026. 23:41:30.900 at −05:00 is 04:41:30.900Z on Sunday, 7 hours 1 minute 30.9 seconds after 21:40Z: 25290.9 seconds, rounded down to 25290.",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Ann."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "cast": [
+          {},
+          {},
+          {
+            "character": "a"
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        },
+        {
+          "id": "q",
+          "name": "Quin",
+          "description": "Quin."
+        }
+      ],
+      "players": [
+        "p",
+        "q"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "player",
+        "at": "2026-10-17T23:40:00+02:00",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "x"
+          }
+        ]
+      },
+      {
+        "id": "2",
+        "parent": "1",
+        "from": "player",
+        "at": "2026-10-17T21:40:00Z",
+        "content": [
+          {
+            "speaker": "q",
+            "text": "y"
+          }
+        ]
+      },
+      {
+        "id": "3",
+        "parent": "2",
+        "from": "model",
+        "char": "a",
+        "at": "2026-10-17T23:41:30.900-05:00",
+        "content": [
+          {
+            "speaker": "a",
+            "text": "z"
+          }
+        ]
+      },
+      {
+        "id": "4",
+        "parent": "3",
+        "from": "model",
+        "char": "a",
+        "content": [
+          {
+            "speaker": "a",
+            "text": "w"
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "cel",
+      "name": "23:40 at +02:00 is hour 23 on a Saturday, and elapsed is 0 at a root",
+      "at": "1",
+      "expr": "hour == 23 && weekday == 6 && elapsed == 0",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "the same instant in UTC is hour 21, and no time has passed",
+      "at": "2",
+      "expr": "hour == 21 && weekday == 6 && elapsed == 0",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "the local time at −05:00, not the UTC hour 4 on a Sunday",
+      "at": "3",
+      "expr": "hour == 23 && weekday == 6",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "elapsed: whole seconds between the instants",
+      "at": "3",
+      "expr": "elapsed == 25290",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "no at: hour and weekday are −1, elapsed 0",
+      "at": "4",
+      "expr": "hour == -1 && weekday == -1 && elapsed == 0",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "no evaluation point",
+      "expr": "hour == -1 && weekday == -1 && elapsed == 0 && turn == 0",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "user: the latest player message's speaker",
+      "at": "4",
+      "expr": "user == 'q'",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "at": "1",
+      "expr": "user == 'p'",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "before any message: the first player",
+      "expr": "user == 'p'",
+      "expect": true
+    },
+    {
+      "type": "check",
+      "expect": {
+        "codes": []
+      }
+    }
+  ]
+}

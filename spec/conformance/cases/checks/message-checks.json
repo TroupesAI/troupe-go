@@ -1,0 +1,137 @@
+{
+  "description": "Checks on messages (Format 11.1, 15.3): a message's char and a part's knownBy name characters (UNKNOWN_CHARACTER); a parent names a message on an earlier line (UNKNOWN_MESSAGE); a recorded value has its variable's type (INVALID_VALUE)",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Ann."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "cast": [
+          {},
+          {
+            "character": "a"
+          }
+        ],
+        "variables": [
+          {
+            "id": "n",
+            "type": "int",
+            "by": [
+              "player"
+            ],
+            "description": "d"
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        }
+      ],
+      "players": [
+        "p"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "Hi.",
+            "knownBy": [
+              "p",
+              "ghost"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "2",
+        "parent": "1",
+        "from": "model",
+        "char": "zed",
+        "content": [
+          {
+            "text": "Who?"
+          }
+        ]
+      },
+      {
+        "id": "3",
+        "parent": "4",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "Too early."
+          }
+        ]
+      },
+      {
+        "id": "4",
+        "parent": "1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "Count."
+          }
+        ],
+        "changes": [
+          {
+            "by": "player",
+            "set": {
+              "state.n": "x"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "expect": {
+        "codes": [
+          "INVALID_VALUE",
+          "UNKNOWN_CHARACTER",
+          "UNKNOWN_MESSAGE"
+        ],
+        "includes": [
+          {
+            "code": "UNKNOWN_CHARACTER",
+            "at": "message:1/content/0/knownBy/1"
+          },
+          {
+            "code": "UNKNOWN_CHARACTER",
+            "at": "message:2/char"
+          },
+          {
+            "code": "UNKNOWN_MESSAGE",
+            "at": "message:3/parent"
+          },
+          {
+            "code": "INVALID_VALUE",
+            "at": "message:4/changes/0/set/state.n"
+          }
+        ]
+      }
+    }
+  ]
+}

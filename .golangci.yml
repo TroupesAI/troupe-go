@@ -1,0 +1,31 @@
+version: "2"
+
+linters:
+  default: standard
+  enable:
+    - errorlint
+    - fatcontext
+    - gosec
+    - misspell
+    - nilerr
+    - nolintlint
+    - revive
+    - thelper
+    - unconvert
+    - usestdlibvars
+    - wastedassign
+  settings:
+    revive:
+      rules:
+        # Go's convention: every exported name has a doc comment that starts
+        # with the name.
+        - name: exported
+
+formatters:
+  enable:
+    - gofumpt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/TroupesAI/troupe-go

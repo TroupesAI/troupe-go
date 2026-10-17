@@ -1,0 +1,57 @@
+{
+  "description": "Variable keys can't be char or user (Format 2.3, 8.3): a list naming one is SCHEMA, and a \"*\" key named char is no valid key (Format 8.5), so UNKNOWN_VARIABLE",
+  "bundle": {
+    "kind": "bundle",
+    "scenarios": [
+      {
+        "id": "s",
+        "variables": [
+          {
+            "id": "inv",
+            "type": "int",
+            "of": "*",
+            "description": "Items."
+          },
+          {
+            "id": "rep",
+            "type": "int",
+            "of": [
+              "watch",
+              "user"
+            ],
+            "description": "Standing."
+          }
+        ],
+        "openings": [
+          {
+            "id": "o",
+            "set": {
+              "state.inv.char": 1
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "expect": {
+        "codes": [
+          "SCHEMA",
+          "UNKNOWN_VARIABLE"
+        ],
+        "includes": [
+          {
+            "code": "SCHEMA",
+            "at": "/scenarios/0/variables/1/of/1"
+          },
+          {
+            "code": "UNKNOWN_VARIABLE",
+            "at": "/scenarios/0/openings/0/set/state.inv.char"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,107 @@
+{
+  "description": "Macro parsing (Format 9): {{char}}, {{user}}, no spaces outside comments and options, comments, escapes, picks; unknown forms, such as {{foo}}, are left as written and rescanned from the next character",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Ann."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s"
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        }
+      ],
+      "players": [
+        "p"
+      ]
+    },
+    "messages": []
+  },
+  "tests": [
+    {
+      "type": "macro",
+      "text": "{{char}} meets {{user}}.",
+      "char": "a",
+      "expect": "Ann meets Pat."
+    },
+    {
+      "type": "macro",
+      "name": "{{char}} with no character is left as written",
+      "text": "{{char}} waits.",
+      "expect": "{{char}} waits."
+    },
+    {
+      "type": "macro",
+      "name": "no spaces outside comments and options",
+      "text": "{{ char }} and {{char }}",
+      "char": "a",
+      "expect": "{{ char }} and {{char }}"
+    },
+    {
+      "type": "macro",
+      "name": "escape",
+      "text": "\\{{char}} is {{char}}",
+      "char": "a",
+      "expect": "{{char}} is Ann"
+    },
+    {
+      "type": "macro",
+      "name": "comments vanish",
+      "text": "a{{// note to authors }}b{{//}}c",
+      "expect": "abc"
+    },
+    {
+      "type": "macro",
+      "name": "unknown macros",
+      "text": "{{foo}} {{char}",
+      "char": "a",
+      "expect": "{{foo}} {{char}"
+    },
+    {
+      "type": "macro",
+      "name": "macro names are case-sensitive",
+      "text": "{{Char}} {{USER}}",
+      "char": "a",
+      "expect": "{{Char}} {{USER}}"
+    },
+    {
+      "type": "macro",
+      "name": "a pick whose options are all the same resolves to it",
+      "text": "{{pick::x::x}}",
+      "expect": "x"
+    },
+    {
+      "type": "macro",
+      "name": "spaces inside options are kept",
+      "text": "[{{pick::a b::a b}}]",
+      "expect": "[a b]"
+    },
+    {
+      "type": "macro",
+      "name": "a pick needs at least two options, none empty; otherwise it is left as written",
+      "text": "{{pick::a}} {{pick::a::}} {{pick::::a}}",
+      "expect": "{{pick::a}} {{pick::a::}} {{pick::::a}}"
+    },
+    {
+      "type": "check",
+      "expect": {
+        "codes": []
+      }
+    }
+  ]
+}

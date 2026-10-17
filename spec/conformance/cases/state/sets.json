@@ -1,0 +1,217 @@
+{
+  "description": "Sets and the scene (Format 8.4, 8.6, 9): initial and recorded sets lose duplicates, and a set with values orders its members as declared; a free-form set keeps its members' order; scene.present loses duplicates and IDs that name no cast character, and is ordered by cast order; sets render with their labels, joined by \", \", and scene.present as the names of those present",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Ann."
+      },
+      {
+        "id": "b",
+        "name": "Bea",
+        "description": "Bea."
+      },
+      {
+        "id": "zed",
+        "name": "Zed",
+        "description": "Not in the cast."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "cast": [
+          {},
+          {
+            "character": "a"
+          },
+          {
+            "character": "b"
+          }
+        ],
+        "variables": [
+          {
+            "id": "inv",
+            "type": "set",
+            "values": [
+              "rope",
+              "torch",
+              "key"
+            ],
+            "labels": {
+              "rope": "a coil of rope"
+            },
+            "by": [
+              "model"
+            ],
+            "description": "d"
+          },
+          {
+            "id": "bag",
+            "type": "set",
+            "by": [
+              "model"
+            ],
+            "description": "free-form"
+          },
+          {
+            "id": "seen",
+            "type": "set",
+            "initial": [
+              "x",
+              "y"
+            ],
+            "labels": {
+              "x": "an x"
+            },
+            "description": "free-form, with a label"
+          },
+          {
+            "id": "tags",
+            "type": "set",
+            "values": [
+              "red",
+              "green",
+              "blue"
+            ],
+            "initial": [
+              "blue",
+              "red",
+              "blue"
+            ],
+            "description": "an initial value out of order, with a duplicate"
+          },
+          {
+            "id": "loot",
+            "type": "set",
+            "initial": [
+              "b",
+              "b",
+              "a"
+            ],
+            "description": "a free-form initial value with a duplicate"
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        }
+      ],
+      "players": [
+        "p"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "Pack up."
+          }
+        ],
+        "changes": [
+          {
+            "by": "model",
+            "set": {
+              "state.inv": [
+                "key",
+                "rope",
+                "key",
+                "torch"
+              ],
+              "state.bag": [
+                "z",
+                "z",
+                "a",
+                "m"
+              ],
+              "scene.present": [
+                "b",
+                "p",
+                "b",
+                "zed",
+                "a"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "expect": {
+        "codes": []
+      }
+    },
+    {
+      "type": "state",
+      "name": "initial sets lose duplicates; listed members in declared order",
+      "expect": {
+        "state.tags": [
+          "red",
+          "blue"
+        ],
+        "state.loot": [
+          "b",
+          "a"
+        ],
+        "state.seen": [
+          "x",
+          "y"
+        ],
+        "state.inv": [],
+        "state.bag": []
+      }
+    },
+    {
+      "type": "state",
+      "name": "recorded sets and scene.present are normalized",
+      "at": "1",
+      "expect": {
+        "state.inv": [
+          "rope",
+          "torch",
+          "key"
+        ],
+        "state.bag": [
+          "z",
+          "a",
+          "m"
+        ],
+        "scene.present": [
+          "p",
+          "a",
+          "b"
+        ]
+      }
+    },
+    {
+      "type": "macro",
+      "name": "sets render with labels, joined by ', '; an empty set renders as nothing",
+      "text": "{{state.seen}} / {{state.inv}}",
+      "expect": "an x, y / "
+    },
+    {
+      "type": "macro",
+      "name": "a recorded set renders in its normalized order; scene.present as names",
+      "at": "1",
+      "text": "{{state.inv}} | {{scene.present}}",
+      "expect": "a coil of rope, torch, key | Pat, Ann, Bea"
+    }
+  ]
+}

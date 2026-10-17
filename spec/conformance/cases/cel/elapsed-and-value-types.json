@@ -1,0 +1,136 @@
+{
+  "description": "elapsed is whole seconds, rounded down, and 0 for a negative gap (Format 10.1); expressions use only bool, int, string, list and map values, so double, bytes, uint and null literals and timestamps fail to check (Format 10.2)",
+  "bundle": {
+    "kind": "bundle",
+    "scenarios": [
+      {
+        "id": "s",
+        "variables": [
+          {
+            "id": "zero",
+            "type": "int",
+            "description": "d"
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s"
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "player",
+        "at": "2026-10-09T10:00:00.900Z",
+        "content": [
+          {
+            "text": "x"
+          }
+        ]
+      },
+      {
+        "id": "2",
+        "parent": "1",
+        "from": "player",
+        "at": "2026-10-09T10:00:02.100Z",
+        "content": [
+          {
+            "text": "y"
+          }
+        ]
+      },
+      {
+        "id": "3",
+        "parent": "2",
+        "from": "player",
+        "at": "2026-10-09T09:59:00Z",
+        "content": [
+          {
+            "text": "z"
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "cel",
+      "name": "1.2 seconds round down to 1",
+      "at": "2",
+      "expr": "elapsed == 1",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "a negative gap is 0",
+      "at": "3",
+      "expr": "elapsed == 0",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "expr": "state.zero != null",
+      "expect": {
+        "checkError": true
+      }
+    },
+    {
+      "type": "cel",
+      "expr": "1u == 1u",
+      "expect": {
+        "checkError": true
+      }
+    },
+    {
+      "type": "cel",
+      "expr": "b'x' == b'x'",
+      "expect": {
+        "checkError": true
+      }
+    },
+    {
+      "type": "cel",
+      "expr": "timestamp('2026-01-01T00:00:00Z') == timestamp('2026-01-01T00:00:00Z')",
+      "expect": {
+        "checkError": true
+      }
+    },
+    {
+      "type": "cel",
+      "expr": "duration('1s') == duration('1s')",
+      "expect": {
+        "checkError": true
+      }
+    },
+    {
+      "type": "cel",
+      "name": "a double literal is a CEL_ERROR",
+      "expr": "1.5 > 1.0",
+      "expect": {
+        "checkError": true
+      }
+    },
+    {
+      "type": "cel",
+      "name": "an exponent makes a double literal",
+      "expr": "state.zero < 1e3",
+      "expect": {
+        "checkError": true
+      }
+    },
+    {
+      "type": "cel",
+      "expr": "[1, 2] == [1, 2] && {'a': 1}['a'] == 1",
+      "expect": true
+    },
+    {
+      "type": "check",
+      "expect": {
+        "codes": []
+      }
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "description": "Raw input (Format 2.2, 11, 13, 15.3): a leading byte order mark and an empty session line aren't I-JSON lines, so they are PARSE",
+  "tests": [
+    {
+      "type": "parse",
+      "name": "a bundle with a byte order mark",
+      "kind": "bundle",
+      "text": "﻿{\"troupe\":\"0.14\",\"kind\":\"bundle\"}",
+      "expect": {
+        "codes": [
+          "PARSE"
+        ]
+      }
+    },
+    {
+      "type": "parse",
+      "name": "a session with a byte order mark",
+      "kind": "session",
+      "text": "﻿{\"troupe\":\"0.14\",\"kind\":\"session\",\"scenario\":\"s\"}\n{\"id\":\"1\",\"from\":\"player\",\"content\":[{\"text\":\"Hi.\"}]}\n",
+      "expect": {
+        "codes": [
+          "PARSE"
+        ]
+      }
+    },
+    {
+      "type": "parse",
+      "name": "an empty line is PARSE",
+      "kind": "session",
+      "text": "{\"troupe\":\"0.14\",\"kind\":\"session\",\"scenario\":\"s\"}\n\n{\"id\":\"1\",\"from\":\"player\",\"content\":[{\"text\":\"Hi.\"}]}\n\n{\"id\":\"2\",\"parent\":\"1\",\"from\":\"model\",\"content\":[{\"text\":\"Hello.\"}]}\n\n",
+      "expect": {
+        "codes": [
+          "PARSE"
+        ]
+      }
+    }
+  ]
+}

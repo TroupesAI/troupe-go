@@ -1,0 +1,176 @@
+{
+  "description": "Macro parsing and context (Format 9): \\\\ and \\{{ escapes, a { before a macro kept, one at a time, comments removed, own in a scenario's text, {{user}} from the first speaking part of the latest player message, and a location ID rendered as the location's name",
+  "bundle": {
+    "kind": "bundle",
+    "worlds": [
+      {
+        "id": "w",
+        "name": "Port",
+        "locations": [
+          {
+            "id": "old_mill",
+            "name": "The Old Mill"
+          }
+        ]
+      }
+    ],
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Ann."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "cast": [
+          {},
+          {},
+          {
+            "character": "a"
+          }
+        ],
+        "variables": [
+          {
+            "id": "alarm",
+            "type": "bool",
+            "labels": {
+              "true": "ringing",
+              "false": "quiet"
+            },
+            "description": "d"
+          },
+          {
+            "id": "hideout",
+            "type": "string",
+            "initial": "old_mill",
+            "description": "d"
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        },
+        {
+          "id": "q",
+          "name": "Quin",
+          "description": "Quin."
+        }
+      ],
+      "players": [
+        "p",
+        "q"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "a"
+          }
+        ]
+      },
+      {
+        "id": "2",
+        "parent": "1",
+        "from": "model",
+        "char": "a",
+        "content": [
+          {
+            "speaker": "a",
+            "text": "b"
+          }
+        ]
+      },
+      {
+        "id": "3",
+        "parent": "2",
+        "from": "player",
+        "content": [
+          {
+            "text": "(ooc)"
+          },
+          {
+            "speaker": "q",
+            "text": "c"
+          }
+        ]
+      },
+      {
+        "id": "4",
+        "parent": "3",
+        "from": "model",
+        "char": "a",
+        "content": [
+          {
+            "speaker": "a",
+            "text": "d"
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "macro",
+      "name": "\\\\ is a backslash, \\{{ a literal {{",
+      "at": "1",
+      "text": "C:\\\\{{user}} and \\{{user}}",
+      "expect": "C:\\Pat and {{user}}"
+    },
+    {
+      "type": "macro",
+      "name": "a lone backslash stays",
+      "at": "1",
+      "text": "a\\b",
+      "expect": "a\\b"
+    },
+    {
+      "type": "macro",
+      "name": "{{{char}}: not a macro at the first {{, so one { is kept and scanning resumes",
+      "char": "a",
+      "text": "{{{char}} and {{{{user}}}}",
+      "expect": "{Ann and {{Pat}}",
+      "at": "1"
+    },
+    {
+      "type": "macro",
+      "name": "own in a scenario's text means state; labels render",
+      "owner": "s",
+      "text": "The alarm is {{own.alarm}}.",
+      "expect": "The alarm is quiet."
+    },
+    {
+      "type": "macro",
+      "name": "a string that is a location ID renders as the location's name",
+      "text": "{{state.hideout}}",
+      "expect": "The Old Mill"
+    },
+    {
+      "type": "macro",
+      "name": "{{user}}: the first part with a speaker in the latest player message",
+      "at": "4",
+      "text": "{{user}}",
+      "expect": "Quin"
+    },
+    {
+      "type": "check",
+      "expect": {
+        "codes": []
+      }
+    }
+  ]
+}

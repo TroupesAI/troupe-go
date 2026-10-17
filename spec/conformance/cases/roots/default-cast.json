@@ -1,0 +1,181 @@
+{
+  "description": "A scenario without cast or worlds (Format 6.1, 6.4, 8.6, 11.1): the default cast is one player seat and every bundle character in bundle order, all present from the start; every bundle world is in use; the root records the opening's set",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "elena",
+        "name": "Elena Voss",
+        "description": "A meticulous thief.",
+        "variables": [
+          {
+            "id": "patience",
+            "type": "int",
+            "initial": 3,
+            "min": 0,
+            "max": 5,
+            "by": [
+              "model"
+            ],
+            "description": "How patient {{char}} is with {{user}}."
+          }
+        ]
+      },
+      {
+        "id": "kai",
+        "name": "Kai",
+        "description": "In the default cast, but silent in the opening."
+      }
+    ],
+    "worlds": [
+      {
+        "id": "w1",
+        "name": "One",
+        "variables": [
+          {
+            "id": "lamps",
+            "type": "int",
+            "initial": 1,
+            "description": "d"
+          }
+        ]
+      },
+      {
+        "id": "w2",
+        "name": "Two",
+        "variables": [
+          {
+            "id": "lamps",
+            "type": "int",
+            "initial": 2,
+            "description": "d"
+          }
+        ]
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "workshop",
+        "openings": [
+          {
+            "id": "late",
+            "set": {
+              "state.elena.patience": 2
+            },
+            "content": [
+              {
+                "speaker": "elena",
+                "text": "You're late. Sit down, and don't touch the maps."
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "workshop",
+      "characters": [
+        {
+          "id": "you",
+          "name": "Robin",
+          "description": "A client."
+        }
+      ],
+      "players": [
+        "you"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "system",
+        "content": [
+          {
+            "speaker": "elena",
+            "text": "You're late. Sit down, and don't touch the maps."
+          }
+        ],
+        "changes": [
+          {
+            "by": "opening",
+            "set": {
+              "state.elena.patience": 2
+            }
+          }
+        ],
+        "opening": "late"
+      },
+      {
+        "id": "2",
+        "parent": "1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "you",
+            "text": "Sorry. Can I see the map?"
+          }
+        ],
+        "changes": [
+          {
+            "by": "player",
+            "set": {
+              "state.elena.patience": 1
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "state",
+      "name": "before the root: the seat Robin fills, then Elena and Kai, all present; both worlds' variables",
+      "expect": {
+        "scene.present": [
+          "you",
+          "elena",
+          "kai"
+        ],
+        "state.elena.patience": 3,
+        "state.w1.lamps": 1,
+        "state.w2.lamps": 2
+      }
+    },
+    {
+      "type": "state",
+      "name": "the root records the opening's set; Kai stays present though silent",
+      "at": "1",
+      "expect": {
+        "scene.present": [
+          "you",
+          "elena",
+          "kai"
+        ],
+        "state.elena.patience": 2
+      }
+    },
+    {
+      "type": "state",
+      "name": "the state applies every recorded change",
+      "at": "2",
+      "expect": {
+        "scene.present": [
+          "you",
+          "elena",
+          "kai"
+        ],
+        "state.elena.patience": 1
+      }
+    },
+    {
+      "type": "check",
+      "name": "a player change to a variable without by: player isn't a failed check",
+      "expect": {
+        "codes": []
+      }
+    }
+  ]
+}

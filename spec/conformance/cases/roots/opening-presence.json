@@ -1,0 +1,146 @@
+{
+  "description": "Presence on roots made from openings (Format 6.3, 8.6, 11.1, 11.4): an opening's set that names scene.present is recorded with the players' characters added; an opening without content or set makes a records-only root without changes, where the whole cast but the joiners is present",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Ann."
+      },
+      {
+        "id": "b",
+        "name": "Bea",
+        "description": "Bea."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "cast": [
+          {},
+          {
+            "character": "a"
+          },
+          {
+            "character": "b"
+          }
+        ],
+        "openings": [
+          {
+            "id": "hall",
+            "set": {
+              "scene.present": [
+                "a"
+              ]
+            },
+            "content": [
+              {
+                "speaker": "a",
+                "text": "Come in, both of you."
+              }
+            ]
+          },
+          {
+            "id": "quiet",
+            "title": "A quiet start"
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        },
+        {
+          "id": "q",
+          "name": "Quinn",
+          "description": "Quinn."
+        }
+      ],
+      "players": [
+        "p",
+        "q"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "system",
+        "content": [
+          {
+            "speaker": "a",
+            "text": "Come in, both of you."
+          }
+        ],
+        "changes": [
+          {
+            "by": "opening",
+            "set": {
+              "scene.present": [
+                "a",
+                "p",
+                "q"
+              ]
+            }
+          }
+        ],
+        "opening": "hall"
+      },
+      {
+        "id": "2",
+        "from": "system",
+        "content": [],
+        "opening": "quiet"
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "name": "a root that adds the players to the opening's scene.present, and a records-only root without changes, conform",
+      "expect": {
+        "codes": []
+      }
+    },
+    {
+      "type": "state",
+      "name": "the opening names only Ann; the root adds Pat's filled seat and Quinn's new seat, in cast order",
+      "at": "1",
+      "expect": {
+        "scene.present": [
+          "p",
+          "a",
+          "q"
+        ]
+      }
+    },
+    {
+      "type": "state",
+      "name": "a records-only root without changes: the initial state",
+      "at": "2",
+      "expect": {
+        "scene.present": [
+          "p",
+          "a",
+          "b",
+          "q"
+        ],
+        "scene.location": ""
+      }
+    },
+    {
+      "type": "cel",
+      "at": "2",
+      "expr": "opening == 'quiet' && turn == 0",
+      "expect": true
+    }
+  ]
+}

@@ -1,0 +1,143 @@
+{
+  "description": "Duplicate IDs (Format 2.3, 15.3): characters, worlds and scenarios share one namespace; locations are unique across worlds; openings within a scenario; variables within an owner. A cast names each character once and worlds lists each world once. An entry and a variable of one owner may share an ID",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "x",
+        "name": "X",
+        "description": "X."
+      },
+      {
+        "id": "kai",
+        "name": "Kai",
+        "description": "Kai.",
+        "entries": [
+          {
+            "id": "mood",
+            "text": "Kai is restless."
+          }
+        ],
+        "variables": [
+          {
+            "id": "mood",
+            "type": "int",
+            "description": "d"
+          },
+          {
+            "id": "mood",
+            "type": "bool",
+            "description": "d"
+          }
+        ]
+      }
+    ],
+    "worlds": [
+      {
+        "id": "x",
+        "name": "World X"
+      },
+      {
+        "id": "w1",
+        "name": "W1",
+        "locations": [
+          {
+            "id": "l",
+            "name": "L"
+          }
+        ],
+        "entries": [
+          {
+            "id": "tide",
+            "text": "The tide is turning."
+          }
+        ],
+        "variables": [
+          {
+            "id": "tide",
+            "type": "int",
+            "description": "d"
+          }
+        ]
+      },
+      {
+        "id": "w2",
+        "name": "W2",
+        "locations": [
+          {
+            "id": "l",
+            "name": "L again"
+          }
+        ]
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "openings": [
+          {
+            "id": "o",
+            "title": "First"
+          },
+          {
+            "id": "o",
+            "title": "Again"
+          }
+        ]
+      },
+      {
+        "id": "t",
+        "cast": [
+          {},
+          {
+            "character": "kai"
+          },
+          {
+            "character": "kai",
+            "player": true
+          }
+        ],
+        "worlds": [
+          "w1",
+          "w1"
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "expect": {
+        "codes": [
+          "DUPLICATE_ID"
+        ],
+        "includes": [
+          {
+            "code": "DUPLICATE_ID",
+            "at": "/worlds/0/id"
+          },
+          {
+            "code": "DUPLICATE_ID",
+            "at": "/worlds/2/locations/0/id"
+          },
+          {
+            "code": "DUPLICATE_ID",
+            "at": "/scenarios/0/openings/1/id"
+          },
+          {
+            "code": "DUPLICATE_ID",
+            "at": "/scenarios/1/cast/2/character"
+          },
+          {
+            "code": "DUPLICATE_ID",
+            "at": "/scenarios/1/worlds/1"
+          },
+          {
+            "code": "DUPLICATE_ID",
+            "at": "/characters/1/variables/1/id"
+          }
+        ]
+      }
+    }
+  ]
+}

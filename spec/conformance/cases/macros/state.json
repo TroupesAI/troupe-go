@@ -1,0 +1,244 @@
+{
+  "description": "State macros (Format 9): labels, used as written; integers; booleans; lists; maps; char and user path segments; a string that is a character ID renders as the character's name, before a location of that ID; the state at a message",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Ann."
+      },
+      {
+        "id": "b",
+        "name": "Bea",
+        "description": "Bea."
+      }
+    ],
+    "worlds": [
+      {
+        "id": "w",
+        "name": "W",
+        "locations": [
+          {
+            "id": "b",
+            "name": "The Back Room"
+          }
+        ]
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "variables": [
+          {
+            "id": "approach",
+            "type": "enum",
+            "values": [
+              "quiet",
+              "loud"
+            ],
+            "labels": {
+              "quiet": "Slip in unseen"
+            },
+            "initial": "quiet",
+            "by": [
+              "player"
+            ],
+            "description": "d"
+          },
+          {
+            "id": "bell",
+            "type": "int",
+            "initial": 7,
+            "by": [
+              "player"
+            ],
+            "description": "d"
+          },
+          {
+            "id": "debt",
+            "type": "int",
+            "initial": -1200,
+            "description": "d"
+          },
+          {
+            "id": "big",
+            "type": "int",
+            "initial": 9007199254740991,
+            "description": "d"
+          },
+          {
+            "id": "ok",
+            "type": "bool",
+            "initial": true,
+            "description": "d"
+          },
+          {
+            "id": "inv",
+            "type": "set",
+            "values": [
+              "rope",
+              "torch"
+            ],
+            "labels": {
+              "rope": "a coil of rope"
+            },
+            "initial": [
+              "rope",
+              "torch"
+            ],
+            "description": "d"
+          },
+          {
+            "id": "trust",
+            "type": "int",
+            "of": [
+              "a",
+              "b"
+            ],
+            "initial": {
+              "*": 50,
+              "a": 70
+            },
+            "description": "d"
+          },
+          {
+            "id": "leader",
+            "type": "string",
+            "initial": "b",
+            "description": "a character ID"
+          },
+          {
+            "id": "mood",
+            "type": "enum",
+            "values": [
+              "calm"
+            ],
+            "labels": {
+              "calm": "{{state.leader}} is calm"
+            },
+            "description": "d"
+          },
+          {
+            "id": "crew",
+            "type": "set",
+            "initial": [
+              "b",
+              "a"
+            ],
+            "description": "character IDs"
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        }
+      ],
+      "players": [
+        "p"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "player",
+        "content": [
+          {
+            "text": "x"
+          }
+        ]
+      },
+      {
+        "id": "2",
+        "parent": "1",
+        "from": "player",
+        "content": [
+          {
+            "text": "y"
+          }
+        ],
+        "changes": [
+          {
+            "by": "player",
+            "set": {
+              "state.bell": 8,
+              "state.approach": "loud"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "macro",
+      "at": "1",
+      "text": "{{state.approach}} at {{state.bell}}",
+      "expect": "Slip in unseen at 7"
+    },
+    {
+      "type": "macro",
+      "name": "against the state at that message; unlabeled values render raw",
+      "at": "2",
+      "text": "{{state.approach}} at {{state.bell}}",
+      "expect": "loud at 8"
+    },
+    {
+      "type": "macro",
+      "name": "integers in decimal, booleans as true or false",
+      "text": "{{state.debt}} {{state.big}} {{state.ok}}",
+      "expect": "-1200 9007199254740991 true"
+    },
+    {
+      "type": "macro",
+      "text": "{{state.inv}}",
+      "expect": "a coil of rope, torch"
+    },
+    {
+      "type": "macro",
+      "name": "user is Pat, whom trust has no key for: an absent key renders as nothing",
+      "char": "a",
+      "text": "{{state.trust.char}} {{state.trust.user}} {{state.trust.b}}",
+      "expect": "70  50"
+    },
+    {
+      "type": "macro",
+      "name": "a whole map renders as Name: value pairs; an absent key renders as nothing; an undeclared variable is left as written; a char segment without a character names no key",
+      "text": "{{state.trust}} {{state.trust.zed}} {{state.nope}} {{state.trust.char}}",
+      "expect": "Ann: 70, Bea: 50  {{state.nope}} "
+    },
+    {
+      "type": "macro",
+      "name": "a character's name, not the location b",
+      "text": "{{state.leader}} leads.",
+      "expect": "Bea leads."
+    },
+    {
+      "type": "macro",
+      "name": "a set of character IDs",
+      "text": "{{state.crew}}",
+      "expect": "Bea, Ann"
+    },
+    {
+      "type": "macro",
+      "name": "a label is used as written: macros in it don't resolve",
+      "text": "{{state.mood}}",
+      "expect": "{{state.leader}} is calm"
+    },
+    {
+      "type": "check",
+      "expect": {
+        "codes": []
+      }
+    }
+  ]
+}

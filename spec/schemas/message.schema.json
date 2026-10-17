@@ -1,0 +1,278 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://docs.troupes.ai/schema/0.14/message.schema.json",
+  "title": "Troupe message",
+  "description": "Every line after the first in a Troupe session file: a message.",
+  "type": "object",
+  "required": [
+    "id",
+    "from",
+    "content"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "$ref": "bundle.schema.json#/$defs/opaqueId"
+    },
+    "parent": {
+      "$ref": "bundle.schema.json#/$defs/opaqueId"
+    },
+    "opening": {
+      "$ref": "bundle.schema.json#/$defs/id"
+    },
+    "from": {
+      "enum": [
+        "player",
+        "model",
+        "system"
+      ]
+    },
+    "char": {
+      "$ref": "bundle.schema.json#/$defs/characterId"
+    },
+    "content": {
+      "type": "array",
+      "items": {
+        "$ref": "bundle.schema.json#/$defs/part"
+      }
+    },
+    "at": {
+      "$ref": "bundle.schema.json#/$defs/timestamp"
+    },
+    "changes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/change"
+      },
+      "minItems": 1
+    },
+    "activated": {
+      "description": "The entries that reached the model for this message, as distinct references (Format 11.4).",
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "bundle.schema.json#/$defs/entryRef"
+      },
+      "minItems": 1
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "$ref": "bundle.schema.json#/$defs/entry"
+      },
+      "minItems": 1
+    },
+    "hidden": {
+      "type": "boolean"
+    },
+    "ext": {
+      "$ref": "bundle.schema.json#/$defs/ext"
+    }
+  },
+  "allOf": [
+    {
+      "description": "Only system messages may have empty content.",
+      "if": {
+        "not": {
+          "properties": {
+            "from": {
+              "const": "system"
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "content": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "description": "A system message after the root is records-only: it has no content.",
+      "if": {
+        "required": [
+          "parent"
+        ],
+        "properties": {
+          "from": {
+            "const": "system"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "content": {
+            "maxItems": 0
+          }
+        }
+      }
+    },
+    {
+      "description": "A records-only message after the root carries changes and no entries.",
+      "if": {
+        "required": [
+          "parent"
+        ],
+        "properties": {
+          "content": {
+            "maxItems": 0
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "changes"
+        ],
+        "properties": {
+          "entries": false
+        }
+      }
+    },
+    {
+      "description": "Only a root that is a system message names an opening.",
+      "if": {
+        "anyOf": [
+          {
+            "required": [
+              "parent"
+            ]
+          },
+          {
+            "not": {
+              "properties": {
+                "from": {
+                  "const": "system"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "opening": false
+        }
+      }
+    },
+    {
+      "description": "Only model messages name the character they were written for, and record activated entries.",
+      "if": {
+        "not": {
+          "properties": {
+            "from": {
+              "const": "model"
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "char": false,
+          "activated": false
+        }
+      }
+    },
+    {
+      "description": "A root is a system message made from an opening, or a player message.",
+      "if": {
+        "not": {
+          "required": [
+            "parent"
+          ]
+        }
+      },
+      "then": {
+        "anyOf": [
+          {
+            "required": [
+              "opening"
+            ],
+            "properties": {
+              "from": {
+                "const": "system"
+              }
+            }
+          },
+          {
+            "properties": {
+              "from": {
+                "const": "player"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "description": "Only a root made from an opening records a change by opening.",
+      "if": {
+        "not": {
+          "required": [
+            "opening"
+          ]
+        }
+      },
+      "then": {
+        "properties": {
+          "changes": {
+            "items": {
+              "properties": {
+                "by": {
+                  "not": {
+                    "const": "opening"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "description": "Only a message's first change can be by opening.",
+      "properties": {
+        "changes": {
+          "prefixItems": [
+            true
+          ],
+          "items": {
+            "properties": {
+              "by": {
+                "not": {
+                  "const": "opening"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "change": {
+      "type": "object",
+      "required": [
+        "by",
+        "set"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "by": {
+          "enum": [
+            "opening",
+            "player",
+            "model"
+          ]
+        },
+        "set": {
+          "$ref": "bundle.schema.json#/$defs/stateValues"
+        },
+        "ext": {
+          "$ref": "bundle.schema.json#/$defs/ext"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,132 @@
+{
+  "description": "Clamping (Format 8.5, 8.6): an int outside min and max is valid; initial and recorded values are clamped in the state; clamping raises a value to min, then lowers it to max, so max wins when the bounds cross",
+  "bundle": {
+    "kind": "bundle",
+    "scenarios": [
+      {
+        "id": "s",
+        "variables": [
+          {
+            "id": "hp",
+            "type": "int",
+            "min": 0,
+            "max": 10,
+            "initial": 15,
+            "description": "d"
+          },
+          {
+            "id": "luck",
+            "type": "int",
+            "min": 0,
+            "max": 100,
+            "description": "d"
+          },
+          {
+            "id": "odd",
+            "type": "int",
+            "min": 10,
+            "max": 5,
+            "description": "bounds that cross"
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        }
+      ],
+      "players": [
+        "p"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "Go."
+          }
+        ],
+        "changes": [
+          {
+            "by": "player",
+            "set": {
+              "state.hp": -4,
+              "state.luck": 150
+            }
+          }
+        ]
+      },
+      {
+        "id": "2",
+        "parent": "1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "Again."
+          }
+        ],
+        "changes": [
+          {
+            "by": "player",
+            "set": {
+              "state.odd": 7
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "name": "out-of-range values aren't INVALID_VALUE",
+      "expect": {
+        "codes": []
+      }
+    },
+    {
+      "type": "state",
+      "name": "initial 15 is clamped to max",
+      "expect": {
+        "state.hp": 10,
+        "state.luck": 0
+      }
+    },
+    {
+      "type": "state",
+      "name": "recorded values are clamped when read",
+      "at": "1",
+      "expect": {
+        "state.hp": 0,
+        "state.luck": 100
+      }
+    },
+    {
+      "type": "state",
+      "name": "when the bounds cross, max wins: the default 0 is raised to 10, then lowered to 5",
+      "expect": {
+        "state.odd": 5
+      }
+    },
+    {
+      "type": "state",
+      "name": "a recorded 7 is raised to 10, then lowered to 5",
+      "at": "2",
+      "expect": {
+        "state.odd": 5
+      }
+    }
+  ]
+}

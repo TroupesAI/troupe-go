@@ -1,0 +1,107 @@
+{
+  "description": "Fields the format doesn't define are UNKNOWN_FIELD, located at the field, not SCHEMA; a part's fields are those of the interface its type selects, and SCHEMA is judged with unknown fields removed (Format 13, 15.3)",
+  "bundle": {
+    "kind": "bundle",
+    "futureField": true,
+    "characters": [
+      {
+        "id": "ann",
+        "name": "Ann",
+        "description": "A guide.",
+        "mystery": 1,
+        "ext": {
+          "acme.mood": {
+            "x": 1
+          }
+        }
+      }
+    ],
+    "worlds": [
+      {
+        "id": "w",
+        "name": "W",
+        "mystery": 1
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "mode": "characters",
+        "mystery": 1,
+        "cast": [
+          {},
+          {
+            "character": "ann"
+          }
+        ],
+        "entries": [
+          {
+            "id": "k_all",
+            "text": "Everyone.",
+            "mystery": 1
+          }
+        ],
+        "openings": [
+          {
+            "id": "o",
+            "content": [
+              {
+                "speaker": "ann",
+                "text": "Hello.",
+                "src": "hi.png"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "expect": {
+        "codes": [
+          "UNKNOWN_FIELD"
+        ],
+        "includes": [
+          {
+            "code": "UNKNOWN_FIELD",
+            "at": "/futureField"
+          },
+          {
+            "code": "UNKNOWN_FIELD",
+            "at": "/characters/0/mystery"
+          },
+          {
+            "code": "UNKNOWN_FIELD",
+            "at": "/worlds/0/mystery"
+          },
+          {
+            "code": "UNKNOWN_FIELD",
+            "at": "/scenarios/0/mystery"
+          },
+          {
+            "code": "UNKNOWN_FIELD",
+            "at": "/scenarios/0/entries/0/mystery"
+          },
+          {
+            "code": "UNKNOWN_FIELD",
+            "at": "/scenarios/0/openings/0/content/0/src"
+          }
+        ]
+      }
+    },
+    {
+      "type": "parse",
+      "name": "limits left empty once its unknown field is removed",
+      "kind": "session",
+      "text": "{\"troupe\": \"0.14\", \"kind\": \"session\", \"scenario\": \"s\", \"limits\": {\"mystery\": 1}}\n{\"id\": \"1\", \"from\": \"player\", \"content\": [{\"text\": \"x\"}]}\n",
+      "expect": {
+        "codes": [
+          "SCHEMA",
+          "UNKNOWN_FIELD"
+        ]
+      }
+    }
+  ]
+}

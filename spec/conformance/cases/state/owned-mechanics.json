@@ -1,0 +1,144 @@
+{
+  "description": "Owned variables (Format 2.3, 6.4, 8.2): each variable keeps its owner, so a character, a world and a scenario can each declare a variable with the same ID, and an owner's entry may share its variable's ID",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Ann.",
+        "variables": [
+          {
+            "id": "time",
+            "type": "int",
+            "initial": 9,
+            "description": "Ann's own time"
+          }
+        ]
+      }
+    ],
+    "worlds": [
+      {
+        "id": "w",
+        "name": "W",
+        "variables": [
+          {
+            "id": "time",
+            "type": "int",
+            "initial": 1,
+            "description": "the world's clock"
+          }
+        ]
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "cast": [
+          {},
+          {
+            "character": "a"
+          }
+        ],
+        "variables": [
+          {
+            "id": "time",
+            "type": "int",
+            "initial": 100,
+            "description": "the scenario's own time"
+          }
+        ],
+        "entries": [
+          {
+            "id": "time",
+            "text": "It is hour {{state.time}}."
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        }
+      ],
+      "players": [
+        "p"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "x"
+          }
+        ],
+        "changes": [
+          {
+            "by": "player",
+            "set": {
+              "state.time": 101,
+              "state.w.time": 2,
+              "state.a.time": 10
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "state",
+      "expect": {
+        "state.time": 100,
+        "state.w.time": 1,
+        "state.a.time": 9
+      }
+    },
+    {
+      "type": "state",
+      "at": "1",
+      "expect": {
+        "state.time": 101,
+        "state.w.time": 2,
+        "state.a.time": 10
+      }
+    },
+    {
+      "type": "cel",
+      "at": "1",
+      "self": "a",
+      "expr": "own.time == 10 && state.a.time == 10 && state.w.time == 2 && state.time == 101",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "at": "1",
+      "self": "w",
+      "expr": "own.time == 2",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "at": "1",
+      "expr": "own.time == 101",
+      "expect": true
+    },
+    {
+      "type": "check",
+      "name": "owners can share a variable ID, and an entry can share its owner's variable ID",
+      "expect": {
+        "codes": []
+      }
+    }
+  ]
+}

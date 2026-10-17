@@ -1,0 +1,119 @@
+{
+  "description": "References in a session's messages that checks/session.json leaves out (Format 6.4, 15.3): a recorded location that no world has is UNKNOWN_LOCATION, and an activated entry of a character outside the cast, whose entries aren't in use, is UNKNOWN_ENTRY",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Ann."
+      },
+      {
+        "id": "b",
+        "name": "Bea",
+        "description": "Bea.",
+        "entries": [
+          {
+            "id": "note",
+            "text": "Bea's note."
+          }
+        ]
+      }
+    ],
+    "worlds": [
+      {
+        "id": "w",
+        "name": "W",
+        "locations": [
+          {
+            "id": "hall",
+            "name": "Hall"
+          }
+        ]
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "cast": [
+          {},
+          {
+            "character": "a"
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        }
+      ],
+      "players": [
+        "p"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "Upstairs."
+          }
+        ],
+        "changes": [
+          {
+            "by": "player",
+            "set": {
+              "scene.location": "attic"
+            }
+          }
+        ]
+      },
+      {
+        "id": "2",
+        "parent": "1",
+        "from": "model",
+        "char": "a",
+        "activated": [
+          "b/note"
+        ],
+        "content": [
+          {
+            "speaker": "a",
+            "text": "There is no attic."
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "expect": {
+        "codes": [
+          "UNKNOWN_ENTRY",
+          "UNKNOWN_LOCATION"
+        ],
+        "includes": [
+          {
+            "code": "UNKNOWN_LOCATION",
+            "at": "message:1/changes/0/set/scene.location"
+          },
+          {
+            "code": "UNKNOWN_ENTRY",
+            "at": "message:2/activated/0"
+          }
+        ]
+      }
+    }
+  ]
+}

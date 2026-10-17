@@ -1,0 +1,152 @@
+{
+  "description": "Macros (Format 9): {{scene.location}} renders the location's name and {{scene.present}} the names of those present; bool labels, an empty list as nothing, maps",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Ann."
+      },
+      {
+        "id": "b",
+        "name": "Bea",
+        "description": "Bea."
+      }
+    ],
+    "worlds": [
+      {
+        "id": "w",
+        "name": "W",
+        "locations": [
+          {
+            "id": "hall",
+            "name": "The Great Hall"
+          }
+        ]
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "variables": [
+          {
+            "id": "lit",
+            "type": "bool",
+            "initial": true,
+            "labels": {
+              "true": "lit",
+              "false": "dark"
+            },
+            "description": "d"
+          },
+          {
+            "id": "rep",
+            "type": "int",
+            "of": [
+              "watch",
+              "guild"
+            ],
+            "initial": 2,
+            "description": "d"
+          },
+          {
+            "id": "crew",
+            "type": "set",
+            "description": "empty by default"
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        }
+      ],
+      "players": [
+        "p"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "player",
+        "content": [
+          {
+            "text": "x"
+          }
+        ]
+      },
+      {
+        "id": "2",
+        "parent": "1",
+        "from": "player",
+        "content": [
+          {
+            "text": "y"
+          }
+        ],
+        "changes": [
+          {
+            "by": "player",
+            "set": {
+              "scene.location": "hall",
+              "scene.present": [
+                "p",
+                "b"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "macro",
+      "name": "the scene by name",
+      "at": "2",
+      "text": "{{scene.location}}: {{scene.present}}",
+      "expect": "The Great Hall: Pat, Bea"
+    },
+    {
+      "type": "macro",
+      "name": "no location renders as nothing; the whole cast is present",
+      "at": "1",
+      "text": "[{{scene.location}}] {{scene.present}}",
+      "expect": "[] Pat, Ann, Bea"
+    },
+    {
+      "type": "macro",
+      "at": "1",
+      "text": "The torch is {{state.lit}}.",
+      "expect": "The torch is lit."
+    },
+    {
+      "type": "macro",
+      "at": "1",
+      "text": "{{state.rep}}",
+      "expect": "watch: 2, guild: 2"
+    },
+    {
+      "type": "macro",
+      "name": "an empty list renders as nothing",
+      "at": "1",
+      "text": "[{{state.crew}}]",
+      "expect": "[]"
+    },
+    {
+      "type": "check",
+      "expect": {
+        "codes": []
+      }
+    }
+  ]
+}

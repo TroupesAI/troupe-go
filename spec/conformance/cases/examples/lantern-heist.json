@@ -1,0 +1,146 @@
+{
+  "description": "Format Appendix B.2 and B.3: every checkable claim about The Lantern Heist and its session (Format 7.4, 8.6, 9, 10, 11.5)",
+  "note": "The session's mara fills the scenario's seat, so the cast is mara, elena and kai. trust is of the cast, with initial {\"*\": 50, \"elena\": 70, \"kai\": 40}. approach starts at its first value.",
+  "bundleFile": "../../../examples/lantern-heist/bundle.json",
+  "sessionFile": "../../../examples/lantern-heist/sessions/heist.troupe-session.jsonl",
+  "tests": [
+    {
+      "type": "check",
+      "name": "B.2 and B.3 are valid",
+      "expect": {
+        "codes": []
+      }
+    },
+    {
+      "type": "state",
+      "name": "before the root: initial values, the whole cast present",
+      "expect": {
+        "state.bell": 6,
+        "state.trust.mara": 50,
+        "state.trust.elena": 70,
+        "state.trust.kai": 40,
+        "state.approach": "quiet",
+        "state.kai.nerve": 0,
+        "state.key_revealed": false,
+        "state.kai_confessed": false,
+        "scene.location": "",
+        "scene.present": [
+          "mara",
+          "elena",
+          "kai"
+        ]
+      }
+    },
+    {
+      "type": "state",
+      "name": "the root records the opening's set",
+      "at": "1",
+      "expect": {
+        "scene.location": "rooftops",
+        "scene.present": [
+          "mara",
+          "elena",
+          "kai"
+        ],
+        "state.bell": 6
+      }
+    },
+    {
+      "type": "state",
+      "name": "the player's choice",
+      "at": "2",
+      "expect": {
+        "state.approach": "quiet"
+      }
+    },
+    {
+      "type": "state",
+      "name": "branch 3: Kai has left, rattled",
+      "at": "3",
+      "expect": {
+        "scene.present": [
+          "mara",
+          "elena"
+        ],
+        "state.bell": 6,
+        "state.trust.kai": 40,
+        "state.kai.nerve": 1
+      }
+    },
+    {
+      "type": "state",
+      "name": "branch 4: the seventh bell, more trust",
+      "at": "4",
+      "expect": {
+        "scene.present": [
+          "mara",
+          "elena",
+          "kai"
+        ],
+        "state.bell": 7,
+        "state.trust.kai": 50,
+        "state.kai.nerve": 0,
+        "state.trust.mara": 50,
+        "state.trust.elena": 70
+      }
+    },
+    {
+      "type": "macro",
+      "name": "the visible clock",
+      "at": "4",
+      "text": "The last bell to ring was the {{state.bell}}th. The plan: {{state.approach}}.",
+      "expect": "The last bell to ring was the 7th. The plan: Slip in unseen."
+    },
+    {
+      "type": "cel",
+      "name": "the guards entry's condition on the rooftops",
+      "at": "3",
+      "expr": "'manor' in scene.within",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "the patrol entry's condition",
+      "at": "4",
+      "expr": "scene.location == 'rooftops'",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "the late entry's condition",
+      "at": "4",
+      "expr": "state.bell >= 10",
+      "expect": false
+    },
+    {
+      "type": "macro",
+      "name": "{{user}} in the opening's part is the first player's character",
+      "part": {
+        "message": "1",
+        "index": 2
+      },
+      "expect": "Or we go now, while they're drunk. *He grins at Mara.* Your call, boss."
+    },
+    {
+      "type": "knows",
+      "name": "Kai's thought is his alone",
+      "message": "4",
+      "part": 2,
+      "expect": [
+        "kai"
+      ]
+    },
+    {
+      "type": "knows",
+      "name": "the seventh bell: everyone present, and the narrator",
+      "message": "4",
+      "part": 0,
+      "expect": [
+        "elena",
+        "kai",
+        "mara",
+        "narrator"
+      ]
+    }
+  ]
+}

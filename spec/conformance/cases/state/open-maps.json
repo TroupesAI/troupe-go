@@ -1,0 +1,194 @@
+{
+  "description": "Open \"*\" maps (Format 8.1, 8.3, 9): no initial; keys start absent and appear when a change sets them; a key whose normalized value is the type's default is removed, including a value that clamps to it; keys are in code point order",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Ann."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "cast": [
+          {},
+          {
+            "character": "a"
+          }
+        ],
+        "variables": [
+          {
+            "id": "inv",
+            "type": "int",
+            "of": "*",
+            "min": 0,
+            "description": "default 0"
+          },
+          {
+            "id": "charges",
+            "type": "int",
+            "of": "*",
+            "min": 2,
+            "max": 5,
+            "description": "default 0 raised to min: 2"
+          },
+          {
+            "id": "marks",
+            "type": "set",
+            "of": "*",
+            "description": "default []"
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        }
+      ],
+      "players": [
+        "p"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "x"
+          }
+        ]
+      },
+      {
+        "id": "2",
+        "parent": "1",
+        "from": "model",
+        "char": "a",
+        "content": [
+          {
+            "text": "y"
+          }
+        ],
+        "changes": [
+          {
+            "by": "model",
+            "set": {
+              "state.inv.torch": 0,
+              "state.inv.rope_coil": 1,
+              "state.inv.lamp": -1,
+              "state.inv.bandage": 3,
+              "state.charges.wand": 9,
+              "state.charges.rod": 0,
+              "state.charges.orb": 2,
+              "state.marks.door": [
+                "x",
+                "x"
+              ],
+              "state.marks.wall": []
+            }
+          }
+        ]
+      },
+      {
+        "id": "3",
+        "parent": "2",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "z"
+          }
+        ],
+        "changes": [
+          {
+            "by": "player",
+            "set": {
+              "state.inv.rope_coil": 0,
+              "state.charges.wand": 3
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "state",
+      "name": "keys start absent",
+      "expect": {
+        "scene.present": [
+          "p",
+          "a"
+        ]
+      },
+      "absent": [
+        "state.inv.torch",
+        "state.inv.rope_coil",
+        "state.charges.wand",
+        "state.marks.door"
+      ]
+    },
+    {
+      "type": "state",
+      "name": "0 and -1, which clamps to 0, remove their keys; 0 and 2 clamp to charges' default 2; [] is a set's default",
+      "at": "2",
+      "expect": {
+        "state.inv.rope_coil": 1,
+        "state.inv.bandage": 3,
+        "state.charges.wand": 5,
+        "state.marks.door": [
+          "x"
+        ]
+      },
+      "absent": [
+        "state.inv.torch",
+        "state.inv.lamp",
+        "state.charges.rod",
+        "state.charges.orb",
+        "state.marks.wall"
+      ]
+    },
+    {
+      "type": "cel",
+      "at": "2",
+      "expr": "!('torch' in state.inv) && !has(state.inv.lamp) && state.inv.rope_coil == 1 && size(state.inv) == 2 && size(state.charges) == 1 && size(state.marks) == 1",
+      "expect": true
+    },
+    {
+      "type": "macro",
+      "name": "keys in code point order; keys that aren't characters render with underscores as spaces",
+      "at": "2",
+      "text": "{{state.inv}}",
+      "expect": "bandage: 3, rope coil: 1"
+    },
+    {
+      "type": "state",
+      "name": "a later change to the default removes a key",
+      "at": "3",
+      "expect": {
+        "state.inv.bandage": 3,
+        "state.charges.wand": 3
+      },
+      "absent": [
+        "state.inv.rope_coil"
+      ]
+    },
+    {
+      "type": "check",
+      "expect": {
+        "codes": []
+      }
+    }
+  ]
+}

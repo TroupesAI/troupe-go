@@ -1,0 +1,68 @@
+version: "3"
+
+tasks:
+  lint:
+    desc: Lint the code and check dependencies for vulnerabilities
+    cmds:
+      - golangci-lint run ./...
+      - go mod tidy -diff
+      - govulncheck ./...
+
+  test:
+    desc: Run the tests, the conformance suite included
+    cmds:
+      - go test -race ./...
+
+  check:
+    desc: Run what CI runs
+    cmds:
+      - task: lint
+      - task: test
+      - task: spec:check
+
+  spec:
+    desc: Copy the schemas, the suite and the examples from a commit of the spec, as REF=<tag or commit>
+    requires:
+      vars: [REF]
+    vars:
+      TMP:
+        sh: mktemp -d
+    cmds:
+      - defer: rm -rf "{{.TMP}}"
+      - task: download
+        vars: { REF: "{{.REF}}", DIR: "{{.TMP}}" }
+      - rm -rf spec/schemas spec/conformance spec/examples
+      - mkdir -p spec
+      - cp -R "{{.TMP}}/schemas" "{{.TMP}}/conformance" "{{.TMP}}/examples" spec/
+      - cp "{{.TMP}}/REF" spec/REF
+
+  spec:local:
+    desc: Copy the schemas, the suite and the examples from ../troupe, to try a spec change before it's pushed
+    cmds:
+      - rm -rf spec/schemas spec/conformance spec/examples
+      - mkdir -p spec
+      - cp -R ../troupe/schemas ../troupe/conformance ../troupe/examples spec/
+
+  spec:check:
+    desc: Fail if the copy differs from the commit in spec/REF
+    vars:
+      TMP:
+        sh: mktemp -d
+      REF:
+        sh: cat spec/REF
+    cmds:
+      - defer: rm -rf "{{.TMP}}"
+      - task: download
+        vars: { REF: "{{.REF}}", DIR: "{{.TMP}}" }
+      - diff -r "{{.TMP}}/schemas" spec/schemas
+      - diff -r "{{.TMP}}/conformance" spec/conformance
+      - diff -r "{{.TMP}}/examples" spec/examples
+
+  download:
+    internal: true
+    cmds:
+      - curl -fsSL "https://codeload.github.com/TroupesAI/troupe/tar.gz/{{.REF}}" -o "{{.DIR}}/spec.tar.gz"
+      - tar -xzf "{{.DIR}}/spec.tar.gz" -C "{{.DIR}}" --strip-components=1
+      # GitHub's archives record their commit, so a tag or a short SHA
+      # resolves to the full one.
+      - gzip -dc "{{.DIR}}/spec.tar.gz" | git get-tar-commit-id > "{{.DIR}}/REF"

@@ -1,0 +1,79 @@
+{
+  "description": "Regex keys within the shared syntax and its limits are valid (Format 7.2, 14): every flag, categories, class escapes, a lazy quantifier, an escaped slash, a word boundary, groups nested 100 deep, and patterns of up to 1000 bytes written out in full. A key whose text after its last slash isn't lowercase letters, such as /r/ fans, is a plain key",
+  "note": "Written out, (a{10}){83} is (aaaaaaaaaa) 83 times, 996 bytes, and a{998,} is 998 copies of a then a*, 1000 bytes. The slashes around a key aren't part of its pattern.",
+  "bundle": {
+    "kind": "bundle",
+    "scenarios": [
+      {
+        "id": "s",
+        "entries": [
+          {
+            "id": "under",
+            "keys": [
+              "/(a{10}){83}/"
+            ],
+            "text": "996 bytes written out"
+          },
+          {
+            "id": "open_under",
+            "keys": [
+              "/a{998,}/"
+            ],
+            "text": "1000 bytes written out"
+          },
+          {
+            "id": "deep",
+            "keys": [
+              "/((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((a))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))/"
+            ],
+            "text": "groups nested 100 deep"
+          },
+          {
+            "id": "flags",
+            "keys": [
+              "/lamp/ims"
+            ],
+            "text": "every flag"
+          },
+          {
+            "id": "forms",
+            "keys": [
+              "/\\p{Lu}\\w+[-a-z\\-.]+?\\/\\b/"
+            ],
+            "text": "a category, class escapes, a class with a literal -, a lazy quantifier, an escaped slash and a word boundary"
+          },
+          {
+            "id": "plain",
+            "keys": [
+              "/r/ fans"
+            ],
+            "text": "a plain key"
+          },
+          {
+            "id": "words",
+            "keys": [
+              "/\\b(sword|blade)s?\\b/i"
+            ],
+            "text": "a SillyTavern-style key"
+          },
+          {
+            "id": "classes",
+            "keys": [
+              "/[-a\\[\\]][{}^$.*+?()|/]\\t\\P{Zs}/",
+              "/a{1000}/"
+            ],
+            "text": "a - first in a class, escaped brackets, other punctuation unescaped in a class, a character escape and a category; and a count of 1000, written out in exactly 1000 bytes"
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "expect": {
+        "codes": []
+      }
+    }
+  ]
+}

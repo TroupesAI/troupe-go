@@ -1,0 +1,322 @@
+{
+  "description": "Who knows a message part (Format 7.4, 11.5): its speaker and the characters present after its message's changes and, except on a root, before them; a part's knownBy replaces the witness rule with exactly the listed characters; the narrator knows a part unless its knownBy leaves the narrator out",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Ann."
+      },
+      {
+        "id": "b",
+        "name": "Bea",
+        "description": "Bea."
+      },
+      {
+        "id": "c",
+        "name": "Cy",
+        "description": "Cy."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "cast": [
+          {},
+          {
+            "character": "a"
+          },
+          {
+            "character": "b"
+          },
+          {
+            "character": "c"
+          }
+        ],
+        "openings": [
+          {
+            "id": "o",
+            "set": {
+              "scene.present": [
+                "a"
+              ]
+            },
+            "content": [
+              {
+                "text": "The hall is quiet."
+              },
+              {
+                "speaker": "a",
+                "text": "Welcome."
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        }
+      ],
+      "players": [
+        "p"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "system",
+        "content": [
+          {
+            "text": "The hall is quiet."
+          },
+          {
+            "speaker": "a",
+            "text": "Welcome."
+          }
+        ],
+        "changes": [
+          {
+            "by": "opening",
+            "set": {
+              "scene.present": [
+                "a",
+                "p"
+              ]
+            }
+          }
+        ],
+        "opening": "o"
+      },
+      {
+        "id": "2",
+        "parent": "1",
+        "from": "model",
+        "char": "a",
+        "content": [
+          {
+            "speaker": "a",
+            "text": "Bea, come in."
+          }
+        ],
+        "changes": [
+          {
+            "by": "model",
+            "set": {
+              "scene.present": [
+                "p",
+                "a",
+                "b"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "id": "3",
+        "parent": "2",
+        "from": "model",
+        "char": "a",
+        "content": [
+          {
+            "speaker": "a",
+            "text": "I'll be back."
+          }
+        ],
+        "changes": [
+          {
+            "by": "model",
+            "set": {
+              "scene.present": [
+                "p",
+                "b"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "id": "4",
+        "parent": "3",
+        "from": "model",
+        "char": "c",
+        "content": [
+          {
+            "speaker": "c",
+            "text": "(from the next room) I heard that."
+          }
+        ]
+      },
+      {
+        "id": "5",
+        "parent": "4",
+        "from": "model",
+        "char": "b",
+        "content": [
+          {
+            "speaker": "b",
+            "text": "Psst. The key is under the mat.",
+            "knownBy": [
+              "p"
+            ]
+          },
+          {
+            "speaker": "b",
+            "text": "*She doesn't trust Cy.*",
+            "knownBy": [
+              "b",
+              "narrator"
+            ]
+          },
+          {
+            "text": "*Bea taps the mat with her foot.*"
+          }
+        ]
+      },
+      {
+        "id": "6",
+        "parent": "5",
+        "from": "model",
+        "char": "b",
+        "content": [
+          {
+            "text": "The mat hides a trapdoor too.",
+            "knownBy": [
+              "narrator"
+            ]
+          },
+          {
+            "speaker": "b",
+            "text": "*She mouths a word to the wall.*",
+            "knownBy": [
+              "c"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "expect": {
+        "codes": []
+      }
+    },
+    {
+      "type": "knows",
+      "name": "a root's part: those present after its changes, not before, and the narrator; the root's change adds the player to the opening's scene.present",
+      "message": "1",
+      "part": 0,
+      "expect": [
+        "a",
+        "narrator",
+        "p"
+      ]
+    },
+    {
+      "type": "knows",
+      "name": "a root's part with a speaker",
+      "message": "1",
+      "part": 1,
+      "expect": [
+        "a",
+        "narrator",
+        "p"
+      ]
+    },
+    {
+      "type": "knows",
+      "name": "present after the changes: Bea, who enters",
+      "message": "2",
+      "part": 0,
+      "expect": [
+        "a",
+        "b",
+        "narrator",
+        "p"
+      ]
+    },
+    {
+      "type": "knows",
+      "name": "present before the changes: Ann, who leaves",
+      "message": "3",
+      "part": 0,
+      "expect": [
+        "a",
+        "b",
+        "narrator",
+        "p"
+      ]
+    },
+    {
+      "type": "knows",
+      "name": "the speaker, though not present",
+      "message": "4",
+      "part": 0,
+      "expect": [
+        "b",
+        "c",
+        "narrator",
+        "p"
+      ]
+    },
+    {
+      "type": "knows",
+      "name": "knownBy replaces the witness rule, so even the speaker doesn't know, nor the narrator",
+      "message": "5",
+      "part": 0,
+      "expect": [
+        "p"
+      ]
+    },
+    {
+      "type": "knows",
+      "name": "knownBy naming the narrator",
+      "message": "5",
+      "part": 1,
+      "expect": [
+        "b",
+        "narrator"
+      ]
+    },
+    {
+      "type": "knows",
+      "name": "the witness rule",
+      "message": "5",
+      "part": 2,
+      "expect": [
+        "b",
+        "narrator",
+        "p"
+      ]
+    },
+    {
+      "type": "knows",
+      "name": "[\"narrator\"]: narrator-only",
+      "message": "6",
+      "part": 0,
+      "expect": [
+        "narrator"
+      ]
+    },
+    {
+      "type": "knows",
+      "name": "knownBy naming a character who isn't present",
+      "message": "6",
+      "part": 1,
+      "expect": [
+        "c"
+      ]
+    }
+  ]
+}

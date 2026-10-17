@@ -1,0 +1,174 @@
+{
+  "description": "Player and model text is used as written (Format 9): its macros never resolve and it holds no escapes. {{user}} is the speaker of the first speaking part of the latest player message on the path that has one (multiplayer)",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Ann."
+      },
+      {
+        "id": "b",
+        "name": "Bea",
+        "description": "Bea."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "cast": [
+          {},
+          {},
+          {
+            "character": "a"
+          },
+          {
+            "character": "b"
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        },
+        {
+          "id": "q",
+          "name": "Quin",
+          "description": "Quin."
+        }
+      ],
+      "players": [
+        "p",
+        "q"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "I type {{char}} on purpose."
+          }
+        ]
+      },
+      {
+        "id": "2",
+        "parent": "1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "q",
+            "text": "Me too! \\{{user}} {{nope}}"
+          }
+        ]
+      },
+      {
+        "id": "3",
+        "parent": "2",
+        "from": "player",
+        "content": [
+          {
+            "text": "*A long pause.*"
+          }
+        ]
+      },
+      {
+        "id": "4",
+        "parent": "3",
+        "from": "model",
+        "char": "a",
+        "content": [
+          {
+            "speaker": "a",
+            "text": "{{char}} smiles at {{user}}."
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "macro",
+      "name": "a player's {{char}} renders as written",
+      "part": {
+        "message": "1",
+        "index": 0
+      },
+      "expect": "I type {{char}} on purpose."
+    },
+    {
+      "type": "macro",
+      "name": "a backslash is no escape there, and {{nope}} no UNKNOWN_MACRO",
+      "part": {
+        "message": "2",
+        "index": 0
+      },
+      "expect": "Me too! \\{{user}} {{nope}}"
+    },
+    {
+      "type": "macro",
+      "name": "a model's text renders as written",
+      "part": {
+        "message": "4",
+        "index": 0
+      },
+      "expect": "{{char}} smiles at {{user}}."
+    },
+    {
+      "type": "macro",
+      "name": "before any player message: the first player",
+      "char": "a",
+      "text": "{{char}} answers {{user}}.",
+      "expect": "Ann answers Pat."
+    },
+    {
+      "type": "macro",
+      "name": "at Pat's message",
+      "at": "1",
+      "char": "a",
+      "text": "{{char}} answers {{user}}.",
+      "expect": "Ann answers Pat."
+    },
+    {
+      "type": "macro",
+      "name": "at Quin's message, the latest player message",
+      "at": "2",
+      "char": "a",
+      "text": "{{char}} answers {{user}}.",
+      "expect": "Ann answers Quin."
+    },
+    {
+      "type": "macro",
+      "name": "a player message without a speaking part doesn't change {{user}}",
+      "at": "3",
+      "char": "a",
+      "text": "{{char}} answers {{user}}.",
+      "expect": "Ann answers Quin."
+    },
+    {
+      "type": "cel",
+      "name": "players lists both, in its order; user follows the latest player message",
+      "at": "3",
+      "char": "a",
+      "expr": "players == ['p', 'q'] && user == 'q'",
+      "expect": true
+    },
+    {
+      "type": "check",
+      "expect": {
+        "codes": []
+      }
+    }
+  ]
+}

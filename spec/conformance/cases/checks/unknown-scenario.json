@@ -1,0 +1,51 @@
+{
+  "description": "UNKNOWN_SCENARIO (Format 15.3): the header's scenario must name a scenario; a character's ID doesn't name one",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "A character, not a scenario."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s"
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "a"
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "player",
+        "content": [
+          {
+            "text": "Hi."
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "expect": {
+        "codes": [
+          "UNKNOWN_SCENARIO"
+        ],
+        "includes": [
+          {
+            "code": "UNKNOWN_SCENARIO",
+            "at": "header/scenario"
+          }
+        ]
+      }
+    }
+  ]
+}

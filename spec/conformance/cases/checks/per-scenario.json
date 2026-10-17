@@ -1,0 +1,84 @@
+{
+  "description": "Expressions type-check once for each scenario, against its variables and with the expressions in use in it, and an expression in use in no scenario against no scenario variables (Format 6.4, 10.2): a character's condition reading a variable only one of the scenarios that cast her declares is CEL_ERROR, as is a world's that no scenario uses, while the scenario's own condition is valid",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Ann.",
+        "entries": [
+          {
+            "id": "e",
+            "when": "state.alarm",
+            "text": "Ann hears the alarm."
+          }
+        ]
+      }
+    ],
+    "worlds": [
+      {
+        "id": "w",
+        "name": "W",
+        "variables": [
+          {
+            "id": "tide",
+            "type": "int",
+            "description": "d"
+          }
+        ],
+        "entries": [
+          {
+            "id": "f",
+            "when": "own.tide > 0 || state.alarm",
+            "text": "The tide rises."
+          }
+        ]
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s1",
+        "worlds": [],
+        "variables": [
+          {
+            "id": "alarm",
+            "type": "bool",
+            "description": "d"
+          }
+        ],
+        "entries": [
+          {
+            "id": "g",
+            "when": "state.alarm",
+            "text": "The alarm rings."
+          }
+        ]
+      },
+      {
+        "id": "s2",
+        "worlds": []
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "expect": {
+        "codes": [
+          "CEL_ERROR"
+        ],
+        "includes": [
+          {
+            "code": "CEL_ERROR",
+            "at": "/characters/0/entries/0/when"
+          },
+          {
+            "code": "CEL_ERROR",
+            "at": "/worlds/0/entries/0/when"
+          }
+        ]
+      }
+    }
+  ]
+}

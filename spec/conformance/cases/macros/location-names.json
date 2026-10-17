@@ -1,0 +1,90 @@
+{
+  "description": "{{scene.location}} always renders as its location's name, even when a character has the same ID, while a string state value that is a character ID renders as that character's name (Format 9)",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "b",
+        "name": "Bea",
+        "description": "Bea."
+      }
+    ],
+    "worlds": [
+      {
+        "id": "w",
+        "name": "Port",
+        "locations": [
+          {
+            "id": "b",
+            "name": "Boathouse"
+          }
+        ]
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "variables": [
+          {
+            "id": "place",
+            "type": "string",
+            "initial": "b",
+            "description": "A place or a person."
+          }
+        ],
+        "openings": [
+          {
+            "id": "o",
+            "set": {
+              "scene.location": "b"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s"
+    },
+    "messages": [
+      {
+        "id": "1",
+        "opening": "o",
+        "from": "system",
+        "content": [],
+        "changes": [
+          {
+            "by": "opening",
+            "set": {
+              "scene.location": "b"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "macro",
+      "name": "the scene's location by its name",
+      "at": "1",
+      "text": "{{scene.location}}",
+      "expect": "Boathouse"
+    },
+    {
+      "type": "macro",
+      "name": "a state value that is a character ID shows the character",
+      "at": "1",
+      "text": "{{state.place}}",
+      "expect": "Bea"
+    },
+    {
+      "type": "check",
+      "expect": {
+        "codes": []
+      }
+    }
+  ]
+}

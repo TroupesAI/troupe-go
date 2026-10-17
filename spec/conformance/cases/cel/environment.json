@@ -1,0 +1,144 @@
+{
+  "description": "The CEL environment (Format 10.1) at Format Appendix B's messages: turn, opening, scenario, players, char, self, own, user, scene, elapsed and keyed variables read with brackets; expressions type-check against the declared variables and have type bool (Format 10.2)",
+  "note": "State at 4: bell 7 and trust.kai 50 from its change; scene.location rooftops from the root. At 3, Kai has left and his nerve is 1. Message 2 is at 21:04 on Saturday 17 October 2026, at +02:00.",
+  "bundleFile": "../../../examples/lantern-heist/bundle.json",
+  "sessionFile": "../../../examples/lantern-heist/sessions/heist.troupe-session.jsonl",
+  "tests": [
+    {
+      "type": "cel",
+      "name": "turn counts rounds: player messages on the path",
+      "at": "4",
+      "expr": "turn == 1",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "opening is the path root's opening",
+      "at": "4",
+      "expr": "opening == 'rooftop_briefing'",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "at": "4",
+      "expr": "scenario == 'heist' && self == 'heist'",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "at": "4",
+      "expr": "players == ['mara'] && user == 'mara'",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "self is the expression's owner, and own its variables",
+      "at": "3",
+      "self": "kai",
+      "expr": "self == 'kai' && own.nerve == 1 && state.kai.nerve == 1",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "branch 4 has no nerve change",
+      "at": "4",
+      "self": "kai",
+      "expr": "own.nerve == 0",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "a scenario's own is its state",
+      "at": "4",
+      "expr": "own.bell == state.bell",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "scene.within: the location, then its ancestors",
+      "at": "4",
+      "expr": "scene.within == ['rooftops', 'manor'] && 'manor' in scene.within",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "before the root: no location",
+      "expr": "scene.location == ''",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "at": "3",
+      "expr": "!('kai' in scene.present) && scene.present == ['mara', 'elena']",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "a computed key is read with brackets",
+      "at": "4",
+      "char": "kai",
+      "expr": "state.trust[char] == 50 && state.trust.elena == 70 && state.trust.mara == 50",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "at": "4",
+      "expr": "state.bell == 7 && state.bell != 8 && state.trust.kai >= 50 && state.bell > 6",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "the confess entry's condition",
+      "at": "4",
+      "expr": "state.trust.kai >= 80",
+      "expect": false
+    },
+    {
+      "type": "cel",
+      "at": "2",
+      "expr": "state.approach == 'quiet' && !state.key_revealed",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "elapsed is 0 when the parent has no at",
+      "at": "2",
+      "expr": "elapsed == 0",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "at": "4",
+      "expr": "state.trust.kai - 1 > 0",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "conditions must be bool",
+      "expr": "state.bell + 1",
+      "expect": {
+        "checkError": true
+      }
+    },
+    {
+      "type": "cel",
+      "name": "undeclared variables fail the type check",
+      "expr": "state.nope",
+      "expect": {
+        "checkError": true
+      }
+    },
+    {
+      "type": "cel",
+      "expr": "'ab'.contains('a') && 'lantern'.startsWith('lan')",
+      "expect": true
+    },
+    {
+      "type": "check",
+      "name": "B.2 and B.3 conform",
+      "expect": {
+        "codes": []
+      }
+    }
+  ]
+}

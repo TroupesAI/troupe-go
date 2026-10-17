@@ -1,0 +1,15 @@
+{
+  "troupe": "0.14",
+  "kind": "bundle",
+  "characters": [
+    { "id": "elena", "name": "Elena Voss", "description": "A meticulous thief and mapmaker. Calm, exacting, dry humor." }
+  ],
+  "scenarios": [
+    {
+      "id": "workshop",
+      "openings": [
+        { "id": "late", "content": [{ "speaker": "elena", "text": "You're late. Sit down, and don't touch the maps." }] }
+      ]
+    }
+  ]
+}
