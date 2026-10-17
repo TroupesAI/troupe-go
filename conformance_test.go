@@ -9,8 +9,10 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"maps"
 	"os"
 	"path"
+	"reflect"
 	"slices"
 	"strconv"
 	"strings"
@@ -26,7 +28,6 @@ var pending = map[string]bool{
 	"cel":   true,
 	"knows": true,
 	"macro": true,
-	"state": true,
 
 	// CEL_ERROR, REGEX_ERROR and UNKNOWN_MACRO come with phases 5 to 7.
 	"checks/bundle.json#0":        true,
@@ -34,8 +35,6 @@ var pending = map[string]bool{
 	"checks/regex-keys.json#0":    true,
 	"checks/session-text.json#0":  true,
 	"checks/unknown-macro.json#0": true,
-	// A "*" map's keys after a change come with the state, in phase 3.
-	"checks/star-map-limit.json#0": true,
 }
 
 // spec holds the copy of the spec repository's files: the cases are in
@@ -59,6 +58,10 @@ type test struct {
 	Type   string         `json:"type"`
 	Name   string         `json:"name"`
 	Expect jsontext.Value `json:"expect"`
+
+	// state, and later macro and cel
+	At     string   `json:"at"`
+	Absent []string `json:"absent"`
 
 	// parse
 	Kind   string `json:"kind"`
@@ -164,6 +167,8 @@ func run(c *testCase, tc test, expect any) error {
 		return runParse(tc, expect.(*codesExpect))
 	case "check":
 		return runCheck(c, expect.(*checkExpect))
+	case "state":
+		return runState(c, tc, *expect.(*map[string]jsontext.Value))
 	}
 	return fmt.Errorf("%s tests: %w", tc.Type, errors.ErrUnsupported)
 }
@@ -189,11 +194,73 @@ func runCheck(c *testCase, expect *checkExpect) error {
 	return nil
 }
 
+// runState compares the state at a message, flattened, with expect, a
+// subset of it, and checks that the keys absent lists aren't in it
+// (conformance README section 3.1).
+func runState(c *testCase, tc test, expect map[string]jsontext.Value) error {
+	b, s, _, err := c.read()
+	if err != nil {
+		return err
+	}
+	story, err := troupe.NewStory(b, s)
+	if err != nil {
+		return err
+	}
+	state := story.Initial()
+	if tc.At != "" {
+		if state, err = story.StateAt(tc.At); err != nil {
+			return err
+		}
+	}
+	flat := maps.Collect(state.All())
+	for key, want := range expect {
+		got, ok := flat[key]
+		if !ok {
+			return fmt.Errorf("%s isn't in the state %v", key, flat)
+		}
+		equal, err := sameJSON(got, want)
+		if err != nil {
+			return err
+		}
+		if !equal {
+			return fmt.Errorf("%s is %v, want %s", key, got, want)
+		}
+	}
+	for _, key := range tc.Absent {
+		if _, ok := flat[key]; ok {
+			return fmt.Errorf("%s is in the state", key)
+		}
+	}
+	return nil
+}
+
+// sameJSON reports whether got, encoded as JSON, equals want, comparing
+// numbers as doubles (conformance README section 3).
+func sameJSON(got any, want jsontext.Value) (bool, error) {
+	data, err := json.Marshal(got)
+	if err != nil {
+		return false, err
+	}
+	var g, w any
+	if err := json.Unmarshal(data, &g); err != nil {
+		return false, err
+	}
+	if err := json.Unmarshal(want, &w); err != nil {
+		return false, err
+	}
+	return reflect.DeepEqual(g, w), nil
+}
+
 // read reads a fresh copy of the case's bundle and session, as conformance
 // README section 1 describes them, with the diagnostics of reading them.
 func (c *testCase) read() (*troupe.Bundle, *troupe.Session, []troupe.Diagnostic, error) {
 	if path.Base(c.BundleFile) == "bundle.json" {
-		return c.readPackage()
+		b, s, diags, err := c.readPackage()
+		if err != nil || s != nil || c.Session == nil {
+			return b, s, diags, err
+		}
+		s, sdiags, err := c.readSession()
+		return b, s, append(diags, sdiags...), err
 	}
 	var bundle []byte
 	var err error
@@ -215,39 +282,46 @@ func (c *testCase) read() (*troupe.Bundle, *troupe.Session, []troupe.Diagnostic,
 	if b == nil {
 		return nil, nil, nil, fmt.Errorf("the bundle doesn't read: %v", diags)
 	}
+	if c.SessionFile == "" && c.Session == nil {
+		return b, nil, diags, nil
+	}
+	s, sdiags, err := c.readSession()
+	return b, s, append(diags, sdiags...), err
+}
 
+// readSession reads the case's session, from its file or as given inline.
+func (c *testCase) readSession() (*troupe.Session, []troupe.Diagnostic, error) {
 	var session []byte
+	var err error
 	switch {
 	case c.SessionFile != "":
 		session, err = fs.ReadFile(spec, c.file(c.SessionFile))
-	case c.Session != nil:
-		header, err := withVersion(c.Session.Header)
-		if err != nil {
-			return nil, nil, nil, err
+	default:
+		var header []byte
+		if header, err = withVersion(c.Session.Header); err != nil {
+			return nil, nil, err
 		}
 		lines := [][]byte{header}
 		for _, m := range c.Session.Messages {
 			line := slices.Clone(m)
 			if err := line.Compact(); err != nil {
-				return nil, nil, nil, err
+				return nil, nil, err
 			}
 			lines = append(lines, line)
 		}
 		session = bytes.Join(lines, []byte("\n"))
-	default:
-		return b, nil, diags, nil
 	}
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
-	s, sdiags, err := troupe.ReadSession(bytes.NewReader(session))
+	s, diags, err := troupe.ReadSession(bytes.NewReader(session))
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 	if s == nil {
-		return nil, nil, nil, fmt.Errorf("the session doesn't read: %v", sdiags)
+		return nil, nil, fmt.Errorf("the session doesn't read: %v", diags)
 	}
-	return b, s, append(diags, sdiags...), nil
+	return s, diags, nil
 }
 
 // readPackage reads the package whose bundle.json the case names, and the

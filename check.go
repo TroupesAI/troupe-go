@@ -30,7 +30,7 @@ func Check(b *Bundle, s *Session) []Diagnostic {
 	c.bundleReferences()
 	c.initials(inBundle, b.Characters, b.Worlds, b.Scenarios)
 	for i := range b.Scenarios {
-		c.openings(newScope(b, nil, i, c.characters, c.worlds))
+		c.openings(newScope(b, nil, i))
 	}
 	if s != nil {
 		c.s = s
@@ -39,7 +39,7 @@ func Check(b *Bundle, s *Session) []Diagnostic {
 		c.sessionIDs()
 		c.sessionReferences(scenario)
 		c.initials(inHeader, s.Header.Characters, s.Header.Worlds, nil)
-		c.messages(newScope(b, s, scenario, c.characters, c.worlds))
+		c.messages(newScope(b, s, scenario))
 	}
 	return sortDiagnostics(c.diags)
 }
@@ -473,8 +473,21 @@ func (c *checker) initial(at place, p jsontext.Pointer, v *Variable) {
 
 // openings checks the keys and values of the openings of sc's scenario.
 func (c *checker) openings(sc *scope) {
+	initial := sc.initial()
 	for j, o := range sc.scenario.Openings {
-		c.set(sc, inBundle, ptr("", "scenarios", sc.index, "openings", j, "set"), o.Set)
+		p := ptr("", "scenarios", sc.index, "openings", j, "set")
+		c.set(sc, inBundle, p, o.Set)
+		c.mapLimit(sc, inBundle, p, o.Set, sc.apply(initial.clone(), o.Set, nil))
+	}
+}
+
+// mapLimit reports the keys of set that write to a "*" map in over, which a
+// change left with more than maxSetMembers keys (Format 8.5, 14).
+func (c *checker) mapLimit(sc *scope, at place, p jsontext.Pointer, set map[string]jsontext.Value, over []string) {
+	for key := range set {
+		if b, _, ok := sc.variable(key); ok && slices.Contains(over, b.name) {
+			c.report(CodeInvalidValue, at, ptr(p, key))
+		}
 	}
 }
 
@@ -492,11 +505,19 @@ func (c *checker) messages(sc *scope) {
 			c.set(sc, inMessage(i, m), ptr("", "changes", j, "set"), ch.Set)
 		}
 	}
+	// The state along each path, for the "*" map limit. Each message's
+	// changes are undone on the way back up.
+	st := sc.initial()
+	undo := make([][]edit, len(msgs))
 	// Session entries apply from the message that adds them onward on its
 	// path, the latest per ID, and disabled removes one (Format 11.3).
 	disabled := map[string][]bool{} // per ID, each entry adding it on the path
 	walkPaths(msgs, func(i int) {
 		m := &msgs[i]
+		for j, ch := range m.Changes {
+			over := sc.apply(st, ch.Set, &undo[i])
+			c.mapLimit(sc, inMessage(i, m), ptr("", "changes", j, "set"), ch.Set, over)
+		}
 		for _, e := range m.Entries {
 			disabled[e.ID] = append(disabled[e.ID], e.Disabled)
 		}
@@ -512,6 +533,8 @@ func (c *checker) messages(sc *scope) {
 			}
 		}
 	}, func(i int) {
+		st.revert(undo[i])
+		undo[i] = nil
 		for _, e := range msgs[i].Entries {
 			disabled[e.ID] = disabled[e.ID][:len(disabled[e.ID])-1]
 		}
@@ -544,11 +567,11 @@ func (c *checker) set(sc *scope, at place, p jsontext.Pointer, set map[string]js
 				}
 			}
 		default:
-			v, ok := sc.variable(key)
+			b, _, ok := sc.variable(key)
 			switch {
 			case !ok:
 				c.report(CodeUnknownVariable, at, kp)
-			case !validValue(v, val):
+			case !validValue(b.v, val):
 				c.report(CodeInvalidValue, at, kp)
 			}
 		}

@@ -15,30 +15,57 @@ type scope struct {
 	// session, its seats are unfilled and left out (conformance README
 	// section 2).
 	cast       []string
+	joiners    []string              // the cast's characters a session adds as joiners
 	characters map[string]*Character // in use, by ID
 	worlds     map[string]*World     // in use, by ID
-	variables  map[string]*Variable  // the scenario's, by ID
 	openings   map[string]bool
+	// bindings are the variables in use: the scenario's, then its worlds',
+	// then its characters' (Format 6.4), each in its owner's order.
+	bindings []*binding
+	byName   map[string]*binding
+}
+
+// binding is a variable in use, under its full name (Format 8.2).
+type binding struct {
+	name string // such as "state.bell" or "state.kai.nerve"
+	v    *Variable
 }
 
 // newScope returns the scope of the bundle's scenario i, played in s when s
-// isn't nil. Characters and worlds come from lookup tables of the bundle's and
-// the session's, the first of each ID.
-func newScope(b *Bundle, s *Session, i int, characters map[string]*Character, worlds map[string]*World) *scope {
+// isn't nil, or of no scenario when i is -1.
+func newScope(b *Bundle, s *Session, i int) *scope {
+	// Characters and worlds are the bundle's and the session's, the first of
+	// each ID.
+	characters, worlds := map[string]*Character{}, map[string]*World{}
+	add := func(cs []Character, ws []World) {
+		for j := range cs {
+			if _, ok := characters[cs[j].ID]; !ok {
+				characters[cs[j].ID] = &cs[j]
+			}
+		}
+		for j := range ws {
+			if _, ok := worlds[ws[j].ID]; !ok {
+				worlds[ws[j].ID] = &ws[j]
+			}
+		}
+	}
+	add(b.Characters, b.Worlds)
+	if s != nil {
+		add(s.Header.Characters, s.Header.Worlds)
+	}
+
 	sc := &scope{
 		index:      i,
 		characters: map[string]*Character{},
 		worlds:     map[string]*World{},
-		variables:  map[string]*Variable{},
 		openings:   map[string]bool{},
+		byName:     map[string]*binding{},
 	}
 	var scenario *Scenario
 	if i >= 0 {
 		scenario = &b.Scenarios[i]
 		sc.scenario = scenario
-		for j := range scenario.Variables {
-			sc.variables[scenario.Variables[j].ID] = &scenario.Variables[j]
-		}
+		sc.bind("state.", scenario.Variables)
 		for _, o := range scenario.Openings {
 			sc.openings[o.ID] = true
 		}
@@ -70,10 +97,10 @@ func newScope(b *Bundle, s *Session, i int, characters map[string]*Character, wo
 	} else {
 		sc.cast = sessionCast(members, &s.Header)
 		inUse = sc.cast
-	}
-	for _, id := range inUse {
-		if c, ok := characters[id]; ok {
-			sc.characters[id] = c
+		for _, c := range s.Header.Characters {
+			if !slices.Contains(s.Header.Players, c.ID) {
+				sc.joiners = append(sc.joiners, c.ID)
+			}
 		}
 	}
 
@@ -93,11 +120,30 @@ func newScope(b *Bundle, s *Session, i int, characters map[string]*Character, wo
 		}
 	}
 	for _, id := range worldIDs {
-		if w, ok := worlds[id]; ok {
+		if w, ok := worlds[id]; ok && sc.worlds[id] == nil {
 			sc.worlds[id] = w
+			sc.bind("state."+id+".", w.Variables)
+		}
+	}
+	for _, id := range inUse {
+		if c, ok := characters[id]; ok && sc.characters[id] == nil {
+			sc.characters[id] = c
+			sc.bind("state."+id+".", c.Variables)
 		}
 	}
 	return sc
+}
+
+// bind puts vars in use, each named prefix and its ID. A name already bound
+// belongs to a variable with a duplicate ID, which is DUPLICATE_ID.
+func (sc *scope) bind(prefix string, vars []Variable) {
+	for i := range vars {
+		b := &binding{name: prefix + vars[i].ID, v: &vars[i]}
+		if _, ok := sc.byName[b.name]; !ok {
+			sc.bindings = append(sc.bindings, b)
+			sc.byName[b.name] = b
+		}
+	}
 }
 
 // sessionCast returns a session's cast (Format 11.2): the scenario cast with
@@ -136,48 +182,32 @@ func sessionCast(members []CastMember, h *SessionHeader) []string {
 	return cast
 }
 
-// variable returns the variable a change key names, and whether the key is
-// valid (Format 8.5): a full name (Format 8.2), followed by a key the variable
-// allows when it is keyed (Format 8.3).
-func (sc *scope) variable(key string) (*Variable, bool) {
-	segs := strings.Split(key, ".")
-	if len(segs) < 2 || segs[0] != "state" {
-		return nil, false
+// variable returns the variable a change key names, and the key within it
+// for a keyed variable. It reports whether the change key is valid (Format
+// 8.5): a full name (Format 8.2), followed by a key the variable allows when
+// it is keyed (Format 8.3).
+func (sc *scope) variable(key string) (*binding, string, bool) {
+	if b, ok := sc.byName[key]; ok {
+		return b, "", !b.v.Of.keyed()
 	}
-	segs = segs[1:]
-	v, ok := sc.variables[segs[0]]
-	if ok {
-		segs = segs[1:]
-	} else {
-		if len(segs) < 2 {
-			return nil, false
-		}
-		if v = sc.ownVariable(segs[0], segs[1]); v == nil {
-			return nil, false
-		}
-		segs = segs[2:]
+	i := strings.LastIndexByte(key, '.')
+	if i < 0 {
+		return nil, "", false
 	}
-	if !v.Of.keyed() {
-		return v, len(segs) == 0
+	b, ok := sc.byName[key[:i]]
+	if !ok || !b.v.Of.keyed() || !sc.allows(b.v, key[i+1:]) {
+		return nil, "", false
 	}
-	return v, len(segs) == 1 && sc.allows(v, segs[0])
+	return b, key[i+1:], true
 }
 
-// ownVariable returns the variable id of the character or world owner, when
-// both are in use.
-func (sc *scope) ownVariable(owner, id string) *Variable {
-	var vars []Variable
-	if c, ok := sc.characters[owner]; ok {
-		vars = c.Variables
-	} else if w, ok := sc.worlds[owner]; ok {
-		vars = w.Variables
+// keys returns the keys of a "cast" or list variable, in order; nil for a
+// "*" map, whose keys appear as changes set them (Format 8.3).
+func (sc *scope) keys(v *Variable) []string {
+	if v.Of.Cast {
+		return sc.cast
 	}
-	for i := range vars {
-		if vars[i].ID == id {
-			return &vars[i]
-		}
-	}
-	return nil
+	return v.Of.List
 }
 
 // allows reports whether a keyed variable has the key k (Format 8.3).
