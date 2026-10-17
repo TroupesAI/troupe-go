@@ -9,12 +9,14 @@ import (
 // scope is what a scenario has in use, as a session plays it or, without a
 // session, as the scenario is written (Format 6.4).
 type scope struct {
+	all      *names    // every character, world and location of the bundle and session
 	scenario *Scenario // nil when the session names none
 	index    int       // the scenario's index in the bundle
 	// cast is the cast's characters in cast order (Format 11.2). Without a
 	// session, its seats are unfilled and left out (conformance README
 	// section 2).
 	cast       []string
+	players    []string              // the players' characters, in the order players lists them
 	joiners    []string              // the cast's characters a session adds as joiners
 	characters map[string]*Character // in use, by ID
 	worlds     map[string]*World     // in use, by ID
@@ -31,17 +33,17 @@ type binding struct {
 	v    *Variable
 }
 
-// names indexes what references can name: the characters and worlds of a
-// bundle and its session, the first of each ID, and every location's ID.
+// names indexes what references can name: the characters, worlds and
+// locations of a bundle and its session, the first of each ID.
 type names struct {
 	characters map[string]*Character
 	worlds     map[string]*World
-	locations  map[string]bool
+	locations  map[string]*Location
 }
 
 // newNames returns the names of b, and of s when s isn't nil.
 func newNames(b *Bundle, s *Session) *names {
-	n := &names{characters: map[string]*Character{}, worlds: map[string]*World{}, locations: map[string]bool{}}
+	n := &names{characters: map[string]*Character{}, worlds: map[string]*World{}, locations: map[string]*Location{}}
 	n.add(b.Characters, b.Worlds)
 	if s != nil {
 		n.add(s.Header.Characters, s.Header.Worlds)
@@ -60,8 +62,10 @@ func (n *names) add(characters []Character, worlds []World) {
 		if _, ok := n.worlds[worlds[i].ID]; !ok {
 			n.worlds[worlds[i].ID] = &worlds[i]
 		}
-		for _, l := range worlds[i].Locations {
-			n.locations[l.ID] = true
+		for j, l := range worlds[i].Locations {
+			if _, ok := n.locations[l.ID]; !ok {
+				n.locations[l.ID] = &worlds[i].Locations[j]
+			}
 		}
 	}
 }
@@ -75,8 +79,8 @@ func scenarioIndex(b *Bundle, id string) int {
 // isn't nil, or of no scenario when i is -1.
 func newScope(b *Bundle, s *Session, i int) *scope {
 	n := newNames(b, s)
-
 	sc := &scope{
+		all:        n,
 		index:      i,
 		characters: map[string]*Character{},
 		worlds:     map[string]*World{},
@@ -118,6 +122,7 @@ func newScope(b *Bundle, s *Session, i int) *scope {
 		}
 	} else {
 		sc.cast, sc.joiners = sessionCast(members, &s.Header)
+		sc.players = s.Header.Players
 		inUse = sc.cast
 	}
 
@@ -270,4 +275,55 @@ var celReserved = []string{
 // char and user (Format 8.3).
 func isKey(k string) bool {
 	return authorID.MatchString(k) && !slices.Contains(celReserved, k) && k != "char" && k != "user"
+}
+
+// declared resolves a macro's state or own path to the variable it names
+// (Format 9): its full name, its declaration, and the path's segments below
+// it. It reports false when the path names no declared variable, as Format
+// 10.2 counts declarations: state against scenario's variables, when it isn't
+// nil, and those of every character and world; own against those of owner, a
+// character, world or scenario ID.
+func (n *names) declared(scenario *Scenario, owner string, own bool, path []string) (string, *Variable, []string, bool) {
+	var vars []Variable
+	prefix := "state."
+	switch {
+	case own && scenario != nil && owner == scenario.ID:
+		vars = scenario.Variables
+	case own && n.characters[owner] != nil:
+		vars, prefix = n.characters[owner].Variables, "state."+owner+"."
+	case own && n.worlds[owner] != nil:
+		vars, prefix = n.worlds[owner].Variables, "state."+owner+"."
+	case own:
+		return "", nil, nil, false
+	default:
+		if scenario != nil {
+			if v := variableOf(scenario.Variables, path[0]); v != nil {
+				return prefix + path[0], v, path[1:], true
+			}
+		}
+		if len(path) < 2 {
+			return "", nil, nil, false
+		}
+		switch {
+		case n.characters[path[0]] != nil:
+			vars = n.characters[path[0]].Variables
+		case n.worlds[path[0]] != nil:
+			vars = n.worlds[path[0]].Variables
+		}
+		prefix, path = "state."+path[0]+".", path[1:]
+	}
+	v := variableOf(vars, path[0])
+	if v == nil {
+		return "", nil, nil, false
+	}
+	return prefix + path[0], v, path[1:], true
+}
+
+// variableOf returns the variable of vars with the ID id, or nil.
+func variableOf(vars []Variable, id string) *Variable {
+	i := slices.IndexFunc(vars, func(v Variable) bool { return v.ID == id })
+	if i < 0 {
+		return nil
+	}
+	return &vars[i]
 }

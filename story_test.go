@@ -12,7 +12,9 @@ import (
 // Applying each message to its parent's state gives the state StateAt gives,
 // so a caller that keeps states never replays a path. States are immutable:
 // applying a message leaves its parent's state as it was, and what Get and All
-// return can't change a state. Get reads what All yields.
+// return can't change a state. Get reads what All yields, which is the scene
+// and the variables: the player {{user}} means is kept in a state, but isn't
+// one of its keys.
 func TestStoryApply(t *testing.T) {
 	b, diags, err := troupe.ReadBundle(strings.NewReader(`{"troupe":"0.14","kind":"bundle",
 		"characters":[{"id":"a","name":"Ann","description":"Ann."}],
@@ -62,9 +64,15 @@ func TestStoryApply(t *testing.T) {
 			t.Errorf("message %s: Apply gives %v, StateAt %v", m.ID, got, maps.Collect(want.All()))
 		}
 		for key, x := range got {
+			if key != "scene.location" && key != "scene.present" && !strings.HasPrefix(key, "state.") {
+				t.Errorf("message %s: All yields %q", m.ID, key)
+			}
 			if y, ok := states[m.ID].Get(key); !ok || !reflect.DeepEqual(x, y) {
 				t.Errorf("message %s: Get(%q) is %v, %v; All yields %v", m.ID, key, y, ok, x)
 			}
+		}
+		if x, ok := states[m.ID].Get("user"); ok {
+			t.Errorf("message %s: Get(\"user\") is %v", m.ID, x)
 		}
 	}
 

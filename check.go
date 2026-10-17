@@ -6,6 +6,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/TroupesAI/troupe-go/internal/macro"
 )
 
 // Check runs the checks of Format 15.3 that reading leaves: IDs, references,
@@ -125,8 +127,13 @@ func (c *checker) owners(at place, characters []Character, worlds []World) {
 
 // scenarios checks the bundle's scenarios: their IDs and those of their
 // entries, variables and openings, what they name, their variables' initial
-// values, and the keys and values of their openings as each is written.
+// values, and the keys and values of their openings as each is written. It
+// checks the macros of each scenario and of the characters and worlds it has
+// in use against its variables, and those of characters and worlds no
+// scenario uses against none (Format 10.2).
 func (c *checker) scenarios() {
+	b := c.b
+	usedCharacters, usedWorlds := make([]bool, len(b.Characters)), make([]bool, len(b.Worlds))
 	for i := range c.b.Scenarios {
 		sc, p := &c.b.Scenarios[i], ptr("", "scenarios", i)
 		c.unique(c.seenOwners, sc.ID, inBundle, ptr(p, "id"))
@@ -159,7 +166,40 @@ func (c *checker) scenarios() {
 		}
 		c.entries(inBundle, p, sc.Entries)
 		c.initials(inBundle, p, sc.Variables)
-		c.openings(newScope(c.b, nil, i))
+		scope := newScope(b, nil, i)
+		c.openings(scope)
+
+		c.text(inBundle, ptr(p, "premise"), sc.Premise, sc, sc.ID)
+		c.text(inBundle, ptr(p, "briefing"), sc.Briefing, sc, sc.ID)
+		for j, m := range sc.Cast {
+			c.text(inBundle, ptr(p, "cast", j, "notes"), m.Notes, sc, sc.ID)
+		}
+		c.ownerTexts(inBundle, p, sc.Entries, sc.Variables, sc, sc.ID)
+		for j, o := range sc.Openings {
+			c.partTexts(inBundle, ptr(p, "openings", j, "content"), o.Content, sc, sc.ID)
+		}
+		for j := range b.Characters {
+			if scope.characters[b.Characters[j].ID] == &b.Characters[j] {
+				usedCharacters[j] = true
+				c.characterTexts(inBundle, ptr("", "characters", j), &b.Characters[j], sc)
+			}
+		}
+		for j := range b.Worlds {
+			if scope.worlds[b.Worlds[j].ID] == &b.Worlds[j] {
+				usedWorlds[j] = true
+				c.worldTexts(inBundle, ptr("", "worlds", j), &b.Worlds[j], sc)
+			}
+		}
+	}
+	for j := range b.Characters {
+		if !usedCharacters[j] {
+			c.characterTexts(inBundle, ptr("", "characters", j), &b.Characters[j], nil)
+		}
+	}
+	for j := range b.Worlds {
+		if !usedWorlds[j] {
+			c.worldTexts(inBundle, ptr("", "worlds", j), &b.Worlds[j], nil)
+		}
 	}
 }
 
@@ -212,7 +252,82 @@ func (c *checker) session() {
 	if h.Head != "" && !ids[h.Head] {
 		c.report(CodeUnknownMessage, inHeader, "/head")
 	}
-	c.messages(newScope(b, s, scenario))
+	scope := newScope(b, s, scenario)
+	c.messages(scope)
+
+	// A session's characters, worlds and entries are checked against its
+	// scenario, and so are roots made from its openings, where own means
+	// state. A session entry has no own (Format 8.2).
+	for i := range h.Characters {
+		c.characterTexts(inHeader, ptr("", "characters", i), &h.Characters[i], scope.scenario)
+	}
+	for i := range h.Worlds {
+		c.worldTexts(inHeader, ptr("", "worlds", i), &h.Worlds[i], scope.scenario)
+	}
+	for i := range s.Messages {
+		m := &s.Messages[i]
+		c.ownerTexts(inMessage(i, m), "", m.Entries, nil, scope.scenario, "")
+		if m.Parent == "" && m.Opening != "" {
+			c.partTexts(inMessage(i, m), "/content", m.Content, scope.scenario, h.Scenario)
+		}
+	}
+}
+
+// characterTexts checks the macros in a character's texts, owned by it.
+func (c *checker) characterTexts(at place, p jsontext.Pointer, ch *Character, scenario *Scenario) {
+	c.text(at, ptr(p, "description"), ch.Description, scenario, ch.ID)
+	c.text(at, ptr(p, "summary"), ch.Summary, scenario, ch.ID)
+	for i, exchange := range ch.Examples {
+		for j, l := range exchange {
+			c.text(at, ptr(p, "examples", i, j, "text"), l.Text, scenario, ch.ID)
+		}
+	}
+	c.ownerTexts(at, p, ch.Entries, ch.Variables, scenario, ch.ID)
+}
+
+// worldTexts checks the macros in a world's texts, owned by it.
+func (c *checker) worldTexts(at place, p jsontext.Pointer, w *World, scenario *Scenario) {
+	c.text(at, ptr(p, "description"), w.Description, scenario, w.ID)
+	for i, l := range w.Locations {
+		c.text(at, ptr(p, "locations", i, "description"), l.Description, scenario, w.ID)
+	}
+	c.ownerTexts(at, p, w.Entries, w.Variables, scenario, w.ID)
+}
+
+// ownerTexts checks the macros in the texts of an owner's entries and the
+// descriptions of its variables.
+func (c *checker) ownerTexts(at place, p jsontext.Pointer, entries []Entry, vars []Variable, scenario *Scenario, owner string) {
+	for i, e := range entries {
+		c.text(at, ptr(p, "entries", i, "text"), e.Text, scenario, owner)
+	}
+	for i, v := range vars {
+		c.text(at, ptr(p, "variables", i, "description"), v.Description, scenario, owner)
+	}
+}
+
+// partTexts checks the macros in the text and alt of the parts at p.
+func (c *checker) partTexts(at place, p jsontext.Pointer, parts []Part, scenario *Scenario, owner string) {
+	for i, part := range parts {
+		c.text(at, ptr(p, i, "text"), part.Text, scenario, owner)
+		c.text(at, ptr(p, i, "alt"), part.Alt, scenario, owner)
+	}
+}
+
+// text checks the macros in a text where they resolve, at p: each is a macro,
+// and names a declared variable, as Format 10.2 counts declarations with the
+// variables of scenario, when it isn't nil (Format 9, 15.3).
+func (c *checker) text(at place, p jsontext.Pointer, text string, scenario *Scenario, owner string) {
+	tokens, unknown := macro.Parse(text)
+	for _, t := range tokens {
+		if t.Kind == macro.State || t.Kind == macro.Own {
+			if _, _, _, ok := c.declared(scenario, owner, t.Kind == macro.Own, t.Path); !ok {
+				unknown = true
+			}
+		}
+	}
+	if unknown {
+		c.report(CodeUnknownMacro, at, p)
+	}
 }
 
 // scenarioVariable reports a session's character or world, at p, that takes a
@@ -469,7 +584,7 @@ func (c *checker) set(sc *scope, at place, p jsontext.Pointer, set map[string]js
 			var loc string
 			if json.Unmarshal(val, &loc) != nil {
 				c.report(CodeInvalidValue, at, kp)
-			} else if loc != "" && !c.locations[loc] {
+			} else if loc != "" && c.locations[loc] == nil {
 				c.report(CodeUnknownLocation, at, kp)
 			}
 		case "scene.present":

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io/fs"
 	"maps"
+	"math/rand/v2"
 	"os"
 	"path"
 	"reflect"
@@ -25,15 +26,13 @@ import (
 // as "<case path>#<test index>". A pending test that passes fails the run, so
 // the list can't go stale.
 var pending = map[string]bool{
-	"cel":   true,
-	"macro": true,
+	"cel": true,
 
-	// CEL_ERROR, REGEX_ERROR and UNKNOWN_MACRO come with phases 5 to 7.
-	"checks/bundle.json#0":        true,
-	"checks/per-scenario.json#0":  true,
-	"checks/regex-keys.json#0":    true,
-	"checks/session-text.json#0":  true,
-	"checks/unknown-macro.json#0": true,
+	// CEL_ERROR and REGEX_ERROR come with phases 6 and 7.
+	"checks/bundle.json#0":       true,
+	"checks/per-scenario.json#0": true,
+	"checks/regex-keys.json#0":   true,
+	"checks/session-text.json#0": true,
 }
 
 // spec holds the copy of the spec repository's files: the cases are in
@@ -58,17 +57,22 @@ type test struct {
 	Name   string         `json:"name"`
 	Expect jsontext.Value `json:"expect"`
 
-	// state, and later macro and cel
+	// state and macro, and later cel
 	At     string   `json:"at"`
 	Absent []string `json:"absent"`
 
-	// knows. A macro test's part is an object instead.
+	// macro
+	Text     string `json:"text"`
+	Char     string `json:"char"`
+	Owner    string `json:"owner"`
+	Narrator bool   `json:"narrator"`
+
+	// knows, and macro, whose part is an object of message and index
 	Message string         `json:"message"`
 	Part    jsontext.Value `json:"part"`
 
-	// parse
+	// parse, and text as for macro
 	Kind   string `json:"kind"`
-	Text   string `json:"text"`
 	Base64 string `json:"base64"`
 }
 
@@ -174,6 +178,8 @@ func run(c *testCase, tc test, expect any) error {
 		return runState(c, tc, *expect.(*map[string]jsontext.Value))
 	case "knows":
 		return runKnows(c, tc, *expect.(*[]string))
+	case "macro":
+		return runMacro(c, tc, *expect.(*string))
 	}
 	return fmt.Errorf("%s tests: %w", tc.Type, errors.ErrUnsupported)
 }
@@ -287,6 +293,48 @@ func runKnows(c *testCase, tc test, expect []string) error {
 	}
 	if got := story.KnownBy(m, before)[part]; !slices.Equal(got, expect) {
 		return fmt.Errorf("known by %q, want %q", got, expect)
+	}
+	return nil
+}
+
+// runMacro compares rendered text with expect: the test's text, or a
+// message part's as it is shown (conformance README section 3.2). Picks in
+// these tests have one option or are chosen already, so any source will do.
+func runMacro(c *testCase, tc test, expect string) error {
+	story, s, err := c.story()
+	if err != nil {
+		return err
+	}
+	r := rand.New(rand.NewPCG(0, 0)) //nolint:gosec // G404: a seeded source makes the test reproducible
+	var got string
+	if tc.Part != nil {
+		var part struct {
+			Message string `json:"message"`
+			Index   int    `json:"index"`
+		}
+		if err := json.Unmarshal(tc.Part, &part, json.RejectUnknownMembers(true)); err != nil {
+			return err
+		}
+		i := slices.IndexFunc(s.Messages, func(m troupe.Message) bool { return m.ID == part.Message })
+		if i < 0 {
+			return fmt.Errorf("no message %s", part.Message)
+		}
+		at, err := story.StateAt(part.Message)
+		if err != nil {
+			return err
+		}
+		got = story.RenderParts(&s.Messages[i], at, r)[part.Index].Text
+	} else {
+		ctx := troupe.Context{Char: tc.Char, Owner: tc.Owner, Narrator: tc.Narrator, State: story.Initial()}
+		if tc.At != "" {
+			if ctx.State, err = story.StateAt(tc.At); err != nil {
+				return err
+			}
+		}
+		got = story.Render(tc.Text, ctx, r)
+	}
+	if got != expect {
+		return fmt.Errorf("rendered %q, want %q", got, expect)
 	}
 	return nil
 }

@@ -65,6 +65,11 @@ The cost is that a change touching both the engine and the platform can't land i
 | The `"*"` map limit is judged after a whole change, and reported at each key of it that writes to the map | After each key | A change's keys have no order, so one that removes a key and adds another can't be judged partway |
 | `Check` walks a session's paths with one state, undoing each message's changes on the way back up | A state per message | Memory stays the size of one state, however long the paths |
 | `Story.KnownBy(m, before)` returns who knows each part of a message, from the state before it | `KnownBy(message, part)` by ID | The platform keeps states, not whole sessions, and one call per message applies its changes once for all its parts |
+| `Story.Render(text, Context, r)`, where `Context` holds the state, the character `{{char}}` means or the narrator, and the owner `own` means | Separate arguments, or one function per kind of text | The caller knows where author text is used; one struct can grow without breaking calls |
+| The player's character `{{user}}` means is part of `State`, and `Apply` keeps it | The caller working it out from the path | Like the state, it depends on the path to a message, so states the platform keeps carry it |
+| A pick's option comes from `r`, a `math/rand/v2` source every call to `Render` and `RenderParts` takes | An optional field in `Context` | Forgetting the source doesn't compile, and rendering stays deterministic, as the README promises |
+| `Story.RenderParts(m, at, r)` returns a message's parts as shown: resolved in a root made from an opening, as written in a player or model message, and `Render` is for author text | Leaving it to callers to use player and model text as written | A caller who forgot would let state leak through model output or prompt attacks (Format Appendix C) |
+| Macros are parsed in `internal/macro`, and one resolver decides which variable a path names, for `Render` and for `UNKNOWN_MACRO` | Each doing its own | Rendering and checking can't disagree on what's declared |
 | A message's own session entries apply to its `activated` | Applying from the next message | Format 11.3: they apply "from that message onward" |
 | A change key that doesn't follow the key grammar is `UNKNOWN_VARIABLE` as well as `SCHEMA` | Leaving it to the schema | Every check runs on the document as written (Format 15.3) |
 | With an unknown scenario, the session is checked against an empty one | Skipping the checks that need it | The rest still holds; only what the scenario would make valid fails |
@@ -96,10 +101,9 @@ conformance_test.go package troupe_test: the runner
 
 ## The public API
 
-The API has to do two things: everything the conformance runner asks for, through exported names only, and everything the platform needs (see [What the platform needs](#what-the-platform-needs)). Reading, checking, states and knowledge are built: `ReadBundle`, `ReadSession`, `ReadPackage`, the typed model, `Diagnostic`, `Check`, `NewStory`, `Story`, `State` and `Story.KnownBy`. The rest is a sketch; its names and signatures get settled when each phase starts.
+The API has to do two things: everything the conformance runner asks for, through exported names only, and everything the platform needs (see [What the platform needs](#what-the-platform-needs)). Reading, checking, states, knowledge and macros are built: `ReadBundle`, `ReadSession`, `ReadPackage`, the typed model, `Diagnostic`, `Check`, `NewStory`, `Story`, `State`, `Story.KnownBy`, `Story.Render` and `Story.RenderParts`. The rest is a sketch; its names and signatures get settled when each phase starts.
 
 ```go
-func (st *Story) Render(text string, at RenderContext) string
 func (st *Story) Eval(expr string, at EvalContext) (bool, error)
 ```
 
@@ -111,7 +115,7 @@ The suite's operations map onto it like this (conformance README section 3):
 | `check` | `Check`, once per scenario when there's no session |
 | `state` | `StateAt`, flattened by `State.All` |
 | `knows` | `KnownBy`, from the parent's `StateAt` |
-| `macro` | `Render`, with `char`, `owner`, `narrator` and `at` |
+| `macro` | `Render`, with `char`, `owner` and `narrator` in its `Context`, and the state at `at` |
 | `cel` | `Eval`, with `char`, `self`, `scanDepth` and `at`; a compile error is a `CEL_ERROR` |
 
 A case whose `bundleFile` is a package's `bundle.json` is read by zipping its directory in memory and calling `ReadPackage`, since package paths are `PARSE` anywhere else.
@@ -119,10 +123,6 @@ A case whose `bundleFile` is a package's `bundle.json` is read by zipping its di
 ## Phases
 
 Each phase ends with its part of the suite passing, lint clean, and its decisions recorded above. The runner keeps a **pending list** of tests not expected to pass yet: each entry is a test type, such as `cel`, or one test, as `<case path>#<test index>`. A pending test that fails is skipped, and one that passes fails the run, so the list can't go stale. It shrinks to empty by the end of phase 7, and is then deleted.
-
-### 5. Macros
-
-The goal is `macro` tests passing, plus `UNKNOWN_MACRO`. That covers parsing in one left-to-right scan, rendering rules, `{{char}}` and `{{user}}`, which state a macro reads, and picks (Format 9).
 
 ### 6. Regex keys and key matching
 
@@ -168,5 +168,9 @@ Each of these needs verifying against the suite when its phase starts.
 ## Spec feedback
 
 When the code shows the spec is wrong or unclear, write it up for the user: what the spec says, the case or input where it matters, and a proposed fix. The user decides, and changes the spec repository. Add a conformance case only when apps could disagree on the issue, not for coverage. Then sync the copy here with `task spec`.
+
+Decided, awaiting the spec commit: 1, by a more general rule, which the library follows. When the commit lands, sync with `task spec` and delete this item.
+
+1. A `{{` before a macro, and `UNKNOWN_MACRO`: a `{{` is `UNKNOWN_MACRO` only when the text from it to the next `}}` holds no macro the scan finds, which covers `{{a{{char}}` as well as `{{{char}}`.
 
 These open items were deliberately left out of 0.14 and may come back as findings: label keys outside `values`, the loose `language` pattern, codes for nested `null`, and the missing activation test type.

@@ -52,20 +52,29 @@ func (st *Story) Initial() State {
 	return State{st.scope, st.initial}
 }
 
-// Apply returns the state after a message's changes, given the state of this
-// story before them: its parent's, or the initial state for a root (Format
-// 8.6). Applying the messages of a path in turn gives the state at its last,
-// so a caller that keeps each message's state never replays a path.
+// Apply returns the state after a message, given the state of this story
+// before it: its parent's, or the initial state for a root. That is the state
+// after the message's changes (Format 8.6), with the player's character
+// {{user}} means after a player message (Format 9). Applying the messages of a
+// path in turn gives the state at its last, so a caller that keeps each
+// message's state never replays a path.
 func (st *Story) Apply(before State, m *Message) State {
 	s := before.s.clone()
 	st.apply(s, m)
 	return State{st.scope, s}
 }
 
-// apply applies m's changes to s, in order.
+// apply applies m to s: its changes, in order, and for a player message with
+// a speaking part, the first such part's speaker as {{user}} (Format 9).
 func (st *Story) apply(s *state, m *Message) {
 	for _, c := range m.Changes {
 		st.scope.apply(s, c.Set, nil)
+	}
+	if m.From != "player" {
+		return
+	}
+	if i := slices.IndexFunc(m.Content, func(p Part) bool { return p.Speaker != "" }); i >= 0 {
+		s.user = m.Content[i].Speaker
 	}
 }
 
