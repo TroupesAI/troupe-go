@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"maps"
 	"reflect"
 	"slices"
@@ -56,14 +57,16 @@ func TestReadBundleModel(t *testing.T) {
 
 // A package's sessions are its files anywhere under sessions/, by path. A
 // session that fails PARSE is left out while the package still reads, and
-// every diagnostic names the file it is in.
+// every diagnostic names the file it is in. Its other files, which aren't
+// documents, are listed and open by path, and bundle.json is kept as written.
 func TestReadPackage(t *testing.T) {
 	header := `{"troupe":"0.14","kind":"session","scenario":"s"}` + "\n"
 	message := `{"id":"1","from":"player","content":[{"text":"Hi."}]}`
+	bundle := `{"troupe":"0.14","kind":"bundle","mystery":1,"scenarios":[{"id":"s"}]}`
 	var buf bytes.Buffer
 	w := zip.NewWriter(&buf)
 	for name, data := range map[string]string{
-		"bundle.json":                          `{"troupe":"0.14","kind":"bundle","mystery":1,"scenarios":[{"id":"s"}]}`,
+		"bundle.json":                          bundle,
 		"sessions/a.troupe-session.jsonl":      header + message,
 		"sessions/old/b.troupe-session.jsonl":  header + message,
 		"sessions/broken.troupe-session.jsonl": header + `{"id":`,
@@ -96,6 +99,25 @@ func TestReadPackage(t *testing.T) {
 		{Code: troupe.CodeParse, File: "sessions/broken.troupe-session.jsonl", Line: 2, Pointer: "/id"},
 	}; !reflect.DeepEqual(diags, want) {
 		t.Errorf("diagnostics %+v, want %+v", diags, want)
+	}
+	if string(p.BundleJSON) != bundle {
+		t.Errorf("bundle.json %q", p.BundleJSON)
+	}
+	if want := []string{"elsewhere/stray.troupe-session.jsonl", "sessions/notes.txt"}; !slices.Equal(p.Files, want) {
+		t.Errorf("files %q, want %q", p.Files, want)
+	}
+	f, err := p.Open("sessions/notes.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if data, err := io.ReadAll(f); err != nil || string(data) != "not a session" {
+		t.Errorf("notes.txt %q, %v", data, err)
+	}
+	if err := f.Close(); err != nil {
+		t.Error(err)
+	}
+	if _, err := p.Open("missing.png"); !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("opening a missing file: %v", err)
 	}
 }
 

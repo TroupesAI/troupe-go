@@ -1,6 +1,7 @@
 package troupe
 
 import (
+	"archive/zip"
 	"encoding/json/jsontext"
 	"iter"
 	"regexp"
@@ -49,7 +50,7 @@ type scan struct {
 	failed bool                   // whether it reported any
 	// files are a package's files; nil outside a package, where package
 	// paths aren't allowed (Format 12.2).
-	files      map[string]bool
+	files      map[string]*zip.File
 	entries    int
 	variables  int
 	characters int
@@ -151,7 +152,7 @@ func (s *scan) text(p jsontext.Pointer, o map[string]any, key string) {
 // a package, and must name one of its files (Format 12.2, 12.3).
 func (s *scan) image(p jsontext.Pointer, o map[string]any, key string) {
 	path, ok := o[key].(string)
-	if ok && packagePath.MatchString(path) && !s.files[path] {
+	if ok && packagePath.MatchString(path) && s.files[path] == nil {
 		s.fail(p.AppendToken(key))
 	}
 }

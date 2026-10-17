@@ -19,6 +19,7 @@ var schemaFiles embed.FS
 
 type schemaSet struct {
 	bundle, header, message *jsonschema.Schema
+	image                   *jsonschema.Schema // a field that holds a file
 }
 
 // schemas compiles the embedded schemas on first use. Each is registered under
@@ -45,6 +46,7 @@ var schemas = sync.OnceValue(func() schemaSet {
 		bundle:  c.MustCompile(ids["bundle"]),
 		header:  c.MustCompile(ids["session-header"]),
 		message: c.MustCompile(ids["message"]),
+		image:   c.MustCompile(ids["bundle"] + "#/$defs/image"),
 	}
 })
 

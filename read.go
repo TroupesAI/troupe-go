@@ -1,6 +1,7 @@
 package troupe
 
 import (
+	"archive/zip"
 	"bufio"
 	"bytes"
 	"encoding/json/jsontext"
@@ -21,7 +22,7 @@ import (
 // The error is r's, when reading it fails.
 func ReadBundle(r io.Reader) (*Bundle, []Diagnostic, error) {
 	var rd reader
-	b, err := rd.bundle(r)
+	b, _, err := rd.bundle(r)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -42,8 +43,8 @@ func ReadSession(r io.Reader) (*Session, []Diagnostic, error) {
 
 // reader reads the documents of one input and collects their diagnostics.
 type reader struct {
-	file  string          // the path within a package
-	files map[string]bool // a package's files; nil outside a package
+	file  string               // the path within a package
+	files map[string]*zip.File // a package's files; nil outside a package
 	diags []Diagnostic
 }
 
@@ -58,20 +59,21 @@ func readAll(r io.Reader, limit int64) ([]byte, error) {
 	return data, err
 }
 
-func (rd *reader) bundle(r io.Reader) (*Bundle, error) {
+// bundle reads a bundle, and returns it with its bytes.
+func (rd *reader) bundle(r io.Reader) (*Bundle, []byte, error) {
 	data, err := readAll(r, maxBundleSize)
 	if errors.Is(err, errTooLarge) {
 		rd.report(Diagnostic{Code: CodeParse})
-		return nil, nil
+		return nil, nil, nil
 	}
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	var b Bundle
 	if !rd.document(data, 0, bundleDoc, &b) {
-		return nil, nil
+		return nil, nil, nil
 	}
-	return &b, nil
+	return &b, data, nil
 }
 
 func (rd *reader) session(r io.Reader) (*Session, error) {

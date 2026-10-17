@@ -3,7 +3,10 @@
 //
 // ReadBundle, ReadSession and ReadPackage read the three forms of a file, and
 // Check runs the checks reading leaves. A document with any diagnostic
-// doesn't conform, and serves only to report them.
+// doesn't conform, and serves only to report them. Package.Open streams a
+// package's other files, such as its images. Bundle.FileFields yields the
+// fields that hold a file, and ReplaceFileFields sets them in a document's
+// JSON, keeping every other byte.
 //
 // NewStory makes the story a session plays, and gives its states: Initial,
 // StateAt for a message, and Apply, which gives a message's state from its

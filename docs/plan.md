@@ -90,6 +90,14 @@ The cost is that a change touching both the engine and the platform can't land i
 | A message's own session entries apply to its `activated` | Applying from the next message | Format 11.3: they apply "from that message onward" |
 | A change key that doesn't follow the key grammar is `UNKNOWN_VARIABLE` as well as `SCHEMA` | Leaving it to the schema | Every check runs on the document as written (Format 15.3) |
 | With an unknown scenario, the session is checked against an empty one | Skipping the checks that need it | The rest still holds; only what the scenario would make valid fails |
+| `Package.Files` lists the paths of a package's files other than `bundle.json` and its sessions, and `Package.Open(path)` streams any file of the package from the caller's `io.ReaderAt` | Reading them into memory, or a callback during `ReadPackage` | A package's files can reach 512 MiB unpacked, and the caller copies them only once it knows the package has no diagnostics. `ReadPackage` already checked every entry's size and data, so `Open` needs no limits of its own |
+| `Package.BundleJSON` holds `bundle.json` as written | Re-reading it with `Open` | `ReadPackage` has the bytes in hand, and a writer needs them to keep every `ext` (Format 13) |
+| A package's reader records its first error under a `sync.Once` | A plain field | `Open` reads through it, and is safe for concurrent use |
+| `Bundle.FileFields()` yields each field that holds a file as a `FileField`: its pointer and its URL, package path, or data: URI's media type and decoded bytes | Values as written, left to callers to parse | Callers need the form and the content, and decoding data: URIs one at a time keeps one in memory at once. Pointers come from the typed model, whose lists keep their indices (see above) |
+| A value of no form of Format 12.2 is left out of `FileFields` | Yielding it as a URL | Only a bundle that fails the schema holds one, and a caller shouldn't fetch it |
+| Only bundles have `FileFields` for now | Sessions too | Importing bundles is what the platform asks for first. A session's file fields would need a `Line` as well, which can be added without breaking callers |
+| `ReplaceFileFields(doc, values)` splices each new value in at the byte offsets `jsontext` reports, keyed by pointer | Re-encoding the document, or editing the typed model | Every other byte stays as written, `ext` included (Format 13), and the model is for reading |
+| `ReplaceFileFields` checks each new value against the schema's `image` definition, and that each pointer names a string, but not that it names a file field | Checking the pointer against the document's kind | A writer writes only conforming files, and the value is where the caller's text enters the document. Pointers come from `FileFields`, and checking them would need the document's kind |
 | A regex parser of our own, emitting RE2 | Compiling keys directly with `regexp` | Format 14 defines a grammar that has to be validated exactly, and keys mean what they mean in ECMAScript, which differs from RE2 in places |
 | Tools pinned with mise, tasks in Task, `golangci-lint` v2 | Whatever is installed | The same setup as the platform, so one toolchain works in both |
 | The platform's lint config without `bodyclose`, `noctx` and `rowserrcheck` | An identical copy | Those linters only check HTTP and database code, which this library has none of |
@@ -119,7 +127,7 @@ conformance_test.go package troupe_test: the runner
 
 ## The public API
 
-The API has to do two things: everything the conformance runner asks for, through exported names only, and everything the platform needs (see [What the platform needs](#what-the-platform-needs)). Everything the suite tests is built: `ReadBundle`, `ReadSession`, `ReadPackage`, the typed model, `Diagnostic`, `Check`, `NewStory`, `Story`, `State`, `Story.KnownBy`, `Story.Render`, `Story.RenderParts`, `Story.PointAt` and `Point.Eval`.
+The API has to do two things: everything the conformance runner asks for, through exported names only, and everything the platform needs (see [What the platform needs](#what-the-platform-needs)). Everything the suite tests is built: `ReadBundle`, `ReadSession`, `ReadPackage`, the typed model, `Diagnostic`, `Check`, `NewStory`, `Story`, `State`, `Story.KnownBy`, `Story.Render`, `Story.RenderParts`, `Story.PointAt` and `Point.Eval`. Beyond the suite, importing bundles uses `Package.Files`, `Package.Open`, `Package.BundleJSON`, `Bundle.FileFields` and `ReplaceFileFields`.
 
 The suite's operations map onto it like this (conformance README section 3):
 
@@ -147,8 +155,8 @@ These are what the platform needs that the suite doesn't test. Build them in the
 - Escaping a player's or a model's words written into session characters, worlds or entries (Format 9).
 - Checking one proposed change, key and value, before the platform records it (Format 8.5).
 - Storing a `State` and restoring it, for a platform that keeps each message's state.
-- Reading a package's other files, such as its images, which the platform copies to its own storage on import.
-- Writing bundles, sessions and packages back, keeping every `ext` and a package's other files (Format 12.3, 13).
+- Writing bundles, sessions and packages back, keeping every `ext` and a package's other files (Format 12.3, 13). `ReplaceFileFields` does this for a bundle's file fields.
+- A session's file fields, for importing packages with sessions.
 - Upgrading documents from the previous minor version. This starts mattering once the platform stores documents.
 
 ## What the platform needs

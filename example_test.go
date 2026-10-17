@@ -1,6 +1,7 @@
 package troupe_test
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"strings"
@@ -61,4 +62,29 @@ func ExampleStory() {
 	// Output:
 	// bell: 7
 	// true <nil>
+}
+
+// On import, a file a bundle holds as a data: URI can be stored apart, and
+// its field set to the file's path, with every other byte kept as written.
+func ExampleReplaceFileFields() {
+	doc := []byte(`{"troupe": "0.14", "kind": "bundle", "cover": "data:image/png;base64,iVBORw0KGgo=", "ext": {"x.y": [1, 2.0]}}`)
+	b, _, err := troupe.ReadBundle(bytes.NewReader(doc))
+	if err != nil {
+		log.Fatal(err)
+	}
+	paths := map[string]string{}
+	for f := range b.FileFields() {
+		if f.MediaType != "" {
+			fmt.Println(f.Pointer, f.MediaType, len(f.Data), "bytes")
+			paths[f.Pointer] = "images/cover.png"
+		}
+	}
+	doc, err = troupe.ReplaceFileFields(doc, paths)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(string(doc))
+	// Output:
+	// /cover image/png 8 bytes
+	// {"troupe": "0.14", "kind": "bundle", "cover": "images/cover.png", "ext": {"x.y": [1, 2.0]}}
 }

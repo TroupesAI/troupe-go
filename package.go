@@ -6,22 +6,46 @@ import (
 	"errors"
 	"io"
 	"io/fs"
+	"slices"
 	"strings"
+	"sync"
 )
 
-// Package is a package's bundle and sessions (Format 12.3).
+// Package is a package: its bundle, its sessions and its other files (Format
+// 12.3).
 type Package struct {
 	Bundle *Bundle
+	// BundleJSON is bundle.json as written, which a writer rewrites to keep
+	// every ext unchanged (Format 13).
+	BundleJSON []byte
 	// Sessions are the package's sessions that read without PARSE or
 	// UNSUPPORTED_VERSION, by path, such as "sessions/a.troupe-session.jsonl".
 	Sessions map[string]*Session
+	// Files are the paths of the package's files other than bundle.json and
+	// its sessions, sorted. They include files nothing references, which a
+	// writer keeps (Format 12.3).
+	Files []string
+	files map[string]*zip.File
+}
+
+// Open opens the file of the package at path, such as one of Files, to read
+// its content as a stream. It reads from the io.ReaderAt given to
+// ReadPackage, which must stay unchanged, and is safe for concurrent use. Its
+// error is an fs.ErrNotExist when path names no file of the package.
+func (p *Package) Open(path string) (io.ReadCloser, error) {
+	f := p.files[path]
+	if f == nil {
+		return nil, &fs.PathError{Op: "open", Path: path, Err: fs.ErrNotExist}
+	}
+	return f.Open()
 }
 
 // ReadPackage reads a package, the ZIP archive of size bytes in r, and its
 // bundle and sessions (Format 12.3). It reads every entry, so data that can't
 // be read is PARSE wherever it is. Its results are those of ReadBundle: the
 // package is nil when the archive fails PARSE, or its bundle.json fails PARSE
-// or UNSUPPORTED_VERSION, and leaves out any session that does.
+// or UNSUPPORTED_VERSION, and leaves out any session that does. Package.Open
+// reads r again.
 func ReadPackage(r io.ReaderAt, size int64) (*Package, []Diagnostic, error) {
 	src := &source{r: r}
 	var rd reader
@@ -54,7 +78,7 @@ func (rd *reader) pkg(src *source, size int64) *Package {
 		rd.report(Diagnostic{Code: CodeParse})
 		return nil
 	}
-	files := map[string]bool{}
+	files := map[string]*zip.File{}
 	names := map[string]bool{}
 	for _, f := range zr.File {
 		folded := strings.Map(asciiLower, f.Name)
@@ -63,10 +87,10 @@ func (rd *reader) pkg(src *source, size int64) *Package {
 		}
 		names[folded] = true
 		if isPackageFile(f.Name) {
-			files[f.Name] = true
+			files[f.Name] = f
 		}
 	}
-	if !files["bundle.json"] {
+	if files["bundle.json"] == nil {
 		rd.report(Diagnostic{Code: CodeParse})
 	}
 	if len(rd.diags) > 0 {
@@ -74,9 +98,13 @@ func (rd *reader) pkg(src *source, size int64) *Package {
 	}
 	rd.files = files
 
-	p := &Package{Sessions: map[string]*Session{}}
+	p := &Package{Sessions: map[string]*Session{}, files: files}
 	for _, f := range zr.File {
-		isSession := files[f.Name] && strings.HasPrefix(f.Name, "sessions/") && strings.HasSuffix(f.Name, ".troupe-session.jsonl")
+		isFile := files[f.Name] != nil
+		isSession := isFile && strings.HasPrefix(f.Name, "sessions/") && strings.HasSuffix(f.Name, ".troupe-session.jsonl")
+		if isFile && !isSession && f.Name != "bundle.json" {
+			p.Files = append(p.Files, f.Name)
+		}
 		if err := rd.entry(f, isSession, p); err != nil {
 			rd.reportEntry(f.Name)
 			// Only a session can fail and leave the package readable.
@@ -88,6 +116,7 @@ func (rd *reader) pkg(src *source, size int64) *Package {
 	if p.Bundle == nil {
 		return nil
 	}
+	slices.Sort(p.Files)
 	return p
 }
 
@@ -103,7 +132,7 @@ func (rd *reader) entry(f *zip.File, isSession bool, p *Package) (err error) {
 	defer func() { rd.file = "" }()
 	switch {
 	case f.Name == "bundle.json":
-		p.Bundle, err = rd.bundle(r)
+		p.Bundle, p.BundleJSON, err = rd.bundle(r)
 	case isSession:
 		var s *Session
 		if s, err = rd.session(r); s != nil {
@@ -152,14 +181,15 @@ func asciiLower(r rune) rune {
 // source records the first error of a caller's io.ReaderAt, so a failure to
 // read is told apart from an archive that isn't valid.
 type source struct {
-	r   io.ReaderAt
-	err error
+	r    io.ReaderAt
+	once sync.Once // Package.Open reads concurrently
+	err  error
 }
 
 func (s *source) ReadAt(p []byte, off int64) (int, error) {
 	n, err := s.r.ReadAt(p, off)
-	if err != nil && !errors.Is(err, io.EOF) && s.err == nil {
-		s.err = err
+	if err != nil && !errors.Is(err, io.EOF) {
+		s.once.Do(func() { s.err = err })
 	}
 	return n, err
 }
