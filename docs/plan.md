@@ -55,7 +55,7 @@ The cost is that a change touching both the engine and the platform can't land i
 | Checks that don't depend on a scenario run once per document, and the others once per scenario: the keys and values of openings, and of a session's changes, the openings roots name and activated entries | Every check per scenario | Repeating the rest would only repeat its diagnostics |
 | A scope is a scenario as a session plays it, or as it is written: without a session, the characters in use are those its cast members name (Format 6.4), and the cast leaves out its seats (conformance README section 2) | One rule for both | The spec gives each its own; phase 3's state reuses the cast |
 | Initial values are checked once, for every variable | Checking each variable in each scenario that uses it | A character's or world's variable may be in no scenario, and a `"cast"` initial member is checked whenever it names a character (Format 8.3) |
-| A session's character or world that takes a scenario variable's ID is reported at the session's ID | At the variable's ID, as conformance README section 3.4 says | The bundle is valid without the session (spec feedback 1) |
+| A session's character or world that takes a scenario variable's ID is reported at the session's ID | At the variable's ID | The bundle is valid without the session (conformance README section 3.4) |
 | `NewStory(b, s)` with `Initial`, `Apply` and `StateAt` | Only `StateAt` | The platform keeps each message's state and applies the next message's changes to it, so it never replays a path of up to 100,000 messages. A session given without messages serves `Apply` alone |
 | `State` is immutable, and `Apply` returns a new one | Changing a state in place | A caller can keep any state, and states share what a change doesn't touch |
 | `State.Get` takes the keys changes write (Format 8.5), and `All` yields them | Accessors per kind of value, or exported fields | One set of keys for writing and reading, and the suite's flattened form is exactly what `All` yields |
@@ -172,9 +172,5 @@ Each of these needs verifying against the suite when its phase starts.
 ## Spec feedback
 
 When the code shows the spec is wrong or unclear, write it up for the user: what the spec says, the case or input where it matters, and a proposed fix. The user decides, and changes the spec repository. Add a conformance case only when apps could disagree on the issue, not for coverage. Then sync the copy here with `task spec`.
-
-Reported, awaiting a decision:
-
-1. **Where a session's clash with a scenario variable is reported.** Format 2.3 makes a scenario variable's ID unique among the character and world IDs of the bundle and the session. Conformance README section 3.4 reports such a clash "at the variable's `id`", which is in the bundle. Since bcb2a9e a bundle's validity doesn't depend on a session coming with it, so a clash that only a session's character or world makes can't be the bundle's. The library reports it at the session's `id`. Apps could disagree. Proposed: in section 3.4, "a scenario variable with the ID of a bundle character or world is at the variable's `id`, and a session character or world with a scenario variable's ID at its own", with a case.
 
 These open items were deliberately left out of 0.14 and may come back as findings: label keys outside `values`, the loose `language` pattern, codes for nested `null`, and the missing activation test type.

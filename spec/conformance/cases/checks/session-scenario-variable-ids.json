@@ -1,0 +1,85 @@
+{
+  "description": "A session character or world can't take a scenario variable's ID (Format 2.3, 15.3): DUPLICATE_ID, at the session's id, since the bundle comes first (conformance README section 3.4)",
+  "bundle": {
+    "kind": "bundle",
+    "scenarios": [
+      {
+        "id": "s",
+        "cast": [
+          {}
+        ],
+        "variables": [
+          {
+            "id": "mood",
+            "type": "int",
+            "description": "d"
+          },
+          {
+            "id": "time",
+            "type": "int",
+            "description": "d"
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        },
+        {
+          "id": "mood",
+          "name": "Mood",
+          "description": "Clashes with the variable's ID."
+        }
+      ],
+      "players": [
+        "p"
+      ],
+      "worlds": [
+        {
+          "id": "time",
+          "name": "Time"
+        }
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "Hi."
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "expect": {
+        "codes": [
+          "DUPLICATE_ID"
+        ],
+        "includes": [
+          {
+            "code": "DUPLICATE_ID",
+            "at": "header/characters/1/id"
+          },
+          {
+            "code": "DUPLICATE_ID",
+            "at": "header/worlds/0/id"
+          }
+        ]
+      }
+    }
+  ]
+}
