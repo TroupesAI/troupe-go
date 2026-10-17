@@ -32,6 +32,27 @@ The cost is that a change touching both the engine and the platform can't land i
 | [`cel-go`](https://github.com/google/cel-go) for conditions | Our own CEL | It's the reference implementation. Format 10.2 narrows it, and that's done with validators, not a fork |
 | [`santhosh-tekuri/jsonschema`](https://github.com/santhosh-tekuri/jsonschema) v6 | Other validators | It supports JSON Schema 2020-12, asserts `format`, and reports instance locations, which diagnostics need |
 | Schemas compiled once, on first use, with `sync.OnceValue` | At `init` | Programs that import the module but never read a document don't pay for it |
+| Each value of the wrong type reads as absent, and a list holding an item of the wrong type reads as absent as a whole | Zero values, or dropping the item | Later checks see the document as written, and every other item keeps its index, so their diagnostics point at the right place. It hides diagnostics on the list's other items, such as an `UNKNOWN_CHARACTER` beside a wrong-typed `knownBy` item; revisit if a suite case needs them |
+| The typed model mirrors the document: absence is the zero value, with pointers where 0 is a value and `*[]string` for `Scenario.Worlds`, whose `[]` means no worlds | Filling in defaults | Format 2.2 makes absence and the zero value the same nearly everywhere, and defaults belong to the operations that apply them |
+| Plain strings for fields with a fixed set of values, such as `Rating` | Named string types with constants | Callers compare them with the spec's strings, and no behavior hangs on the type |
+| `int64` for integers that can reach ±(2^53 − 1), `int` for those the schema bounds to small ranges | `int` everywhere | `int` is 32 bits on some platforms |
+| `Keys` for `of`, and one `Part` struct for both kinds of part, holding only the fields its type defines | An interface, or raw JSON | Plain data is simplest to read, and an unknown field never reaches the model |
+| `ext`, `initial` and the values in `set` are `jsontext.Value`, decoded from the bytes as written | Re-encoding the validator's tree | Writers keep every `ext` unchanged (Format 13), and the original bytes are the surest way |
+| Unknown fields are the schema's `additionalProperties` failures, outside parts of an unknown type. The document is validated again, without them, only when there were any | A list of defined fields kept in Go | Every interface is an object with `additionalProperties: false` in the schemas, so the spec stays the one source |
+| Limits and package paths are checked on the parsed tree, before the schema | On the typed model, after it | Format 14's limits come before the work they bound, and the schema walks what they count |
+| The unpacked size is the sum of the entries' declared sizes, checked before decompressing | Counting while decompressing | `archive/zip` fails an entry whose data doesn't match its declared size, so the sum bounds the work and is known before any is done |
+| A package with an entry that can't be read is `nil`, unless that entry is a session, which is left out | Leaving out any such entry | Sessions are documents of their own, and every other entry belongs to the archive |
+| Every file under `sessions/` with the session extension is a session, at any depth | Only the folder's direct children | Format 12.3 says "under `sessions/`" (spec feedback 7) |
+| A ZIP name starting with a drive letter, such as `C:x`, is absolute | Only a leading `/` | Extracted on Windows, it escapes the target directory |
+| A diagnostic about a ZIP entry names its file only when the name is a package path | Always naming it | Other names may hold anything, and diagnostics hold no document text |
+| A `kind` that is missing or another is `PARSE` | `SCHEMA` | Format 15.3's `PARSE` covers a document of a kind its form doesn't hold (spec feedback 6) |
+| A message line that is I-JSON but not an object is `SCHEMA` | `PARSE` | Messages have no `kind`, and their schema requires an object |
+| Numbers beyond a double's range are `PARSE`; more precision than a double holds is rounded | Rejecting excess precision too, as RFC 7493 does | Spec feedback 5 |
+| The cast limit counts the characters a session adds | Counting the whole cast | The rest comes from the bundle, which `ReadSession` doesn't have (spec feedback 4) |
+| Diagnostics are sorted by file, line, pointer, with indices compared as numbers, and code, without duplicates | Document order | The validator's tree has no member order, and sorting makes the result deterministic |
+| `Diagnostic.Location` gives the suite's form of the location | `Diagnostic.String` | `String` would be expected to describe the whole diagnostic, its code included |
+| A `propertyNames` failure's location is rebuilt from its parent failure | The validator's own | jsonschema v6.0.3 keeps that location without copying it, so later validation overwrites it |
+| `golang.org/x/text` required at v0.43.0 | v0.14.0, which jsonschema requires | v0.14.0 has known vulnerabilities, and the requirement keeps importers off it |
 | A regex parser of our own, emitting RE2 | Compiling keys directly with `regexp` | Format 14 defines a grammar that has to be validated exactly, and keys mean what they mean in ECMAScript, which differs from RE2 in places (see [Pitfalls](#pitfalls)) |
 | Tools pinned with mise, tasks in Task, `golangci-lint` v2 | Whatever is installed | The same setup as the platform, so one toolchain works in both |
 | The platform's lint config without `bodyclose`, `noctx` and `rowserrcheck` | An identical copy | Those linters only check HTTP and database code, which this library has none of |
@@ -60,7 +81,7 @@ conformance_test.go package troupe_test: the runner
 
 ## The public API
 
-The API has to do two things: everything the conformance runner asks for, through exported names only, and everything the platform needs (see [What the platform needs](#what-the-platform-needs)). Phase 1's part is settled (see [Reading](#1-reading)). The rest is a sketch; its names and signatures get settled when each phase starts.
+The API has to do two things: everything the conformance runner asks for, through exported names only, and everything the platform needs (see [What the platform needs](#what-the-platform-needs)). Reading is built: `ReadBundle`, `ReadSession`, `ReadPackage`, the typed model and `Diagnostic`. The rest is a sketch; its names and signatures get settled when each phase starts.
 
 ```go
 // Checks (Format 15.3), on documents that read without PARSE.
@@ -90,65 +111,6 @@ Flattening a `State` into the suite's keys is the runner's job, unless the platf
 ## Phases
 
 Each phase ends with its part of the suite passing, lint clean, and its decisions recorded above. The runner keeps a **pending list** of tests not expected to pass yet: each entry is a test type, such as `cel`, or one test, as `<case path>#<test index>`. A pending test that fails is skipped, and one that passes fails the run, so the list can't go stale. It shrinks to empty by the end of phase 7, and is then deleted.
-
-### 1. Reading
-
-The goal is `parse` tests passing at the session-reader level, since the platform plays sessions.
-
-```go
-// Version is the Troupe version this module reads.
-const Version = "0.14"
-
-func ReadBundle(r io.Reader) (*Bundle, []Diagnostic, error)
-func ReadSession(r io.Reader) (*Session, []Diagnostic, error)
-func ReadPackage(r io.ReaderAt, size int64) (*Package, []Diagnostic, error)
-
-type Package struct {
-	Bundle   *Bundle
-	Sessions map[string]*Session // by path, such as "sessions/a.troupe-session.jsonl"
-}
-
-type Session struct {
-	Header   SessionHeader
-	Messages []Message // in line order
-}
-
-type Diagnostic struct {
-	Code    Code
-	File    string // the path within a package; "" outside one
-	Line    int    // in a session, the line from 1, where 1 is the header; 0 in a bundle
-	Message string // the message's ID, when its line has a valid one
-	Pointer string // a JSON Pointer within the document
-}
-
-// String gives the suite's form: "/scenarios/0/when", "header/players", "message:3/changes/0".
-func (d Diagnostic) String() string
-
-type Code string // CodeParse, CodeUnsupportedVersion, CodeSchema, CodeUnknownField; later phases add theirs
-```
-
-What a read returns:
-
-- When the reader fails, only the error.
-- `nil` for a document that fails `PARSE` or `UNSUPPORTED_VERSION`, pending [spec feedback](#spec-feedback) 1. A package is `nil` when the archive or its `bundle.json` fails; a session that fails is left out of `Sessions`.
-- The document otherwise, `SCHEMA` included, so `Check` still runs on it. A value of the wrong type is skipped, so its field reads exactly as if it were absent. In a list, a wrong-typed item makes the whole list absent, so every other item keeps its document index and diagnostics found later point at the right place. That hides diagnostics on the list's other items, such as an `UNKNOWN_CHARACTER` beside a wrong-typed `knownBy` item; revisit if a suite case needs them. A document with any diagnostic doesn't conform: callers use it only to report problems.
-- Diagnostics in document order.
-
-The typed model has one struct per spec interface: `Bundle`, `Character`, `Line`, `World`, `Location`, `Scenario`, `CastMember`, `Opening`, `Entry`, `Variable`, `SessionHeader`, `Limits`, `Message`, `Part` and `Change`. It mirrors the document, and defaults are applied by the operations that read them.
-
-- Absence is the zero value where the spec makes the zero value impossible or the same as absence (Format 2.2): strings, lists, maps and booleans. Optional numbers where 0 is a value are pointers, and `Scenario.Worlds` is `*[]string`, since `[]` means no worlds and absence means all of them.
-- `ext`, `initial` and the values in `set` are `jsontext.Value`, kept as written.
-- Integers are `int` where the spec bounds them within int32, and `int64` where they can reach ±(2^53 − 1).
-- Settled with the code: how the unions `Variable.of` and `Part` are represented, and whether the list of defined properties comes from the Go types or the schemas' `properties`. The schemas are preferred if they describe every interface cleanly, so the spec stays the one source.
-
-How a document is read:
-
-1. Size limits are counted while reading, which stops at the limit.
-2. The strict pass (`internal/ijson`) checks the bytes and builds the tree the validator takes: UTF-8, no BOM, duplicate names, surrogates and noncharacters, nesting depth 64, number text, and one value per document or line (Format 2.2). Each failure carries its JSON Pointer.
-3. Count limits, before any check that walks what they count (Format 14). Then `kind`, and versions (Format 13): a missing or malformed `troupe` is only `SCHEMA`.
-4. Unknown fields are reported and removed, then the document is validated against its schema (Format 13, 15.3).
-5. The typed model is decoded from what remains.
-6. JSON Lines sessions (Format 11), and packages (Format 12.3), whose `bundle.json` and sessions stream from their ZIP entries.
 
 ### 2. Checks
 
@@ -202,15 +164,10 @@ Prompt assembly, the choice of which active entries reach the model, model calls
 
 Each of these needs verifying against the suite when its phase starts.
 
-- **`encoding/json` (v1) is too lenient.** It accepts duplicate names, silently replaces invalid UTF-8, and decodes numbers to `float64`, which can't tell whether `9007199254740993` is within ±(2^53 − 1). Hence the strict pass in phase 1.
-- **`jsontext` isn't all of I-JSON.** It accepts noncharacters, written or escaped, numbers too large for a double such as `1e400`, any depth up to its own limit, and a second value after the first. The strict pass checks each.
-- **v2 is stricter than Format 2.2 about integers, and stops at the first type error.** It refuses `8.0` and `8e0` for an `int64`, which Format 2.2 says are integers, and leaves the value already in the field when the type is wrong. Hence the caller-supplied unmarshalers.
-- **Unknown fields can't simply be passed to the validator.** Several schema objects set `additionalProperties: false`, so an unknown field would come out as `SCHEMA` as well as `UNKNOWN_FIELD`. Remove unknown fields first, then validate (Format 13). A part of an unknown `type` is only `SCHEMA`.
-- **Schema references must not reach the network.** The message and header schemas share definitions in `bundle.schema.json`. Register all three with the compiler under their `$id`, so nothing is ever fetched.
-- **Schema error locations need care.** For an `anyOf` that nothing accepts, the suite wants the deepest location where a branch fails, among other rules (conformance README section 3.4). The validator's raw output won't match without work.
+- **Schema error locations need care.** `failures` in `schema.go` follows conformance README section 3.4: the deepest location for an `anyOf` nothing accepts, a failing name at its property. Phase 2's `includes` are the first test of them.
+- **Integers too large for an `int64` read as absent, with no diagnostic,** such as `"max": 1e300`, which the schema accepts. Spec feedback 2 decides which code they get.
 - **ECMAScript and RE2 differ.** Under the `u` flag, ECMAScript's `.` excludes `\r`, U+2028 and U+2029, and RE2's doesn't. ECMAScript's `\s` is Unicode whitespace plus U+FEFF, and RE2's is ASCII only. The `m` flag recognizes different line terminators. With `i` and `u` together, ECMAScript's `\w` and `\b` also match U+017F and U+212A. The translation must produce ECMAScript's meaning.
 - **CEL's defaults are wider than Format 10.2.** cel-go's standard environment has many more functions and macros, as well as `double`, `uint`, `bytes` and `null`. Reject them with AST validators after checking, along with any use of `state`, `own` or `scene` other than a selection, and selecting `char` or `user` from a keyed map. `has()` follows Format 10.2, which isn't quite CEL's presence test. Bound expression size (4 KiB) before parsing.
-- **`archive/zip` doesn't check what Format 12.3 requires.** Check every rule yourself: absolute paths, `..`, backslashes, symlinks, encryption, compression methods, case-insensitive duplicates, entry count, and unpacked size counted while decompressing, since headers can lie.
 - **Timestamps keep their offset.** `hour` and `weekday` are read at the offset written (Format 10.1). Don't convert to UTC or to local time.
 
 ## Spec feedback
@@ -223,5 +180,10 @@ Reported, awaiting the spec:
 2. **Integer fields outside ±(2^53 − 1).** Format 2.2 lists the range under I-JSON, which makes `"max": 9007199254740993` a `PARSE`. Enforcing that would put the schema's knowledge of which fields are integers into the I-JSON pass, and the schemas set no bound on fields such as `max`, `depth` or `maxStep`. Values of `int` variables are already `INVALID_VALUE` (Format 8.5). Proposed: bound every integer field in the schemas to ±9007199254740991, so it's `SCHEMA`, have Format 2.2 refer to that, and add a case.
 
 3. **The suite depends on `examples/`.** Four cases (`cel/environment`, `examples/first-card`, `examples/card-with-lore`, `examples/lantern-heist`) read files from `../../../examples/`, outside `conformance/`, but conformance README section 1 describes the suite as `conformance/` alone. Proposed: say in section 1 that `bundleFile` and `sessionFile` may point into `examples/`, which a library copying the suite copies too, under its CC BY 4.0 license. No case needed.
+
+4. **The cast limit needs the bundle.** Format 14 limits "characters in a session's cast" to 256, and Format 15.3 makes it `PARSE`. But the cast is the scenario's cast from the bundle plus what the session adds (Format 11.2), so a reader of a session file alone can't check it. Proposed: limit each document on its own, "characters in a scenario's cast, and characters a session adds: 256 each". No case needed beyond one per limit.
+5. **"Numbers that fit an IEEE 754 double" (Format 2.2).** RFC 7493, which 2.2 cites, rules out numbers of greater magnitude *or precision* than a double, such as `3.141592653589793238462643383279`. Read that way, a number with more digits than a double holds isn't I-JSON; read as range only, it is, rounded. Apps could disagree. Proposed: "numbers within a double's range; a number with more precision is rounded to the nearest double", with a case for each side. The library reads it as range only.
+6. **A missing `kind`.** Format 15.3 makes `PARSE` a document that isn't "of the `kind` its form holds", and the schemas require `kind`, which makes it `SCHEMA` too. For `troupe`, Format 15.3 says a missing one is only `SCHEMA`; for `kind` it says nothing. Proposed: "a missing or other `kind` is `PARSE`", with a case `{"troupe":"0.14"}` read as a bundle.
+7. **Sessions in subfolders.** Format 12.3 makes every file "under `sessions/`" with the extension a session. Whether `sessions/a/b.troupe-session.jsonl` is one is a matter of reading "under". Proposed: say "anywhere under `sessions/`", or "directly in"; the library reads it as anywhere.
 
 These open items were deliberately left out of 0.14 and may come back as findings: label keys outside `values`, the loose `language` pattern, codes for nested `null`, and the missing activation test type.
