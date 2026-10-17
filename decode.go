@@ -133,18 +133,16 @@ func decodeList(dec *jsontext.Decoder, list reflect.Value) (bool, error) {
 	if err != nil || val.Kind() != '[' {
 		return false, err
 	}
-	var items []jsontext.Value
+	out := reflect.MakeSlice(list.Type(), 0, 0)
 	for item := range values(val) {
 		if !fits(list.Type().Elem(), item) {
 			return false, nil
 		}
-		items = append(items, item.Clone())
-	}
-	out := reflect.MakeSlice(list.Type(), len(items), len(items))
-	for i, item := range items {
-		if err := json.Unmarshal(item, out.Index(i).Addr().Interface(), lenient); err != nil {
+		elem := reflect.New(list.Type().Elem())
+		if err := json.Unmarshal(item, elem.Interface(), lenient); err != nil {
 			return false, err
 		}
+		out = reflect.Append(out, elem.Elem())
 	}
 	list.Set(out)
 	return true, nil

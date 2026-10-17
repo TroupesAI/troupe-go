@@ -203,11 +203,7 @@ func runCheck(c *testCase, expect *checkExpect) error {
 // subset of it, and checks that the keys absent lists aren't in it
 // (conformance README section 3.1).
 func runState(c *testCase, tc test, expect map[string]jsontext.Value) error {
-	b, s, _, err := c.read()
-	if err != nil {
-		return err
-	}
-	story, err := troupe.NewStory(b, s)
+	story, _, err := c.story()
 	if err != nil {
 		return err
 	}
@@ -242,11 +238,7 @@ func runState(c *testCase, tc test, expect map[string]jsontext.Value) error {
 // runKnows compares who knows a part of a message with expect (conformance
 // README section 3.5).
 func runKnows(c *testCase, tc test, expect []string) error {
-	b, s, _, err := c.read()
-	if err != nil {
-		return err
-	}
-	story, err := troupe.NewStory(b, s)
+	story, s, err := c.story()
 	if err != nil {
 		return err
 	}
@@ -286,6 +278,17 @@ func sameJSON(got any, want jsontext.Value) (bool, error) {
 		return false, err
 	}
 	return reflect.DeepEqual(g, w), nil
+}
+
+// story returns the story of the case's bundle and session (conformance
+// README section 2), and the session.
+func (c *testCase) story() (*troupe.Story, *troupe.Session, error) {
+	b, s, _, err := c.read()
+	if err != nil {
+		return nil, nil, err
+	}
+	story, err := troupe.NewStory(b, s)
+	return story, s, err
 }
 
 // read reads a fresh copy of the case's bundle and session, as conformance

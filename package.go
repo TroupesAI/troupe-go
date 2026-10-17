@@ -72,7 +72,7 @@ func (rd *reader) pkg(src *source, size int64) *Package {
 	if len(rd.diags) > 0 {
 		return nil
 	}
-	rd.files = func(path string) bool { return files[path] }
+	rd.files = files
 
 	p := &Package{Sessions: map[string]*Session{}}
 	for _, f := range zr.File {

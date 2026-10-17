@@ -139,7 +139,7 @@ func deepest(e *jsonschema.ValidationError) *jsonschema.ValidationError {
 	return best
 }
 
-// inUnknownPart reports whether e is about a part of an unknown type, whose
+// inUnknownPart reports whether f is about a part of an unknown type, whose
 // properties are only SCHEMA (Format 13).
 func inUnknownPart(f failure, doc any) bool {
 	if !strings.Contains(f.schemaURL, "/$defs/part/") {

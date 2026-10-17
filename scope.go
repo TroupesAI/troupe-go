@@ -31,28 +31,50 @@ type binding struct {
 	v    *Variable
 }
 
+// names indexes what references can name: the characters and worlds of a
+// bundle and its session, the first of each ID, and every location's ID.
+type names struct {
+	characters map[string]*Character
+	worlds     map[string]*World
+	locations  map[string]bool
+}
+
+// newNames returns the names of b, and of s when s isn't nil.
+func newNames(b *Bundle, s *Session) *names {
+	n := &names{characters: map[string]*Character{}, worlds: map[string]*World{}, locations: map[string]bool{}}
+	n.add(b.Characters, b.Worlds)
+	if s != nil {
+		n.add(s.Header.Characters, s.Header.Worlds)
+	}
+	return n
+}
+
+// add adds characters and worlds, and the worlds' locations.
+func (n *names) add(characters []Character, worlds []World) {
+	for i := range characters {
+		if _, ok := n.characters[characters[i].ID]; !ok {
+			n.characters[characters[i].ID] = &characters[i]
+		}
+	}
+	for i := range worlds {
+		if _, ok := n.worlds[worlds[i].ID]; !ok {
+			n.worlds[worlds[i].ID] = &worlds[i]
+		}
+		for _, l := range worlds[i].Locations {
+			n.locations[l.ID] = true
+		}
+	}
+}
+
+// scenarioIndex returns the index of b's scenario with the ID id, or -1.
+func scenarioIndex(b *Bundle, id string) int {
+	return slices.IndexFunc(b.Scenarios, func(sc Scenario) bool { return sc.ID == id })
+}
+
 // newScope returns the scope of the bundle's scenario i, played in s when s
 // isn't nil, or of no scenario when i is -1.
 func newScope(b *Bundle, s *Session, i int) *scope {
-	// Characters and worlds are the bundle's and the session's, the first of
-	// each ID.
-	characters, worlds := map[string]*Character{}, map[string]*World{}
-	add := func(cs []Character, ws []World) {
-		for j := range cs {
-			if _, ok := characters[cs[j].ID]; !ok {
-				characters[cs[j].ID] = &cs[j]
-			}
-		}
-		for j := range ws {
-			if _, ok := worlds[ws[j].ID]; !ok {
-				worlds[ws[j].ID] = &ws[j]
-			}
-		}
-	}
-	add(b.Characters, b.Worlds)
-	if s != nil {
-		add(s.Header.Characters, s.Header.Worlds)
-	}
+	n := newNames(b, s)
 
 	sc := &scope{
 		index:      i,
@@ -95,13 +117,8 @@ func newScope(b *Bundle, s *Session, i int) *scope {
 			}
 		}
 	} else {
-		sc.cast = sessionCast(members, &s.Header)
+		sc.cast, sc.joiners = sessionCast(members, &s.Header)
 		inUse = sc.cast
-		for _, c := range s.Header.Characters {
-			if !slices.Contains(s.Header.Players, c.ID) {
-				sc.joiners = append(sc.joiners, c.ID)
-			}
-		}
 	}
 
 	var worldIDs []string
@@ -120,13 +137,13 @@ func newScope(b *Bundle, s *Session, i int) *scope {
 		}
 	}
 	for _, id := range worldIDs {
-		if w, ok := worlds[id]; ok && sc.worlds[id] == nil {
+		if w, ok := n.worlds[id]; ok && sc.worlds[id] == nil {
 			sc.worlds[id] = w
 			sc.bind("state."+id+".", w.Variables)
 		}
 	}
 	for _, id := range inUse {
-		if c, ok := characters[id]; ok && sc.characters[id] == nil {
+		if c, ok := n.characters[id]; ok && sc.characters[id] == nil {
 			sc.characters[id] = c
 			sc.bind("state."+id+".", c.Variables)
 		}
@@ -147,8 +164,9 @@ func (sc *scope) bind(prefix string, vars []Variable) {
 }
 
 // sessionCast returns a session's cast (Format 11.2): the scenario cast with
-// its seats filled, then the new seats, then the joiners.
-func sessionCast(members []CastMember, h *SessionHeader) []string {
+// its seats filled, then the new seats, then the joiners: the header
+// characters that aren't players, which it also returns.
+func sessionCast(members []CastMember, h *SessionHeader) (cast, joiners []string) {
 	isHeader := map[string]bool{}
 	for _, c := range h.Characters {
 		isHeader[c.ID] = true
@@ -161,7 +179,6 @@ func sessionCast(members []CastMember, h *SessionHeader) []string {
 			fill = append(fill, p)
 		}
 	}
-	var cast []string
 	for _, m := range members {
 		switch {
 		case m.Character == "":
@@ -176,10 +193,10 @@ func sessionCast(members []CastMember, h *SessionHeader) []string {
 	cast = append(cast, fill...)
 	for _, c := range h.Characters {
 		if !slices.Contains(h.Players, c.ID) {
-			cast = append(cast, c.ID)
+			joiners = append(joiners, c.ID)
 		}
 	}
-	return cast
+	return append(cast, joiners...), joiners
 }
 
 // variable returns the variable a change key names, and the key within it

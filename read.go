@@ -42,8 +42,8 @@ func ReadSession(r io.Reader) (*Session, []Diagnostic, error) {
 
 // reader reads the documents of one input and collects their diagnostics.
 type reader struct {
-	file  string            // the path within a package
-	files func(string) bool // a package's files; nil outside a package
+	file  string          // the path within a package
+	files map[string]bool // a package's files; nil outside a package
 	diags []Diagnostic
 }
 
@@ -179,8 +179,8 @@ func (rd *reader) document(data []byte, line int, k docKind, v any) bool {
 		return false
 	}
 	doc, _ := tree.(map[string]any)
-	if id, ok := doc["id"].(string); ok && line > 1 && messageID.MatchString(id) {
-		at.Message = id
+	if id, ok := doc["id"].(string); ok && line > 1 {
+		at.Message = validID(id)
 	}
 	report := func(c Code, p jsontext.Pointer) {
 		d := at
@@ -204,10 +204,9 @@ func (rd *reader) document(data []byte, line int, k docKind, v any) bool {
 			return false
 		}
 	}
-	parsed := len(rd.diags)
 	sc := scan{report: func(p jsontext.Pointer) { report(CodeParse, p) }, files: rd.files}
 	k.scan(&sc, doc)
-	if len(rd.diags) > parsed {
+	if sc.failed {
 		return false
 	}
 	validate(k.schema(), tree, report)

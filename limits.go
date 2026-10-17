@@ -46,9 +46,10 @@ func isPackageFile(name string) bool {
 // document leniently: values of the wrong type are the schema's to report.
 type scan struct {
 	report func(jsontext.Pointer) // reports PARSE
-	// files reports whether a package holds a file; nil outside a package,
-	// where package paths aren't allowed (Format 12.2).
-	files      func(string) bool
+	failed bool                   // whether it reported any
+	// files are a package's files; nil outside a package, where package
+	// paths aren't allowed (Format 12.2).
+	files      map[string]bool
 	entries    int
 	variables  int
 	characters int
@@ -64,7 +65,7 @@ func (s *scan) bundle(doc map[string]any) {
 	}
 	for p, sc := range each(doc, "", "scenarios") {
 		if cast, _ := sc["cast"].([]any); len(cast) > maxCast {
-			s.report(p.AppendToken("cast").AppendToken(strconv.Itoa(maxCast)))
+			s.fail(p.AppendToken("cast").AppendToken(strconv.Itoa(maxCast)))
 		}
 		s.owner(p, sc)
 		for op, o := range each(sc, p, "openings") {
@@ -76,7 +77,7 @@ func (s *scan) bundle(doc map[string]any) {
 func (s *scan) header(doc map[string]any) {
 	for p, c := range each(doc, "", "characters") {
 		if s.characters++; s.characters == maxCast+1 {
-			s.report(p)
+			s.fail(p)
 		}
 		s.character(p, c)
 	}
@@ -111,13 +112,13 @@ func (s *scan) world(p jsontext.Pointer, w map[string]any) {
 func (s *scan) owner(p jsontext.Pointer, o map[string]any) {
 	for ep, e := range each(o, p, "entries") {
 		if s.entries++; s.entries == maxEntries+1 {
-			s.report(ep)
+			s.fail(ep)
 		}
 		s.entry(ep, e)
 	}
 	for vp, v := range each(o, p, "variables") {
 		if s.variables++; s.variables == maxVariables+1 {
-			s.report(vp)
+			s.fail(vp)
 		}
 		s.text(vp, v, "description")
 	}
@@ -126,7 +127,7 @@ func (s *scan) owner(p jsontext.Pointer, o map[string]any) {
 func (s *scan) entry(p jsontext.Pointer, e map[string]any) {
 	s.text(p, e, "text")
 	if when, ok := e["when"].(string); ok && len(when) > maxCEL {
-		s.report(p.AppendToken("when"))
+		s.fail(p.AppendToken("when"))
 	}
 }
 
@@ -142,7 +143,7 @@ func (s *scan) content(p jsontext.Pointer, o map[string]any) {
 
 func (s *scan) text(p jsontext.Pointer, o map[string]any, key string) {
 	if t, ok := o[key].(string); ok && len(t) > maxText {
-		s.report(p.AppendToken(key))
+		s.fail(p.AppendToken(key))
 	}
 }
 
@@ -150,9 +151,14 @@ func (s *scan) text(p jsontext.Pointer, o map[string]any, key string) {
 // a package, and must name one of its files (Format 12.2, 12.3).
 func (s *scan) image(p jsontext.Pointer, o map[string]any, key string) {
 	path, ok := o[key].(string)
-	if ok && packagePath.MatchString(path) && (s.files == nil || !s.files(path)) {
-		s.report(p.AppendToken(key))
+	if ok && packagePath.MatchString(path) && !s.files[path] {
+		s.fail(p.AppendToken(key))
 	}
+}
+
+func (s *scan) fail(p jsontext.Pointer) {
+	s.failed = true
+	s.report(p)
 }
 
 // each yields the objects in the array o[key], with their pointers.

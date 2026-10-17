@@ -31,7 +31,7 @@ func NewStory(b *Bundle, s *Session) (*Story, error) {
 		}
 		st.scope = newScope(b, nil, 0)
 	} else {
-		i := slices.IndexFunc(b.Scenarios, func(sc Scenario) bool { return sc.ID == s.Header.Scenario })
+		i := scenarioIndex(b, s.Header.Scenario)
 		if i < 0 {
 			return nil, errors.New("troupe: the session's scenario isn't in the bundle")
 		}
@@ -58,10 +58,15 @@ func (st *Story) Initial() State {
 // so a caller that keeps each message's state never replays a path.
 func (st *Story) Apply(before State, m *Message) State {
 	s := before.s.clone()
+	st.apply(s, m)
+	return State{st.scope, s}
+}
+
+// apply applies m's changes to s, in order.
+func (st *Story) apply(s *state, m *Message) {
 	for _, c := range m.Changes {
 		st.scope.apply(s, c.Set, nil)
 	}
-	return State{st.scope, s}
 }
 
 // StateAt returns the state at the session's message with the ID id, after
@@ -85,9 +90,7 @@ func (st *Story) StateAt(id string) (State, error) {
 	}
 	s := st.initial.clone()
 	for _, i := range slices.Backward(path) {
-		for _, c := range st.messages[i].Changes {
-			st.scope.apply(s, c.Set, nil)
-		}
+		st.apply(s, &st.messages[i])
 	}
 	return State{st.scope, s}, nil
 }

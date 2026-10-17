@@ -2,7 +2,7 @@
 
 A Go library for [Troupe](https://github.com/TroupesAI/troupe), an open file format for AI roleplay. It reads Troupe files, checks them, and computes what they mean: the state at a message, how macros render, how conditions evaluate and who knows what.
 
-**Status:** in development, not yet usable. It targets Troupe 0.14, the spec's current draft. The [plan](docs/plan.md) says what is being built and in what order.
+**Status:** in development, targeting Troupe 0.14, the spec's current draft. It reads files, checks them, and computes the state at a message and who knows each part. Macros, conditions and entry activation are still to come; the [plan](docs/plan.md) says what is being built and in what order.
 
 ## Scope
 
