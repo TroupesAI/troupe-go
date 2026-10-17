@@ -22,18 +22,6 @@ import (
 	"github.com/TroupesAI/troupe-go"
 )
 
-// pending lists the tests not expected to pass yet: a test type, or one test
-// as "<case path>#<test index>". A pending test that passes fails the run, so
-// the list can't go stale.
-var pending = map[string]bool{
-	"cel": true,
-
-	// CEL_ERROR comes with phase 7.
-	"checks/bundle.json#0":       true,
-	"checks/per-scenario.json#0": true,
-	"checks/session-text.json#0": true,
-}
-
 // spec holds the copy of the spec repository's files: the cases are in
 // conformance/cases, and the files they name are relative to theirs.
 var spec = os.DirFS("spec")
@@ -56,11 +44,16 @@ type test struct {
 	Name   string         `json:"name"`
 	Expect jsontext.Value `json:"expect"`
 
-	// state and macro, and later cel
+	// state, macro and cel
 	At     string   `json:"at"`
 	Absent []string `json:"absent"`
 
-	// macro
+	// cel
+	Expr      string `json:"expr"`
+	Self      string `json:"self"`
+	ScanDepth *int   `json:"scanDepth"`
+
+	// macro, and char for cel
 	Text     string `json:"text"`
 	Char     string `json:"char"`
 	Owner    string `json:"owner"`
@@ -109,13 +102,7 @@ func TestConformance(t *testing.T) {
 					if err != nil {
 						t.Fatalf("suite error: %v", err)
 					}
-					err = run(&c, tc, expect)
-					switch onList := pending[tc.Type] || pending[fmt.Sprintf("%s#%d", name, i)]; {
-					case onList && err != nil:
-						t.Skipf("pending: %v", err)
-					case onList:
-						t.Error("passes, so remove it from the pending list")
-					case err != nil:
+					if err := run(&c, tc, expect); err != nil {
 						t.Error(err)
 					}
 				})
@@ -135,9 +122,7 @@ func decodeExpect(tc test) (any, error) {
 		expect = new(string)
 	case "cel":
 		if tc.Expect.Kind() == '{' {
-			expect = new(struct {
-				CheckError bool `json:"checkError"`
-			})
+			expect = new(celError)
 		} else {
 			expect = new(bool)
 		}
@@ -151,6 +136,10 @@ func decodeExpect(tc test) (any, error) {
 		return nil, fmt.Errorf("unknown test type %q", tc.Type)
 	}
 	return expect, json.Unmarshal(tc.Expect, expect, json.RejectUnknownMembers(true))
+}
+
+type celError struct {
+	CheckError bool `json:"checkError"`
 }
 
 type codesExpect struct {
@@ -179,6 +168,8 @@ func run(c *testCase, tc test, expect any) error {
 		return runKnows(c, tc, *expect.(*[]string))
 	case "macro":
 		return runMacro(c, tc, *expect.(*string))
+	case "cel":
+		return runCel(c, tc, expect)
 	}
 	return fmt.Errorf("%s tests: %w", tc.Type, errors.ErrUnsupported)
 }
@@ -336,6 +327,68 @@ func runMacro(c *testCase, tc test, expect string) error {
 		return fmt.Errorf("rendered %q, want %q", got, expect)
 	}
 	return nil
+}
+
+// runCel evaluates a condition at the evaluation point at, for char, owned by
+// self and scanning scanDepth messages, and compares the result with expect:
+// a bool, or a CEL_ERROR (conformance README section 3.3).
+func runCel(c *testCase, tc test, expect any) error {
+	story, s, err := c.story()
+	if err != nil {
+		return err
+	}
+	self, scanDepth := tc.Self, 4
+	if self == "" {
+		self = c.scenario(s)
+	}
+	if tc.ScanDepth != nil {
+		scanDepth = *tc.ScanDepth
+	}
+	var path []troupe.Message
+	if tc.At != "" {
+		if path, err = pathTo(s, tc.At); err != nil {
+			return err
+		}
+	}
+	got, err := story.PointAt(story.Initial(), path, tc.Char).Eval(tc.Expr, self, scanDepth)
+	if want, ok := expect.(*celError); ok {
+		if err == nil || !want.CheckError {
+			return fmt.Errorf("%s compiles, want a CEL_ERROR", tc.Expr)
+		}
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if want := *expect.(*bool); got != want {
+		return fmt.Errorf("%s is %v, want %v", tc.Expr, got, want)
+	}
+	return nil
+}
+
+// pathTo returns the messages of s on the path from a root to id.
+func pathTo(s *troupe.Session, id string) ([]troupe.Message, error) {
+	var path []troupe.Message
+	for id != "" {
+		i := slices.IndexFunc(s.Messages, func(m troupe.Message) bool { return m.ID == id })
+		if i < 0 {
+			return nil, fmt.Errorf("no message %s", id)
+		}
+		path = append(path, s.Messages[i])
+		id = s.Messages[i].Parent
+	}
+	slices.Reverse(path)
+	return path, nil
+}
+
+// scenario returns the ID of the scenario the story plays: the session's, or
+// without one the bundle's first (conformance README section 2).
+func (c *testCase) scenario(s *troupe.Session) string {
+	if s != nil {
+		return s.Header.Scenario
+	}
+	b, _, _, _ := c.read()
+	return b.Scenarios[0].ID
 }
 
 // sameJSON reports whether got, encoded as JSON, equals want, comparing

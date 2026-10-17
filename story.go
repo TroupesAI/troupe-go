@@ -14,6 +14,7 @@ type Story struct {
 	messages []Message
 	index    map[string]int // each message ID's first line, as an index into messages
 	initial  *state
+	conditions
 }
 
 // NewStory returns the story of session s, played with bundle b. Without s, it
@@ -54,9 +55,10 @@ func (st *Story) Initial() State {
 
 // Apply returns the state after a message, given the state of this story
 // before it: its parent's, or the initial state for a root. That is the state
-// after the message's changes (Format 8.6), with the player's character
-// {{user}} means after a player message (Format 9). Applying the messages of a
-// path in turn gives the state at its last, so a caller that keeps each
+// after the message's changes (Format 8.6), with what else conditions and
+// macros read that depends on the path, such as the rounds so far and the
+// player's character {{user}} means (Format 9, 10.1). Applying the messages
+// of a path in turn gives the state at its last, so a caller that keeps each
 // message's state never replays a path.
 func (st *Story) Apply(before State, m *Message) State {
 	s := before.s.clone()
@@ -64,15 +66,21 @@ func (st *Story) Apply(before State, m *Message) State {
 	return State{st.scope, s}
 }
 
-// apply applies m to s: its changes, in order, and for a player message with
-// a speaking part, the first such part's speaker as {{user}} (Format 9).
+// apply applies m to s: its changes, in order; for a player message, a
+// round, and with a speaking part, the first such part's speaker as {{user}}
+// (Format 9, 11.1); for a root, its opening; and m's at.
 func (st *Story) apply(s *state, m *Message) {
 	for _, c := range m.Changes {
 		st.scope.apply(s, c.Set, nil)
 	}
+	if m.Parent == "" {
+		s.opening = m.Opening
+	}
+	s.parentAt, s.at = s.at, m.At
 	if m.From != "player" {
 		return
 	}
+	s.turn++
 	if i := slices.IndexFunc(m.Content, func(p Part) bool { return p.Speaker != "" }); i >= 0 {
 		s.user = m.Content[i].Speaker
 	}

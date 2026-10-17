@@ -18,6 +18,12 @@ const narrator = "narrator"
 // every part in narrator mode. Nobody knows a hidden message's parts (Format
 // 11.4).
 func (st *Story) KnownBy(m *Message, before State) [][]string {
+	return st.knownBy(m, before.s, st.Apply(before, m).s)
+}
+
+// knownBy returns who knows each part of m, given the states before and after
+// it.
+func (st *Story) knownBy(m *Message, before, after *state) [][]string {
 	out := make([][]string, len(m.Content))
 	if m.Hidden {
 		for i := range out {
@@ -25,15 +31,14 @@ func (st *Story) KnownBy(m *Message, before State) [][]string {
 		}
 		return out
 	}
-	after := st.Apply(before, m)
 	for i, part := range m.Content {
 		var ids []string
 		if part.KnownBy != nil {
 			ids = slices.Clone(part.KnownBy)
 		} else {
-			ids = append(ids, after.s.present...)
+			ids = append(ids, after.present...)
 			if m.Parent != "" {
-				ids = append(ids, before.s.present...)
+				ids = append(ids, before.present...)
 			}
 			if part.Speaker != "" {
 				ids = append(ids, part.Speaker)

@@ -7,12 +7,17 @@ import (
 	"slices"
 )
 
-// state is the state at a point of a story (Format 8.6), and the player's
-// character {{user}} means there (Format 9).
+// state is the state at a point of a story (Format 8.6), with what else a
+// condition or a macro reads there that depends on the path to it (Format
+// 9, 10.1).
 type state struct {
 	location string
 	present  []string
-	user     string // "" for none
+	user     string // the player's character {{user}} means; "" for none
+	turn     int    // the rounds so far (Format 11.1)
+	opening  string // the path's opening; "" for none
+	at       string // the message's at, and its parent's; "" for none
+	parentAt string
 	// values holds each variable in use by its full name: a value from
 	// value, or for a keyed variable a map[string]any of them by key.
 	values map[string]any
@@ -173,5 +178,7 @@ func (st *state) revert(undo []edit) {
 
 // clone returns a copy of st that applying changes to doesn't change st.
 func (st *state) clone() *state {
-	return &state{location: st.location, present: st.present, user: st.user, values: maps.Clone(st.values)}
+	c := *st
+	c.values = maps.Clone(st.values)
+	return &c
 }

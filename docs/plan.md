@@ -29,7 +29,7 @@ The cost is that a change touching both the engine and the platform can't land i
 | No clock interface | Passing in the current time | Every time a rule reads comes from a message's `at` (Format 10.1), so nothing reads the clock |
 | `encoding/json/jsontext` for the strict pass, `encoding/json/v2` with `WithUnmarshalers` for the typed model | `encoding/json` v1, or a third-party decoder | Stable since Go 1.27. `jsontext` rejects duplicate names, invalid UTF-8 and unpaired surrogates by default, and `StackPointer` locates failures without document text. Caller-supplied unmarshalers handle `8.0` and wrong-typed values without changing exported types. The cost: a program built with `GOEXPERIMENT=nojsonv2` can't import the module |
 | Bundles and sessions are read from an `io.Reader`, sessions line by line; packages from an `io.ReaderAt` and a size | `[]byte` | One shape across the readers. A 256 MiB session isn't held as bytes and as a model at once, a package's documents stream from its ZIP entries, and size limits are counted while reading. Readers return an `error` only when the reader fails, so an I/O failure is never reported as `PARSE` |
-| [`cel-go`](https://github.com/google/cel-go) for conditions | Our own CEL | It's the reference implementation. Format 10.2 narrows it, and that's done with validators, not a fork |
+| [`cel-go`](https://github.com/google/cel-go) for conditions, now at the module path `cel.dev/cel-go` | Our own CEL | It's the reference implementation. Format 10.2 narrows it, and that's done with validators, not a fork |
 | [`santhosh-tekuri/jsonschema`](https://github.com/santhosh-tekuri/jsonschema) v6 | Other validators | It supports JSON Schema 2020-12, asserts `format`, and reports instance locations, which diagnostics need |
 | Schemas compiled once, on first use, with `sync.OnceValue` | At `init` | Programs that import the module but never read a document don't pay for it |
 | Each value of the wrong type reads as absent, and a list holding an item of the wrong type reads as absent as a whole | Zero values, or dropping the item | Later checks see the document as written, and every other item keeps its index, so their diagnostics point at the right place. It hides diagnostics on the list's other items, such as an `UNKNOWN_CHARACTER` beside a wrong-typed `knownBy` item; revisit if a suite case needs them |
@@ -76,10 +76,18 @@ The cost is that a change touching both the engine and the platform can't land i
 | Key matching is in `internal/keys`, for `hit()` and entry activation | In package `troupe` | It has no caller until phase 7, and both later callers use it |
 | Tests of regex keys' meaning take their expected results from V8, on text whose line breaks are `\n` | Results worked out by hand | ECMAScript's meaning is what the spec requires, and V8 is a reference for it |
 | `keys.Text` writes every line break as `\n`, and the scanned text is converted once, as it is built | Converting in each match, or translating `.`, `^` and `$` | Format 7.2 matches keys against text whose line breaks are `\n`, where RE2 reads `.`, `^` and `$` as ECMAScript does |
+| `Story.PointAt(before, recent, char)` builds an evaluation point from the path's last messages and the state before them, and `Point.Eval(expr, self, scanDepth)` evaluates a condition there | `Eval` taking a message ID, or the whole path | The platform keeps states, so it passes only the messages a scan reaches; building the point once does the work every condition there shares |
+| The rounds, the path's opening, and the times of a message and its parent are part of `State`, kept by `Apply`, and aren't its keys | Working them out from the path | Like `{{user}}`, they depend on the path, so states the platform keeps carry them |
+| `Eval` returns an error only for a `CEL_ERROR`, and a runtime error is `false` | An error for runtime errors too | Format 10.2 makes a runtime error a false condition |
+| Variables are declared with qualified names, such as `state.bell` and `own.nerve` | `state` as a map or an object | `state` and `scene` alone, or indexed by a computed string, don't type-check, as Format 10.2 requires, and undeclared variables fail the type check |
+| CEL's standard macros are cleared; `has()` expands to a non-strict check of its selection, and `hit()` to a look-up whose results the point computes for the expression's literal keys | The standard `has()`, and a `hit()` function | Format 10.2's `has()` is true exactly when selecting isn't a runtime error, and `hit()`'s keys are literals checked when the expression compiles |
+| An AST validator rejects other functions, `double`, `uint`, `bytes` and `null` literals, type names as values, and `char` or `user` selected from a keyed map | Removing them from the environment | cel-go's standard library is all or nothing, and these rules read the checked AST |
+| Conditions compile once per story, owner and expression, and `Check` builds an environment once per scenario and owner | Compiling for each evaluation | A platform evaluates every entry's condition on every turn |
+| `internal/condition` | `internal/cel` | Its name doesn't clash with cel-go's `cel` package |
 | A message's own session entries apply to its `activated` | Applying from the next message | Format 11.3: they apply "from that message onward" |
 | A change key that doesn't follow the key grammar is `UNKNOWN_VARIABLE` as well as `SCHEMA` | Leaving it to the schema | Every check runs on the document as written (Format 15.3) |
 | With an unknown scenario, the session is checked against an empty one | Skipping the checks that need it | The rest still holds; only what the scenario would make valid fails |
-| A regex parser of our own, emitting RE2 | Compiling keys directly with `regexp` | Format 14 defines a grammar that has to be validated exactly, and keys mean what they mean in ECMAScript, which differs from RE2 in places (see [Pitfalls](#pitfalls)) |
+| A regex parser of our own, emitting RE2 | Compiling keys directly with `regexp` | Format 14 defines a grammar that has to be validated exactly, and keys mean what they mean in ECMAScript, which differs from RE2 in places |
 | Tools pinned with mise, tasks in Task, `golangci-lint` v2 | Whatever is installed | The same setup as the platform, so one toolchain works in both |
 | The platform's lint config without `bodyclose`, `noctx` and `rowserrcheck` | An identical copy | Those linters only check HTTP and database code, which this library has none of |
 
@@ -96,8 +104,8 @@ troupe.go, *.go     package troupe: the public API
 internal/ijson/     strict reading: I-JSON, depth, number text (Format 2.2, 14)
 internal/regex/     regex keys: grammar, limits, translation to RE2 (Format 14)
 internal/keys/      key matching: plain keys and regex keys (Format 7.2)
-internal/cel/       the condition environment and the Format 10.2 validators
-internal/macro/     macro parsing and rendering (Format 9)
+internal/condition/ conditions: the environment and the Format 10.2 rules
+internal/macro/     macro parsing (Format 9)
 spec/               copied from the spec repository; never edited by hand
   REF               the spec commit the copy comes from
   schemas/          embedded, and compiled on first use
@@ -108,11 +116,7 @@ conformance_test.go package troupe_test: the runner
 
 ## The public API
 
-The API has to do two things: everything the conformance runner asks for, through exported names only, and everything the platform needs (see [What the platform needs](#what-the-platform-needs)). Reading, checking, states, knowledge and macros are built: `ReadBundle`, `ReadSession`, `ReadPackage`, the typed model, `Diagnostic`, `Check`, `NewStory`, `Story`, `State`, `Story.KnownBy`, `Story.Render` and `Story.RenderParts`. The rest is a sketch; its names and signatures get settled when each phase starts.
-
-```go
-func (st *Story) Eval(expr string, at EvalContext) (bool, error)
-```
+The API has to do two things: everything the conformance runner asks for, through exported names only, and everything the platform needs (see [What the platform needs](#what-the-platform-needs)). Everything the suite tests is built: `ReadBundle`, `ReadSession`, `ReadPackage`, the typed model, `Diagnostic`, `Check`, `NewStory`, `Story`, `State`, `Story.KnownBy`, `Story.Render`, `Story.RenderParts`, `Story.PointAt` and `Point.Eval`.
 
 The suite's operations map onto it like this (conformance README section 3):
 
@@ -123,17 +127,13 @@ The suite's operations map onto it like this (conformance README section 3):
 | `state` | `StateAt`, flattened by `State.All` |
 | `knows` | `KnownBy`, from the parent's `StateAt` |
 | `macro` | `Render`, with `char`, `owner` and `narrator` in its `Context`, and the state at `at` |
-| `cel` | `Eval`, with `char`, `self`, `scanDepth` and `at`; a compile error is a `CEL_ERROR` |
+| `cel` | `Point.Eval`, at the point `PointAt` builds from the path to `at`, with `char`, `self` and `scanDepth`; an error is a `CEL_ERROR` |
 
 A case whose `bundleFile` is a package's `bundle.json` is read by zipping its directory in memory and calling `ReadPackage`, since package paths are `PARSE` anywhere else.
 
 ## Phases
 
-Each phase ends with its part of the suite passing, lint clean, and its decisions recorded above. The runner keeps a **pending list** of tests not expected to pass yet: each entry is a test type, such as `cel`, or one test, as `<case path>#<test index>`. A pending test that fails is skipped, and one that passes fails the run, so the list can't go stale. It shrinks to empty by the end of phase 7, and is then deleted.
-
-### 7. Conditions
-
-The goal is `cel` tests passing, plus `CEL_ERROR`. That covers the environment (Format 10.1), the rules (Format 10.2), and `hit()` over the scanned text, with `internal/keys`, whose plain keys the `hit()` cases test. At the end of this phase the whole suite passes and the pending list is gone.
+Each phase ends with its part of the work tested, lint clean, and its decisions recorded above. The whole conformance suite passes.
 
 ### 8. Beyond the suite
 
@@ -159,13 +159,6 @@ The platform's API (its architecture is in `docs/stack.md` of the platform repos
 - **Export** a package with its images and sessions.
 
 Prompt assembly, the choice of which active entries reach the model, model calls and storage stay in the platform.
-
-## Pitfalls
-
-Each of these needs verifying against the suite when its phase starts.
-
-- **CEL's defaults are wider than Format 10.2.** cel-go's standard environment has many more functions and macros, as well as `double`, `uint`, `bytes` and `null`. Reject them with AST validators after checking, along with any use of `state`, `own` or `scene` other than a selection, and selecting `char` or `user` from a keyed map. `has()` follows Format 10.2, which isn't quite CEL's presence test. Bound expression size (4 KiB) before parsing.
-- **Timestamps keep their offset.** `hour` and `weekday` are read at the offset written (Format 10.1). Don't convert to UTC or to local time.
 
 ## Spec feedback
 
