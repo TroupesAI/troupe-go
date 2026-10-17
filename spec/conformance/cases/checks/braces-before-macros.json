@@ -1,0 +1,29 @@
+{
+  "description": "A {{ that starts no macro is UNKNOWN_MACRO only when the text from it to the next }} holds no macro the scan finds (Format 9, 15.3): in {{{char}} and {{a{{char}} the scan keeps the first { and finds {{char}}, so neither is reported. checks/unknown-macro.json covers {{original}}, which is",
+  "bundle": {
+    "kind": "bundle",
+    "scenarios": [
+      {
+        "id": "s",
+        "entries": [
+          {
+            "id": "brace",
+            "text": "{{{char}} waves."
+          },
+          {
+            "id": "text_before",
+            "text": "{{a{{char}} waves."
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "expect": {
+        "codes": []
+      }
+    }
+  ]
+}

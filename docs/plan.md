@@ -169,8 +169,4 @@ Each of these needs verifying against the suite when its phase starts.
 
 When the code shows the spec is wrong or unclear, write it up for the user: what the spec says, the case or input where it matters, and a proposed fix. The user decides, and changes the spec repository. Add a conformance case only when apps could disagree on the issue, not for coverage. Then sync the copy here with `task spec`.
 
-Decided, awaiting the spec commit: 1, by a more general rule, which the library follows. When the commit lands, sync with `task spec` and delete this item.
-
-1. A `{{` before a macro, and `UNKNOWN_MACRO`: a `{{` is `UNKNOWN_MACRO` only when the text from it to the next `}}` holds no macro the scan finds, which covers `{{a{{char}}` as well as `{{{char}}`.
-
 These open items were deliberately left out of 0.14 and may come back as findings: label keys outside `values`, the loose `language` pattern, codes for nested `null`, and the missing activation test type.
