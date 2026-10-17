@@ -98,6 +98,9 @@ The cost is that a change touching both the engine and the platform can't land i
 | Only bundles have `FileFields` for now | Sessions too | Importing bundles is what the platform asks for first. A session's file fields would need a `Line` as well, which can be added without breaking callers |
 | `ReplaceFileFields(doc, values)` splices each new value in at the byte offsets `jsontext` reports, keyed by pointer | Re-encoding the document, or editing the typed model | Every other byte stays as written, `ext` included (Format 13), and the model is for reading |
 | `ReplaceFileFields` checks each new value against the schema's `image` definition, and that each pointer names a string, but not that it names a file field | Checking the pointer against the document's kind | A writer writes only conforming files, and the value is where the caller's text enters the document. Pointers come from `FileFields`, and checking them would need the document's kind |
+| `ReadPackageBundle(r, files)` reads a package's `bundle.json` given its files' paths, with the results `ReadPackage` gives for it, `File` included | Reading it with `ReadBundle`, or a `Package` built by hand | The platform stores `bundle.json` and the files, not the ZIP, and reads it back for the typed model. Outside a package, package paths are `PARSE` (Format 12.2) |
+| `ReadPackageBundle`'s files include the sessions' paths, and `bundle.json` is always one | Only `Package.Files` | A bundle may reference any file of the package (Format 12.3), as `ReadPackage` checks it |
+| A package's files are checked as a set of paths | The map of ZIP entries | `ReadPackage` and `ReadPackageBundle` share the check |
 | A regex parser of our own, emitting RE2 | Compiling keys directly with `regexp` | Format 14 defines a grammar that has to be validated exactly, and keys mean what they mean in ECMAScript, which differs from RE2 in places |
 | Tools pinned with mise, tasks in Task, `golangci-lint` v2 | Whatever is installed | The same setup as the platform, so one toolchain works in both |
 | The platform's lint config without `bodyclose`, `noctx` and `rowserrcheck` | An identical copy | Those linters only check HTTP and database code, which this library has none of |
@@ -127,7 +130,7 @@ conformance_test.go package troupe_test: the runner
 
 ## The public API
 
-The API has to do two things: everything the conformance runner asks for, through exported names only, and everything the platform needs (see [What the platform needs](#what-the-platform-needs)). Everything the suite tests is built: `ReadBundle`, `ReadSession`, `ReadPackage`, the typed model, `Diagnostic`, `Check`, `NewStory`, `Story`, `State`, `Story.KnownBy`, `Story.Render`, `Story.RenderParts`, `Story.PointAt` and `Point.Eval`. Beyond the suite, importing bundles uses `Package.Files`, `Package.Open`, `Package.BundleJSON`, `Bundle.FileFields` and `ReplaceFileFields`.
+The API has to do two things: everything the conformance runner asks for, through exported names only, and everything the platform needs (see [What the platform needs](#what-the-platform-needs)). Everything the suite tests is built: `ReadBundle`, `ReadSession`, `ReadPackage`, the typed model, `Diagnostic`, `Check`, `NewStory`, `Story`, `State`, `Story.KnownBy`, `Story.Render`, `Story.RenderParts`, `Story.PointAt` and `Point.Eval`. Beyond the suite, importing bundles uses `Package.Files`, `Package.Open`, `Package.BundleJSON`, `Bundle.FileFields`, `ReplaceFileFields` and `ReadPackageBundle`.
 
 The suite's operations map onto it like this (conformance README section 3):
 

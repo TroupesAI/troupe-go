@@ -88,3 +88,26 @@ func ExampleReplaceFileFields() {
 	// /cover image/png 8 bytes
 	// {"troupe": "0.14", "kind": "bundle", "cover": "images/cover.png", "ext": {"x.y": [1, 2.0]}}
 }
+
+// A package's bundle.json, stored apart from its ZIP, reads back given the
+// paths of the package's files, such as Package.Files.
+func ExampleReadPackageBundle() {
+	doc := `{"troupe": "0.14", "kind": "bundle", "cover": "images/cover.png"}`
+	b, diags, err := troupe.ReadPackageBundle(strings.NewReader(doc), []string{"images/cover.png"})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(b.Cover, len(diags))
+
+	// Without that file, the path names nothing.
+	_, diags, err = troupe.ReadPackageBundle(strings.NewReader(doc), nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, d := range diags {
+		fmt.Println(d.Code, d.File, d.Location())
+	}
+	// Output:
+	// images/cover.png 0
+	// PARSE bundle.json /cover
+}

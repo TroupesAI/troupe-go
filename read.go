@@ -1,7 +1,6 @@
 package troupe
 
 import (
-	"archive/zip"
 	"bufio"
 	"bytes"
 	"encoding/json/jsontext"
@@ -29,6 +28,23 @@ func ReadBundle(r io.Reader) (*Bundle, []Diagnostic, error) {
 	return b, sortDiagnostics(rd.diags), nil
 }
 
+// ReadPackageBundle reads bundle.json as a package holds it, without the
+// package. Files are the paths of the package's files, such as Package.Files
+// and the keys of Package.Sessions, and its package paths must name one of
+// them or bundle.json (Format 12.2, 12.3). Its results are those ReadPackage
+// gives for that bundle.json, so every diagnostic's File is "bundle.json".
+func ReadPackageBundle(r io.Reader, files []string) (*Bundle, []Diagnostic, error) {
+	rd := reader{file: "bundle.json", files: map[string]bool{"bundle.json": true}}
+	for _, f := range files {
+		rd.files[f] = true
+	}
+	b, _, err := rd.bundle(r)
+	if err != nil {
+		return nil, nil, err
+	}
+	return b, sortDiagnostics(rd.diags), nil
+}
+
 // ReadSession reads a session file, line by line (Format 11). Its results are
 // those of ReadBundle, for every line: the session is nil when any line fails
 // PARSE, or its header UNSUPPORTED_VERSION.
@@ -43,8 +59,8 @@ func ReadSession(r io.Reader) (*Session, []Diagnostic, error) {
 
 // reader reads the documents of one input and collects their diagnostics.
 type reader struct {
-	file  string               // the path within a package
-	files map[string]*zip.File // a package's files; nil outside a package
+	file  string          // the path within a package
+	files map[string]bool // the paths of a package's files; nil outside a package
 	diags []Diagnostic
 }
 

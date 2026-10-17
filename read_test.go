@@ -121,6 +121,65 @@ func TestReadPackage(t *testing.T) {
 	}
 }
 
+// A package's bundle.json, read without the package but with its files'
+// paths, reads as ReadPackage reads it: a package path must name one of them.
+func TestReadPackageBundle(t *testing.T) {
+	for _, c := range []struct {
+		doc  string
+		want []string
+	}{
+		{
+			`{"troupe":"0.14","kind":"bundle","mystery":1,"cover":"images/cover.png"}`,
+			[]string{"UNKNOWN_FIELD bundle.json /mystery"},
+		},
+		{
+			`{"troupe":"0.14","kind":"bundle","characters":[{"id":"kai","name":"Kai","description":"A thief.","avatar":"images/kai.png"}]}`,
+			[]string{"PARSE bundle.json /characters/0/avatar"},
+		},
+	} {
+		var buf bytes.Buffer
+		w := zip.NewWriter(&buf)
+		for name, data := range map[string]string{"bundle.json": c.doc, "images/cover.png": "PNG"} {
+			f, err := w.Create(name)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := f.Write([]byte(data)); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err := w.Close(); err != nil {
+			t.Fatal(err)
+		}
+		p, pdiags, err := troupe.ReadPackage(bytes.NewReader(buf.Bytes()), int64(buf.Len()))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var pb *troupe.Bundle
+		if p != nil {
+			pb = p.Bundle
+		}
+
+		b, diags, err := troupe.ReadPackageBundle(strings.NewReader(c.doc), []string{"images/cover.png"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(b, pb) {
+			t.Errorf("%s: got  %+v\nReadPackage %+v", c.doc, b, pb)
+		}
+		if !reflect.DeepEqual(diags, pdiags) {
+			t.Errorf("%s: diagnostics %+v\nReadPackage %+v", c.doc, diags, pdiags)
+		}
+		var got []string
+		for _, d := range diags {
+			got = append(got, string(d.Code)+" "+d.File+" "+d.Location())
+		}
+		if !slices.Equal(got, c.want) {
+			t.Errorf("%s: diagnostics %q, want %q", c.doc, got, c.want)
+		}
+	}
+}
+
 // Reading stops at each limit of Format 14 that the conformance suite has no
 // case for, so hostile input can't make it do unbounded work.
 func TestReadLimits(t *testing.T) {
