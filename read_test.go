@@ -7,40 +7,38 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/TroupesAI/troupe-go"
 )
 
-// A document that fails the schema still reads, with each value of the wrong
-// type absent, so later checks see the document as written.
-func TestReadBundleSkipsWrongTypes(t *testing.T) {
+// A document that fails the schema still reads, so later checks see it as
+// written: a value of the wrong type is absent, not zero, and a list holding
+// an item of the wrong type is absent as a whole, so every other item keeps
+// its index. What the model holds is what the document says: an integer may
+// be written with a zero fraction, a part has only the fields its type
+// defines, and ext keeps its bytes as written.
+func TestReadBundleModel(t *testing.T) {
 	in := `{"troupe":"0.14","kind":"bundle","name":5,"tags":["a",5],"ext":{"x.y": [1, 2.0]},
-		"scenarios":[{"id":"s","worlds":[],
-			"entries":[{"id":"e","text":"t","scanDepth":8.0,"chance":"often","knownBy":["a"]}],
-			"variables":[
-				{"id":"v","type":"int","description":"d","of":"cast","min":-1},
-				{"id":"w","type":"int","description":"d","of":["a","b"]}],
+		"scenarios":[{"id":"s",
+			"entries":[{"id":"e","text":"t","scanDepth":8.0,"chance":"often"}],
 			"openings":[{"id":"o","set":{"state.v":1,"state.w":null},
 				"content":[{"text":"hi","src":"x.png"},{"type":"image","src":"https://x.test/a.png","text":"no"}]}]}]}`
-	b, diags, err := troupe.ReadBundle(strings.NewReader(in))
+	b, _, err := troupe.ReadBundle(strings.NewReader(in))
 	if err != nil {
 		t.Fatal(err)
 	}
-	eight, minusOne := 8, int64(-1)
+	eight := 8
 	want := &troupe.Bundle{
 		Troupe: "0.14",
 		Ext:    jsontext.Value(`{"x.y": [1, 2.0]}`),
 		Scenarios: []troupe.Scenario{{
 			ID:      "s",
-			Worlds:  &[]string{},
-			Entries: []troupe.Entry{{ID: "e", Text: "t", ScanDepth: &eight, KnownBy: []string{"a"}}},
-			Variables: []troupe.Variable{
-				{ID: "v", Type: "int", Description: "d", Of: troupe.Keys{Cast: true}, Min: &minusOne},
-				{ID: "w", Type: "int", Description: "d", Of: troupe.Keys{List: []string{"a", "b"}}},
-			},
+			Entries: []troupe.Entry{{ID: "e", Text: "t", ScanDepth: &eight}},
 			Openings: []troupe.Opening{{
 				ID:  "o",
 				Set: map[string]jsontext.Value{"state.v": jsontext.Value("1")},
@@ -54,15 +52,50 @@ func TestReadBundleSkipsWrongTypes(t *testing.T) {
 	if !reflect.DeepEqual(b, want) {
 		t.Errorf("got  %+v\nwant %+v", b, want)
 	}
-	if got := locations(diags); !reflect.DeepEqual(got, []string{
-		"SCHEMA /name",
-		"SCHEMA /scenarios/0/entries/0/chance",
-		"UNKNOWN_FIELD /scenarios/0/openings/0/content/0/src",
-		"UNKNOWN_FIELD /scenarios/0/openings/0/content/1/text",
-		"SCHEMA /scenarios/0/openings/0/set/state.w",
-		"SCHEMA /tags/1",
-	}) {
-		t.Errorf("diagnostics %q", got)
+}
+
+// A package's sessions are its files anywhere under sessions/, by path. A
+// session that fails PARSE is left out while the package still reads, and
+// every diagnostic names the file it is in.
+func TestReadPackage(t *testing.T) {
+	header := `{"troupe":"0.14","kind":"session","scenario":"s"}` + "\n"
+	message := `{"id":"1","from":"player","content":[{"text":"Hi."}]}`
+	var buf bytes.Buffer
+	w := zip.NewWriter(&buf)
+	for name, data := range map[string]string{
+		"bundle.json":                          `{"troupe":"0.14","kind":"bundle","mystery":1,"scenarios":[{"id":"s"}]}`,
+		"sessions/a.troupe-session.jsonl":      header + message,
+		"sessions/old/b.troupe-session.jsonl":  header + message,
+		"sessions/broken.troupe-session.jsonl": header + `{"id":`,
+		"sessions/notes.txt":                   "not a session",
+		"elsewhere/stray.troupe-session.jsonl": "not a session either",
+	} {
+		f, err := w.Create(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := f.Write([]byte(data)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := w.Close(); err != nil {
+		t.Fatal(err)
+	}
+	p, diags, err := troupe.ReadPackage(bytes.NewReader(buf.Bytes()), int64(buf.Len()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p == nil {
+		t.Fatalf("the package doesn't read: %v", diags)
+	}
+	if got := slices.Sorted(maps.Keys(p.Sessions)); !slices.Equal(got, []string{"sessions/a.troupe-session.jsonl", "sessions/old/b.troupe-session.jsonl"}) {
+		t.Errorf("sessions %q", got)
+	}
+	if want := []troupe.Diagnostic{
+		{Code: troupe.CodeUnknownField, File: "bundle.json", Pointer: "/mystery"},
+		{Code: troupe.CodeParse, File: "sessions/broken.troupe-session.jsonl", Line: 2, Pointer: "/id"},
+	}; !reflect.DeepEqual(diags, want) {
+		t.Errorf("diagnostics %+v, want %+v", diags, want)
 	}
 }
 

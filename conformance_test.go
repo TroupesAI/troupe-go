@@ -178,6 +178,34 @@ func run(c *testCase, tc test, expect any) error {
 	return fmt.Errorf("%s tests: %w", tc.Type, errors.ErrUnsupported)
 }
 
+// runParse reads the input as a session reader (Format 15.2), so tests marked
+// "level": "session" run too (conformance README section 3.6).
+func runParse(tc test, expect *codesExpect) error {
+	input := []byte(tc.Text)
+	if tc.Base64 != "" {
+		var err error
+		if input, err = base64.StdEncoding.DecodeString(tc.Base64); err != nil {
+			return err
+		}
+	}
+	var diags []troupe.Diagnostic
+	var err error
+	switch tc.Kind {
+	case "bundle":
+		_, diags, err = troupe.ReadBundle(bytes.NewReader(input))
+	case "session":
+		_, diags, err = troupe.ReadSession(bytes.NewReader(input))
+	case "package":
+		_, diags, err = troupe.ReadPackage(bytes.NewReader(input), int64(len(input)))
+	default:
+		return fmt.Errorf("unknown kind %q", tc.Kind)
+	}
+	if err != nil {
+		return err
+	}
+	return compareCodes(diags, expect.Codes)
+}
+
 // runCheck validates the case's documents as reading them does, then runs
 // every other check (conformance README section 3.4).
 func runCheck(c *testCase, expect *checkExpect) error {
@@ -412,34 +440,6 @@ func withVersion(doc jsontext.Value) ([]byte, error) {
 	}
 	members["troupe"] = jsontext.Value(strconv.Quote(troupe.Version))
 	return json.Marshal(members)
-}
-
-// runParse reads the input as a session reader (Format 15.2), so tests marked
-// "level": "session" run too (conformance README section 3.6).
-func runParse(tc test, expect *codesExpect) error {
-	input := []byte(tc.Text)
-	if tc.Base64 != "" {
-		var err error
-		if input, err = base64.StdEncoding.DecodeString(tc.Base64); err != nil {
-			return err
-		}
-	}
-	var diags []troupe.Diagnostic
-	var err error
-	switch tc.Kind {
-	case "bundle":
-		_, diags, err = troupe.ReadBundle(bytes.NewReader(input))
-	case "session":
-		_, diags, err = troupe.ReadSession(bytes.NewReader(input))
-	case "package":
-		_, diags, err = troupe.ReadPackage(bytes.NewReader(input), int64(len(input)))
-	default:
-		return fmt.Errorf("unknown kind %q", tc.Kind)
-	}
-	if err != nil {
-		return err
-	}
-	return compareCodes(diags, expect.Codes)
 }
 
 // compareCodes compares the sorted, distinct codes of diags with want.
