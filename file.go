@@ -15,7 +15,9 @@ import (
 )
 
 // FileField is a field that holds a file, and its value: an https: URL, a
-// package path or a data: URI, whichever sets its fields (Format 12.2).
+// package path or a data: URI, whichever sets its fields (Format 12.2). A
+// data: URI's content isn't checked against its media type: readers leave
+// that to the app that shows it.
 type FileField struct {
 	Pointer   string // the field, as a JSON Pointer into its document
 	URL       string // an https: URL
