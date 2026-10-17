@@ -1,0 +1,56 @@
+{
+  "description": "A \"cast\" variable's initial object (Format 8.3, 15.3): a member naming a character of the bundle or session is checked though the character is in no cast, so an invalid value for it is INVALID_VALUE",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Ann."
+      },
+      {
+        "id": "b",
+        "name": "Bea",
+        "description": "Bea."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "cast": [
+          {
+            "character": "a"
+          }
+        ],
+        "variables": [
+          {
+            "id": "trust",
+            "type": "int",
+            "of": "cast",
+            "description": "Trust in each cast member.",
+            "initial": {
+              "a": 1,
+              "b": "high"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "expect": {
+        "codes": [
+          "INVALID_VALUE"
+        ],
+        "includes": [
+          {
+            "code": "INVALID_VALUE",
+            "at": "/scenarios/0/variables/0/initial/b"
+          }
+        ]
+      }
+    }
+  ]
+}

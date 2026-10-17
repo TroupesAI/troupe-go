@@ -12,75 +12,68 @@ import (
 // variable keys and values, messages and players. b is a bundle that read
 // without PARSE, and s, when not nil, a session played with it.
 //
-// With a session, the bundle and the session are checked together, for the
-// session's scenario. Without one, the bundle is checked for each of its
-// scenarios, played without players (conformance README section 2).
-// Diagnostics are sorted as reading's are, and their File is empty.
+// The bundle is checked once for each of its scenarios, as written and played
+// without players, whether or not a session comes with it. A session is then
+// checked against its scenario (conformance README section 2). Diagnostics are
+// sorted as reading's are, and their File is empty.
 func Check(b *Bundle, s *Session) []Diagnostic {
-	c := newChecker(b, s)
-	c.ids()
-	c.references()
-	c.initials()
-	if s == nil {
-		for i := range b.Scenarios {
-			c.scoped(newScope(b, nil, i, c.characters, c.worlds))
-		}
-	} else {
-		c.scoped(newScope(b, s, c.scenario, c.characters, c.worlds))
+	c := &checker{
+		b:           b,
+		characters:  map[string]*Character{},
+		worlds:      map[string]*World{},
+		locations:   map[string]bool{},
+		owners:      map[string]bool{},
+		locationIDs: map[string]bool{},
+	}
+	c.add(b.Characters, b.Worlds)
+	c.bundleIDs()
+	c.bundleReferences()
+	c.initials(inBundle, b.Characters, b.Worlds, b.Scenarios)
+	for i := range b.Scenarios {
+		c.openings(newScope(b, nil, i, c.characters, c.worlds))
+	}
+	if s != nil {
+		c.s = s
+		c.add(s.Header.Characters, s.Header.Worlds)
+		scenario := slices.IndexFunc(b.Scenarios, func(sc Scenario) bool { return sc.ID == s.Header.Scenario })
+		c.sessionIDs()
+		c.sessionReferences(scenario)
+		c.initials(inHeader, s.Header.Characters, s.Header.Worlds, nil)
+		c.messages(newScope(b, s, scenario, c.characters, c.worlds))
 	}
 	return sortDiagnostics(c.diags)
 }
 
 type checker struct {
-	b        *Bundle
-	s        *Session // nil without a session
-	scenario int      // the index of the session's scenario; -1 when it names none
-	// characters and worlds are the bundle's and the session's, the first of
-	// each ID, and locations every location's ID.
+	b *Bundle
+	s *Session // nil until the session's checks
+	// characters and worlds are the first of each ID, and locations every
+	// location's ID: the bundle's, and once its checks begin, the session's.
 	characters map[string]*Character
 	worlds     map[string]*World
 	locations  map[string]bool
-	diags      []Diagnostic
+	// owners and locationIDs are the IDs seen, for DUPLICATE_ID.
+	owners      map[string]bool
+	locationIDs map[string]bool
+	diags       []Diagnostic
 }
 
-func newChecker(b *Bundle, s *Session) *checker {
-	c := &checker{
-		b:          b,
-		s:          s,
-		scenario:   -1,
-		characters: map[string]*Character{},
-		worlds:     map[string]*World{},
-		locations:  map[string]bool{},
-	}
-	characters, worlds := pointers(b.Characters), pointers(b.Worlds)
-	if s != nil {
-		c.scenario = slices.IndexFunc(b.Scenarios, func(sc Scenario) bool { return sc.ID == s.Header.Scenario })
-		characters = append(characters, pointers(s.Header.Characters)...)
-		worlds = append(worlds, pointers(s.Header.Worlds)...)
-	}
-	for _, ch := range characters {
-		if _, ok := c.characters[ch.ID]; !ok {
-			c.characters[ch.ID] = ch
+// add adds characters and worlds, and the worlds' locations, to those
+// references can name.
+func (c *checker) add(characters []Character, worlds []World) {
+	for i := range characters {
+		if _, ok := c.characters[characters[i].ID]; !ok {
+			c.characters[characters[i].ID] = &characters[i]
 		}
 	}
-	for _, w := range worlds {
-		if _, ok := c.worlds[w.ID]; !ok {
-			c.worlds[w.ID] = w
+	for i := range worlds {
+		if _, ok := c.worlds[worlds[i].ID]; !ok {
+			c.worlds[worlds[i].ID] = &worlds[i]
 		}
-		for _, l := range w.Locations {
+		for _, l := range worlds[i].Locations {
 			c.locations[l.ID] = true
 		}
 	}
-	return c
-}
-
-// pointers returns pointers to the items of s.
-func pointers[T any](s []T) []*T {
-	out := make([]*T, len(s))
-	for i := range s {
-		out[i] = &s[i]
-	}
-	return out
 }
 
 // place is a document the diagnostics are in: the bundle, a session's header
@@ -120,42 +113,25 @@ func ptr(p jsontext.Pointer, tokens ...any) jsontext.Pointer {
 	return p
 }
 
-// ids checks that IDs are unique as Format 2.3 requires. A duplicate is
-// reported at each ID after the first, in the order of conformance README
-// section 3.4.
-func (c *checker) ids() {
-	b, s := c.b, c.s
-	owners, locations := map[string]bool{}, map[string]bool{}
+// bundleIDs checks that the bundle's IDs are unique as Format 2.3 requires.
+// A duplicate is reported at each ID after the first, in the order of
+// conformance README section 3.4.
+func (c *checker) bundleIDs() {
+	b := c.b
 	for i, ch := range b.Characters {
-		c.unique(owners, ch.ID, inBundle, ptr("", "characters", i, "id"))
+		c.unique(c.owners, ch.ID, inBundle, ptr("", "characters", i, "id"))
 	}
 	for i, w := range b.Worlds {
-		c.unique(owners, w.ID, inBundle, ptr("", "worlds", i, "id"))
+		c.unique(c.owners, w.ID, inBundle, ptr("", "worlds", i, "id"))
 	}
 	for i, sc := range b.Scenarios {
-		c.unique(owners, sc.ID, inBundle, ptr("", "scenarios", i, "id"))
-	}
-	if s != nil {
-		for i, ch := range s.Header.Characters {
-			c.unique(owners, ch.ID, inHeader, ptr("", "characters", i, "id"))
-		}
-		for i, w := range s.Header.Worlds {
-			c.unique(owners, w.ID, inHeader, ptr("", "worlds", i, "id"))
-		}
+		c.unique(c.owners, sc.ID, inBundle, ptr("", "scenarios", i, "id"))
 	}
 	for i, w := range b.Worlds {
 		for j, l := range w.Locations {
-			c.unique(locations, l.ID, inBundle, ptr("", "worlds", i, "locations", j, "id"))
+			c.unique(c.locationIDs, l.ID, inBundle, ptr("", "worlds", i, "locations", j, "id"))
 		}
 	}
-	if s != nil {
-		for i, w := range s.Header.Worlds {
-			for j, l := range w.Locations {
-				c.unique(locations, l.ID, inHeader, ptr("", "worlds", i, "locations", j, "id"))
-			}
-		}
-	}
-
 	for i, ch := range b.Characters {
 		c.ownIDs(inBundle, ptr("", "characters", i), ch.Entries, ch.Variables)
 	}
@@ -184,20 +160,49 @@ func (c *checker) ids() {
 			c.unique(openings, o.ID, inBundle, ptr(p, "openings", j, "id"))
 		}
 	}
-	if s == nil {
-		return
+}
+
+// sessionIDs checks the session's IDs, after the bundle's: its characters and
+// worlds share the bundle's namespace, and its locations the bundle's
+// locations' (Format 2.3).
+func (c *checker) sessionIDs() {
+	h := &c.s.Header
+	for i, ch := range h.Characters {
+		c.unique(c.owners, ch.ID, inHeader, ptr("", "characters", i, "id"))
+		c.scenarioVariable(ch.ID, ptr("", "characters", i, "id"))
 	}
-	for i, ch := range s.Header.Characters {
+	for i, w := range h.Worlds {
+		c.unique(c.owners, w.ID, inHeader, ptr("", "worlds", i, "id"))
+		c.scenarioVariable(w.ID, ptr("", "worlds", i, "id"))
+	}
+	for i, w := range h.Worlds {
+		for j, l := range w.Locations {
+			c.unique(c.locationIDs, l.ID, inHeader, ptr("", "worlds", i, "locations", j, "id"))
+		}
+	}
+	for i, ch := range h.Characters {
 		c.ownIDs(inHeader, ptr("", "characters", i), ch.Entries, ch.Variables)
 	}
-	for i, w := range s.Header.Worlds {
+	for i, w := range h.Worlds {
 		c.ownIDs(inHeader, ptr("", "worlds", i), w.Entries, w.Variables)
 	}
 	messages := map[string]bool{}
-	for i := range s.Messages {
-		m := &s.Messages[i]
+	for i := range c.s.Messages {
+		m := &c.s.Messages[i]
 		c.unique(messages, m.ID, inMessage(i, m), "/id")
 		c.ownIDs(inMessage(i, m), "", m.Entries, nil)
+	}
+}
+
+// scenarioVariable reports a session's character or world, at p, that takes a
+// scenario variable's ID (Format 2.3). It is the session's to report, since
+// the bundle is valid without it.
+func (c *checker) scenarioVariable(id string, p jsontext.Pointer) {
+	for _, sc := range c.b.Scenarios {
+		if slices.ContainsFunc(sc.Variables, func(v Variable) bool { return v.ID == id }) {
+			c.report(CodeDuplicateID, inHeader, p)
+			return
+		}
 	}
 }
 
@@ -226,13 +231,10 @@ func (c *checker) ownIDs(at place, p jsontext.Pointer, entries []Entry, variable
 	}
 }
 
-// references checks that references name what they refer to, other than
-// those that depend on a scope (Format 15.3).
-func (c *checker) references() {
-	b, s := c.b, c.s
-	isBundleCharacter := func(id string) bool {
-		return slices.ContainsFunc(b.Characters, func(ch Character) bool { return ch.ID == id })
-	}
+// bundleReferences checks that the bundle's references name what they refer
+// to, other than those that depend on a scenario (Format 15.3).
+func (c *checker) bundleReferences() {
+	b := c.b
 	for i := range b.Characters {
 		c.character(inBundle, ptr("", "characters", i), &b.Characters[i])
 	}
@@ -242,13 +244,13 @@ func (c *checker) references() {
 	for i, sc := range b.Scenarios {
 		p := ptr("", "scenarios", i)
 		for j, m := range sc.Cast {
-			if m.Character != "" && !isBundleCharacter(m.Character) {
+			if m.Character != "" && c.characters[m.Character] == nil {
 				c.report(CodeUnknownCharacter, inBundle, ptr(p, "cast", j, "character"))
 			}
 		}
 		if sc.Worlds != nil {
 			for j, w := range *sc.Worlds {
-				if !slices.ContainsFunc(b.Worlds, func(bw World) bool { return bw.ID == w }) {
+				if c.worlds[w] == nil {
 					c.report(CodeUnknownWorld, inBundle, ptr(p, "worlds", j))
 				}
 			}
@@ -258,29 +260,32 @@ func (c *checker) references() {
 			c.parts(inBundle, ptr(p, "openings", j, "content"), o.Content)
 		}
 	}
-	c.parents()
-	if s == nil {
-		return
-	}
+	c.parents(inBundle)
+}
 
-	h := &s.Header
+// sessionReferences checks that the session's references name what they refer
+// to, in the bundle or the session, other than those that depend on its
+// scenario, the bundle's scenario at index scenario or -1 for none.
+func (c *checker) sessionReferences(scenario int) {
+	b, s, h := c.b, c.s, &c.s.Header
 	for i := range h.Characters {
 		c.character(inHeader, ptr("", "characters", i), &h.Characters[i])
 	}
 	for i, w := range h.Worlds {
 		c.entries(inHeader, ptr("", "worlds", i), w.Entries)
 	}
-	if c.scenario < 0 && h.Scenario != "" {
+	c.parents(inHeader)
+	if scenario < 0 && h.Scenario != "" {
 		c.report(CodeUnknownScenario, inHeader, "/scenario")
 	}
 	// A person plays a header character or a cast member (Format 11.2).
 	for j, p := range h.Players {
 		player := slices.ContainsFunc(h.Characters, func(ch Character) bool { return ch.ID == p })
-		if c.scenario >= 0 {
-			if cast := b.Scenarios[c.scenario].Cast; cast != nil {
+		if scenario >= 0 {
+			if cast := b.Scenarios[scenario].Cast; cast != nil {
 				player = player || slices.ContainsFunc(cast, func(m CastMember) bool { return m.Character == p })
 			} else {
-				player = player || isBundleCharacter(p)
+				player = player || slices.ContainsFunc(b.Characters, func(ch Character) bool { return ch.ID == p })
 			}
 		}
 		if !player {
@@ -343,9 +348,11 @@ func (c *checker) knownBy(at place, p jsontext.Pointer, ids []string) {
 	}
 }
 
-// parents checks that every location's parent names a location, without
-// cycles, reporting a cycle at the parent of each location on it.
-func (c *checker) parents() {
+// parents checks that every location of the document at, the bundle or a
+// session's header, has a parent that names a location, without cycles. A
+// cycle is reported at the parent of each location on it. A session's
+// locations may name the bundle's, but not the other way around.
+func (c *checker) parents(at place) {
 	type location struct {
 		at     place
 		p      jsontext.Pointer // its parent's
@@ -364,8 +371,13 @@ func (c *checker) parents() {
 		}
 	}
 	add(inBundle, c.b.Worlds)
-	if c.s != nil {
+	if at == inHeader {
 		add(inHeader, c.s.Header.Worlds)
+	}
+	report := func(l location) {
+		if l.at == at {
+			c.report(CodeUnknownLocation, l.at, l.p)
+		}
 	}
 	// Each location has at most one parent, so a walk from a location not yet
 	// seen ends at one without a parent, or at one seen before: on this walk,
@@ -387,7 +399,7 @@ func (c *checker) parents() {
 			case locs[i].parent == "":
 				i = -1
 			case !ok:
-				c.report(CodeUnknownLocation, locs[i].at, locs[i].p)
+				report(locs[i])
 				i = -1
 			default:
 				i = next
@@ -395,7 +407,7 @@ func (c *checker) parents() {
 		}
 		if i >= 0 && state[i] == walking {
 			for _, j := range path[slices.Index(path, i):] {
-				c.report(CodeUnknownLocation, locs[j].at, locs[j].p)
+				report(locs[j])
 			}
 		}
 		for _, j := range path {
@@ -404,30 +416,22 @@ func (c *checker) parents() {
 	}
 }
 
-// initials checks every variable's initial value (Format 8.1, 8.3, 8.5).
-func (c *checker) initials() {
-	check := func(at place, p jsontext.Pointer, vars []Variable) {
+// initials checks the initial values of the variables of the characters,
+// worlds and scenarios of the document at (Format 8.1, 8.3, 8.5).
+func (c *checker) initials(at place, characters []Character, worlds []World, scenarios []Scenario) {
+	check := func(p jsontext.Pointer, vars []Variable) {
 		for i := range vars {
 			c.initial(at, ptr(p, "variables", i), &vars[i])
 		}
 	}
-	for i, ch := range c.b.Characters {
-		check(inBundle, ptr("", "characters", i), ch.Variables)
+	for i, ch := range characters {
+		check(ptr("", "characters", i), ch.Variables)
 	}
-	for i, w := range c.b.Worlds {
-		check(inBundle, ptr("", "worlds", i), w.Variables)
+	for i, w := range worlds {
+		check(ptr("", "worlds", i), w.Variables)
 	}
-	for i, sc := range c.b.Scenarios {
-		check(inBundle, ptr("", "scenarios", i), sc.Variables)
-	}
-	if c.s == nil {
-		return
-	}
-	for i, ch := range c.s.Header.Characters {
-		check(inHeader, ptr("", "characters", i), ch.Variables)
-	}
-	for i, w := range c.s.Header.Worlds {
-		check(inHeader, ptr("", "worlds", i), w.Variables)
+	for i, sc := range scenarios {
+		check(ptr("", "scenarios", i), sc.Variables)
 	}
 }
 
@@ -467,18 +471,17 @@ func (c *checker) initial(at place, p jsontext.Pointer, v *Variable) {
 	}
 }
 
-// scoped runs the checks that depend on what sc has in use: the keys and
-// values of its openings and of a session's changes, the openings roots name,
-// and the entries messages record as activated.
-func (c *checker) scoped(sc *scope) {
-	if sc.scenario != nil {
-		for j, o := range sc.scenario.Openings {
-			c.set(sc, inBundle, ptr("", "scenarios", sc.index, "openings", j, "set"), o.Set)
-		}
+// openings checks the keys and values of the openings of sc's scenario.
+func (c *checker) openings(sc *scope) {
+	for j, o := range sc.scenario.Openings {
+		c.set(sc, inBundle, ptr("", "scenarios", sc.index, "openings", j, "set"), o.Set)
 	}
-	if c.s == nil {
-		return
-	}
+}
+
+// messages runs the checks of a session's messages that depend on what its
+// scenario has in use, sc: the keys and values of changes, the openings roots
+// name, and the entries messages record as activated.
+func (c *checker) messages(sc *scope) {
 	msgs := c.s.Messages
 	for i := range msgs {
 		m := &msgs[i]

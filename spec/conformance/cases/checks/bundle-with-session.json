@@ -1,0 +1,79 @@
+{
+  "description": "A check with a session (Format 6.4, 15.3; conformance README section 2) checks the bundle once for each scenario, as without a session, so an invalid key in an opening of a scenario the session doesn't play is UNKNOWN_VARIABLE",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Ann."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "cast": [
+          {},
+          {
+            "character": "a"
+          }
+        ]
+      },
+      {
+        "id": "t",
+        "openings": [
+          {
+            "id": "o",
+            "set": {
+              "state.missing": 1
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "p",
+          "name": "Pat",
+          "description": "Pat."
+        }
+      ],
+      "players": [
+        "p"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "Hi."
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "expect": {
+        "codes": [
+          "UNKNOWN_VARIABLE"
+        ],
+        "includes": [
+          {
+            "code": "UNKNOWN_VARIABLE",
+            "at": "/scenarios/1/openings/0/set/state.missing"
+          }
+        ]
+      }
+    }
+  ]
+}
