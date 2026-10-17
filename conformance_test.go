@@ -26,7 +26,6 @@ import (
 // the list can't go stale.
 var pending = map[string]bool{
 	"cel":   true,
-	"knows": true,
 	"macro": true,
 
 	// CEL_ERROR, REGEX_ERROR and UNKNOWN_MACRO come with phases 5 to 7.
@@ -62,6 +61,10 @@ type test struct {
 	// state, and later macro and cel
 	At     string   `json:"at"`
 	Absent []string `json:"absent"`
+
+	// knows. A macro test's part is an object instead.
+	Message string         `json:"message"`
+	Part    jsontext.Value `json:"part"`
 
 	// parse
 	Kind   string `json:"kind"`
@@ -169,6 +172,8 @@ func run(c *testCase, tc test, expect any) error {
 		return runCheck(c, expect.(*checkExpect))
 	case "state":
 		return runState(c, tc, *expect.(*map[string]jsontext.Value))
+	case "knows":
+		return runKnows(c, tc, *expect.(*[]string))
 	}
 	return fmt.Errorf("%s tests: %w", tc.Type, errors.ErrUnsupported)
 }
@@ -230,6 +235,38 @@ func runState(c *testCase, tc test, expect map[string]jsontext.Value) error {
 		if _, ok := flat[key]; ok {
 			return fmt.Errorf("%s is in the state", key)
 		}
+	}
+	return nil
+}
+
+// runKnows compares who knows a part of a message with expect (conformance
+// README section 3.5).
+func runKnows(c *testCase, tc test, expect []string) error {
+	b, s, _, err := c.read()
+	if err != nil {
+		return err
+	}
+	story, err := troupe.NewStory(b, s)
+	if err != nil {
+		return err
+	}
+	i := slices.IndexFunc(s.Messages, func(m troupe.Message) bool { return m.ID == tc.Message })
+	if i < 0 {
+		return fmt.Errorf("no message %s", tc.Message)
+	}
+	m := &s.Messages[i]
+	before := story.Initial()
+	if m.Parent != "" {
+		if before, err = story.StateAt(m.Parent); err != nil {
+			return err
+		}
+	}
+	var part int
+	if err := json.Unmarshal(tc.Part, &part); err != nil {
+		return err
+	}
+	if got := story.KnownBy(m, before)[part]; !slices.Equal(got, expect) {
+		return fmt.Errorf("known by %q, want %q", got, expect)
 	}
 	return nil
 }

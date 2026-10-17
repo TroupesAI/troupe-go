@@ -64,6 +64,7 @@ The cost is that a change touching both the engine and the platform can't land i
 | `NewStory` doesn't run `Check` | Running it | Callers check documents on import, not on every turn. For documents that fail `Check`, states are only bounded: invalid keys and values are skipped |
 | The `"*"` map limit is judged after a whole change, and reported at each key of it that writes to the map | After each key | A change's keys have no order, so one that removes a key and adds another can't be judged partway |
 | `Check` walks a session's paths with one state, undoing each message's changes on the way back up | A state per message | Memory stays the size of one state, however long the paths |
+| `Story.KnownBy(m, before)` returns who knows each part of a message, from the state before it | `KnownBy(message, part)` by ID | The platform keeps states, not whole sessions, and one call per message applies its changes once for all its parts |
 | A message's own session entries apply to its `activated` | Applying from the next message | Format 11.3: they apply "from that message onward" |
 | A change key that doesn't follow the key grammar is `UNKNOWN_VARIABLE` as well as `SCHEMA` | Leaving it to the schema | Every check runs on the document as written (Format 15.3) |
 | With an unknown scenario, the session is checked against an empty one | Skipping the checks that need it | The rest still holds; only what the scenario would make valid fails |
@@ -95,10 +96,9 @@ conformance_test.go package troupe_test: the runner
 
 ## The public API
 
-The API has to do two things: everything the conformance runner asks for, through exported names only, and everything the platform needs (see [What the platform needs](#what-the-platform-needs)). Reading, checking and states are built: `ReadBundle`, `ReadSession`, `ReadPackage`, the typed model, `Diagnostic`, `Check`, `NewStory`, `Story` and `State`. The rest is a sketch; its names and signatures get settled when each phase starts.
+The API has to do two things: everything the conformance runner asks for, through exported names only, and everything the platform needs (see [What the platform needs](#what-the-platform-needs)). Reading, checking, states and knowledge are built: `ReadBundle`, `ReadSession`, `ReadPackage`, the typed model, `Diagnostic`, `Check`, `NewStory`, `Story`, `State` and `Story.KnownBy`. The rest is a sketch; its names and signatures get settled when each phase starts.
 
 ```go
-func (st *Story) KnownBy(message string, part int) []string
 func (st *Story) Render(text string, at RenderContext) string
 func (st *Story) Eval(expr string, at EvalContext) (bool, error)
 ```
@@ -110,7 +110,7 @@ The suite's operations map onto it like this (conformance README section 3):
 | `parse` | `ReadBundle`, `ReadSession`, `ReadPackage`, at the session-reader level |
 | `check` | `Check`, once per scenario when there's no session |
 | `state` | `StateAt`, flattened by `State.All` |
-| `knows` | `KnownBy` |
+| `knows` | `KnownBy`, from the parent's `StateAt` |
 | `macro` | `Render`, with `char`, `owner`, `narrator` and `at` |
 | `cel` | `Eval`, with `char`, `self`, `scanDepth` and `at`; a compile error is a `CEL_ERROR` |
 
@@ -119,10 +119,6 @@ A case whose `bundleFile` is a package's `bundle.json` is read by zipping its di
 ## Phases
 
 Each phase ends with its part of the suite passing, lint clean, and its decisions recorded above. The runner keeps a **pending list** of tests not expected to pass yet: each entry is a test type, such as `cel`, or one test, as `<case path>#<test index>`. A pending test that fails is skipped, and one that passes fails the run, so the list can't go stale. It shrinks to empty by the end of phase 7, and is then deleted.
-
-### 4. Knowledge
-
-The goal is `knows` tests passing: the witness rule, `knownBy`, the narrator in both modes, and hidden messages (Format 7.4, 11.5).
 
 ### 5. Macros
 
