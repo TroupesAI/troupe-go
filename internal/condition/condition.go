@@ -68,24 +68,28 @@ type Env struct {
 	keyed map[string]bool // the keyed variables' names
 }
 
+// macros are the macros expressions are parsed with. The comprehensions and
+// has() of CEL's standard library aren't allowed; has() is replaced, and
+// hit() added.
+var macros = []cel.EnvOption{
+	cel.ClearMacros(),
+	cel.Macros(
+		cel.GlobalMacro("has", 1, expandHas),
+		cel.GlobalMacro("hit", 1, expandHit),
+	),
+}
+
 // NewEnv returns the environment of builtins and vars. A name declared twice,
 // which a duplicate ID makes, is declared once.
 func NewEnv(vars []Var) (*Env, error) {
 	e := &Env{keyed: map[string]bool{}}
-	opts := []cel.EnvOption{
-		// The comprehensions and has() of CEL's standard library aren't
-		// allowed; has() is replaced, and hit() added.
-		cel.ClearMacros(),
-		cel.Macros(
-			cel.GlobalMacro("has", 1, expandHas),
-			cel.GlobalMacro("hit", 1, expandHit),
-		),
+	opts := append(slices.Clone(macros),
 		cel.Variable(hits, cel.MapType(cel.StringType, cel.BoolType)),
 		cel.Function(hasValue, cel.Overload("has_value", []*cel.Type{cel.DynType}, cel.BoolType,
 			cel.OverloadIsNonStrict(),
 			cel.UnaryBinding(func(v ref.Val) ref.Val { return types.Bool(!types.IsError(v) && !types.IsUnknown(v)) }))),
 		cel.ASTValidators(cel.ValidateHomogeneousAggregateLiterals(), rules{e.keyed}),
-	}
+	)
 	opts = append(opts, e.declare(builtins)...)
 	opts = append(opts, e.declare(vars)...)
 	env, err := cel.NewEnv(opts...)
