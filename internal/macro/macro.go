@@ -26,6 +26,7 @@ const (
 type Token struct {
 	Kind    Kind
 	Text    string   // the text of a Text token; a macro's source, braces included
+	Offset  int      // where a macro's source starts in the text
 	Path    []string // the segments of a State or Own path
 	Options []string // a Pick's options
 }
@@ -70,6 +71,7 @@ func Parse(text string) (tokens []Token, unknown bool) {
 				if t, ok := form(src, text[i+2:i+2+end]); ok {
 					flush()
 					if t != nil {
+						t.Offset = i
 						tokens = append(tokens, *t)
 					}
 					i += len(src)

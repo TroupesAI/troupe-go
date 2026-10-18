@@ -21,6 +21,14 @@ type state struct {
 	// values holds each variable in use by its full name: a value from
 	// value, or for a keyed variable a map[string]any of them by key.
 	values map[string]any
+	// entries are the session entries in use, the latest per ID, in the
+	// order they were added, each that replaces another in its place (Format
+	// 11.3).
+	entries []Entry
+	// activated holds the round of the latest message on the path that
+	// records each entry in activated, by reference, for timing (Format
+	// 7.2).
+	activated map[string]int
 }
 
 // edit is what applying a change replaced, so it can be put back.

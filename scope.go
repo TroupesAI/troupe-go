@@ -20,6 +20,7 @@ type scope struct {
 	joiners    []string              // the cast's characters a session adds as joiners
 	characters map[string]*Character // in use, by ID
 	worlds     map[string]*World     // in use, by ID
+	worldIDs   []string              // in use, in order: the scenario's, then the session's
 	openings   map[string]bool
 	// bindings are the variables in use: the scenario's, then its worlds',
 	// then its characters' (Format 6.4), each in its owner's order.
@@ -144,6 +145,7 @@ func newScope(b *Bundle, s *Session, i int) *scope {
 	for _, id := range worldIDs {
 		if w, ok := n.worlds[id]; ok && sc.worlds[id] == nil {
 			sc.worlds[id] = w
+			sc.worldIDs = append(sc.worldIDs, id)
 			sc.bind("state."+id+".", w.Variables)
 		}
 	}

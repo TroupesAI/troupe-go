@@ -28,3 +28,23 @@ func TestRenderPick(t *testing.T) {
 		t.Errorf("a source chose %v, want each option", seen)
 	}
 }
+
+// Escaped text resolves to exactly what was written.
+func TestEscape(t *testing.T) {
+	b, _, err := troupe.ReadBundle(strings.NewReader(`{"troupe":"0.14","kind":"bundle",
+		"characters":[{"id":"a","name":"Ann","description":"Ann."}],"scenarios":[{"id":"s"}]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	story, err := troupe.NewStory(b, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := rand.New(rand.NewPCG(1, 2)) //nolint:gosec // G404: a seeded source makes the test reproducible
+	c := troupe.RenderContext{State: story.Initial(), Char: "a"}
+	for _, text := range []string{`\`, `\\{{`, `{{char}}`, `{{{char}}`, `\{{char}}`, `{{pick::x::y}}`, `a}}{\`} {
+		if got := story.Render(troupe.Escape(text), c, r); got != text {
+			t.Errorf("Escape(%q) renders as %q", text, got)
+		}
+	}
+}

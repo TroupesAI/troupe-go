@@ -2,8 +2,10 @@ package troupe_test
 
 import (
 	"bytes"
+	"encoding/json/v2"
 	"fmt"
 	"log"
+	"math/rand/v2"
 	"strings"
 
 	"github.com/TroupesAI/troupe-go"
@@ -62,6 +64,77 @@ func ExampleStory() {
 	// Output:
 	// bell: 7
 	// true <nil>
+}
+
+// A session starts from an opening's root. Each turn, the caller restores the
+// stored state before the messages a scan reaches, builds the point after
+// them, and gets the entries active for the message being written.
+func ExamplePoint_Active() {
+	b, _, err := troupe.ReadBundle(strings.NewReader(`{"troupe": "0.14", "kind": "bundle",
+		"characters": [{"id": "kai", "name": "Kai", "description": "A thief.",
+			"entries": [{"id": "fear", "text": "Kai fears heights.", "keys": ["/roofs?/"], "sticky": 2}]}],
+		"scenarios": [{"id": "heist", "cast": [{}, {"character": "kai"}],
+			"openings": [{"id": "rooftop", "set": {"scene.present": ["kai"]},
+				"content": [{"text": "Rain on the {{pick::roof::slates}}."}]}]}]}`))
+	if err != nil {
+		log.Fatal(err)
+	}
+	// The player's character, as a person typed it: its description is
+	// escaped, since macros resolve there.
+	header, err := json.Marshal(troupe.SessionHeader{
+		Troupe:   troupe.Version,
+		Scenario: "heist",
+		Characters: []troupe.Character{{
+			ID: "mara", Name: "Mara", Description: troupe.Escape("A smuggler {{who never pays}}."),
+		}},
+		Players: []string{"mara"},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	s, _, err := troupe.ReadSession(bytes.NewReader(header))
+	if err != nil {
+		log.Fatal(err)
+	}
+	story, err := troupe.NewStory(b, s)
+	if err != nil {
+		log.Fatal(err)
+	}
+	r := rand.New(rand.NewPCG(1, 2)) //nolint:gosec // G404: a seeded source makes the example reproducible
+
+	root, err := story.Root("rooftop", r)
+	if err != nil {
+		log.Fatal(err)
+	}
+	root.ID = "1"
+	fmt.Println(root.Content[0].Text, string(root.Changes[0].Set["scene.present"]))
+	stored, err := json.Marshal(story.Apply(story.Initial(), &root))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Message 2 is written for Kai, after the root, which the scan reaches.
+	reply := troupe.Message{ID: "2", Parent: "1", From: "model", Char: "kai", Content: []troupe.Part{{Text: "Kai grips the ledge."}}}
+	for _, a := range story.PointAt(story.Initial(), []troupe.Message{root}, "kai").Active(r) {
+		fmt.Println(a.Owner+"/"+a.Entry.ID, a.Kept)
+		if !a.Kept {
+			reply.Activated = append(reply.Activated, a.Owner+"/"+a.Entry.ID)
+		}
+	}
+
+	// Message 3 is written for Kai too, after message 2, from the root's
+	// stored state.
+	before, err := story.UnmarshalState(stored)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, a := range story.PointAt(before, []troupe.Message{reply}, "kai").Active(r) {
+		fmt.Println(a.Owner+"/"+a.Entry.ID, a.Kept)
+	}
+	// Output:
+	// Rain on the roof. ["kai","mara"]
+	// kai/fear false
+	// kai/fear true
 }
 
 // On import, a file a bundle holds as a data: URI can be stored apart, and

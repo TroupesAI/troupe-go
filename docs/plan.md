@@ -60,7 +60,7 @@ The cost is that a change touching both the engine and the platform can't land i
 | `State` is immutable, and `Apply` returns a new one | Changing a state in place | A caller can keep any state, and states share what a change doesn't touch |
 | `State.Get` takes the keys changes write (Format 8.5), and `All` yields them | Accessors per kind of value, or exported fields | One set of keys for writing and reading, and the suite's flattened form is exactly what `All` yields |
 | Values are a `bool`, `int64`, `string` or `[]string` in an `any` | A value type of our own | They are the JSON types a state holds, and `Get` copies sets so callers can't change a state |
-| `State` has no exported fields | Exported fields | It can gain serialization when the platform asks for it, without breaking callers |
+| `State` has no exported fields | Exported fields | It gained serialization when the platform asked for it, without breaking callers |
 | `NewStory` doesn't run `Check` | Running it | Callers check documents on import, not on every turn. For documents that fail `Check`, states are only bounded: invalid keys and values are skipped |
 | The `"*"` map limit is judged after a whole change, and reported at each key of it that writes to the map | After each key | A change's keys have no order, so one that removes a key and adds another can't be judged partway |
 | `Check` walks a session's paths with one state, undoing each message's changes on the way back up | A state per message | Memory stays the size of one state, however long the paths |
@@ -96,11 +96,25 @@ The cost is that a change touching both the engine and the platform can't land i
 | `Bundle.FileFields()` yields each field that holds a file as a `FileField`: its pointer and its URL, package path, or data: URI's media type and decoded bytes | Values as written, left to callers to parse | Callers need the form and the content, and decoding data: URIs one at a time keeps one in memory at once. Pointers come from the typed model, whose lists keep their indices (see above) |
 | A value of no form of Format 12.2 is left out of `FileFields` | Yielding it as a URL | Only a bundle that fails the schema holds one, and a caller shouldn't fetch it |
 | Only bundles have `FileFields` for now | Sessions too | Importing bundles is what the platform asks for first. A session's file fields would need a `Line` as well, which can be added without breaking callers |
-| `ReplaceFileFields(doc, values)` splices each new value in at the byte offsets `jsontext` reports, keyed by pointer | Re-encoding the document, or editing the typed model | Every other byte stays as written, `ext` included (Format 13), and the model is for reading |
+| `ReplaceFileFields(doc, values)` splices each new value in at the byte offsets `jsontext` reports, keyed by pointer | Re-encoding the document, or editing the typed model | Every other byte stays as written, `ext` included (Format 13), and a document that fails the schema reads into the model without its wrong-typed values |
 | `ReplaceFileFields` checks each new value against the schema's `image` definition, and that each pointer names a string, but not that it names a file field | Checking the pointer against the document's kind | A writer writes only conforming files, and the value is where the caller's text enters the document. Pointers come from `FileFields`, and checking them would need the document's kind |
 | `ReadPackageBundle(r, files)` reads a package's `bundle.json` given its files' paths, with the results `ReadPackage` gives for it, `File` included | Reading it with `ReadBundle`, or a `Package` built by hand | The platform stores `bundle.json` and the files, not the ZIP, and reads it back for the typed model. Outside a package, package paths are `PARSE` (Format 12.2) |
 | `ReadPackageBundle`'s files include the sessions' paths, and `bundle.json` is always one | Only `Package.Files` | A bundle may reference any file of the package (Format 12.3), as `ReadPackage` checks it |
 | A package's files are checked as a set of paths | The map of ZIP entries | `ReadPackage` and `ReadPackageBundle` share the check |
+| The model marshals as the spec writes it: required fields always, optional ones only when set, `Part` with its type's fields, `Keys` as `of`, and `Bundle` and `SessionHeader` with their `kind`. `Keys` also unmarshals, so the model decodes back with plain `json.Unmarshal` | Callers writing JSON with types of their own | The platform writes the roots, messages and characters it makes, and stored states hold session entries. A conforming document marshals as the same JSON, which the spec's examples test |
+| `Story.Root(opening, r)` returns the root as a `Message` without an ID or `at` | Taking them, or returning the line's bytes | The caller gives IDs and times, and stores a message's fields in columns of its own |
+| A root's picks are replaced in the opening's text at the offsets the macro parser gives, each by its option escaped | Rendering and escaping the whole text | Everything else stays as written (Format 11.1), and the parser alone decides what is a pick |
+| The players a root adds to its set's `scene.present` are appended, and the value is encoded again only when one is added | Writing the whole list in cast order | `scene.present` is put in cast order when applied (Format 8.6), and every other value stays as written |
+| `Escape(text)` is a function | A `Story` method | It needs no story |
+| `Point.Active(r)` returns `ActiveEntry` values: the owner, the entry as written and whether sticky keeps it | Resolved placement and priority fields | The point already has what activation reads: the state, the scanned text and who the message is for. `Entry`'s fields give their defaults, and `Owner` serves `Render` and `Eval` alike, since `session` is no character's, world's or scenario's ID |
+| Active entries are those whoever the message is for knows, decided before groups compete | Leaving knowledge to the caller | An entry that can't reach the model shouldn't keep one that can from its group. See the spec feedback below |
+| A state keeps the session entries in use and, by reference, the round of the latest message that records each entry in `activated`, and `Apply` keeps them | The caller passing them, or a lookup of the messages that add entries | The platform keeps states, not paths, as with `{{user}}`. The cost: every stored state holds the session entries' text, up to 10,000 entries (Format 14). Revisit if stored states grow too large |
+| A session entry that replaces another takes its place among the session's entries | Moving it to the end | An owner's entries are in reading order (Format 7) |
+| Keys compile once per story | Compiling them on every match | A platform matches every key in use on every turn |
+| `State.MarshalJSON` and `Story.UnmarshalState(data)` | A method on `State` taking a story, or `encoding.BinaryMarshaler` | A state is read back as a story's. `MarshalJSON` lets a caller pass a `State` as a JSON parameter, such as PostgreSQL's `jsonb` |
+| A stored state names the Troupe version, holds its values by the keys changes write (Format 8.5), and holds what else `Apply` keeps under names of its own | The internal structure | The keys are the spec's, so the format doesn't follow internals and later releases read it. A key the stored state doesn't hold takes its initial value, as a joiner added to the header needs (Format 8.3) |
+| `UnmarshalState` fails for another Troupe version, and for a key or value that isn't valid in the story | Skipping them | A state restored into the wrong story would be silently wrong. Upgrading stored states belongs with upgrading documents |
+| A stored state writes U+0000 as U+0001 `0`, and U+0001 as U+0001 U+0001, in every string | Base64, or refusing U+0000 | `jsonb` refuses `\u0000`, which a state value or session entry may hold, and text without either character stays as it is |
 | A regex parser of our own, emitting RE2 | Compiling keys directly with `regexp` | Format 14 defines a grammar that has to be validated exactly, and keys mean what they mean in ECMAScript, which differs from RE2 in places |
 | Tools pinned with mise, tasks in Task, `golangci-lint` v2 | Whatever is installed | The same setup as the platform, so one toolchain works in both |
 | The platform's lint config without `bodyclose`, `noctx` and `rowserrcheck` | An identical copy | Those linters only check HTTP and database code, which this library has none of |
@@ -130,7 +144,7 @@ conformance_test.go package troupe_test: the runner
 
 ## The public API
 
-The API has to do two things: everything the conformance runner asks for, through exported names only, and everything the platform needs (see [What the platform needs](#what-the-platform-needs)). Everything the suite tests is built: `ReadBundle`, `ReadSession`, `ReadPackage`, the typed model, `Diagnostic`, `Check`, `NewStory`, `Story`, `State`, `Story.KnownBy`, `Story.Render`, `Story.RenderParts`, `Story.PointAt` and `Point.Eval`. Beyond the suite, importing bundles uses `Package.Files`, `Package.Open`, `Package.BundleJSON`, `Bundle.FileFields`, `ReplaceFileFields` and `ReadPackageBundle`.
+The API has to do two things: everything the conformance runner asks for, through exported names only, and everything the platform needs (see [What the platform needs](#what-the-platform-needs)). Everything the suite tests is built: `ReadBundle`, `ReadSession`, `ReadPackage`, the typed model, `Diagnostic`, `Check`, `NewStory`, `Story`, `State`, `Story.KnownBy`, `Story.Render`, `Story.RenderParts`, `Story.PointAt` and `Point.Eval`. Beyond the suite, importing bundles uses `Package.Files`, `Package.Open`, `Package.BundleJSON`, `Bundle.FileFields`, `ReplaceFileFields` and `ReadPackageBundle`, and playing uses `Story.Root`, `Point.Active`, `ActiveEntry`, `Escape`, `State.MarshalJSON` and `Story.UnmarshalState`.
 
 The suite's operations map onto it like this (conformance README section 3):
 
@@ -153,12 +167,9 @@ Each phase ends with its part of the work tested, lint clean, and its decisions 
 
 These are what the platform needs that the suite doesn't test. Build them in the order the platform asks for them, with tests of our own, since the suite has no cases for them:
 
-- Entry activation: keys, `when`, timing from `activated` records, `group`, `priority` and `chance` (Format 7.2). An activation test type was deliberately left out of the suite for now.
-- Making a root from an opening: picks chosen once and escaped, and the opening's `set` with the players added to `scene.present` (Format 11.1).
-- Escaping a player's or a model's words written into session characters, worlds or entries (Format 9).
+- Retrieving entries with `pull` (Format 7.2).
 - Checking one proposed change, key and value, before the platform records it (Format 8.5).
-- Storing a `State` and restoring it, for a platform that keeps each message's state.
-- Writing bundles, sessions and packages back, keeping every `ext` and a package's other files (Format 12.3, 13). `ReplaceFileFields` does this for a bundle's file fields.
+- Writing sessions and packages back, keeping every `ext` and a package's other files (Format 12.3, 13). The model marshals as the spec writes it, and `ReplaceFileFields` replaces a bundle's file fields.
 - A session's file fields, for importing packages with sessions.
 - Upgrading documents from the previous minor version. This starts mattering once the platform stores documents.
 
@@ -179,3 +190,10 @@ Prompt assembly, the choice of which active entries reach the model, model calls
 When the code shows the spec is wrong or unclear, write it up for the user: what the spec says, the case or input where it matters, and a proposed fix. The user decides, and changes the spec repository. Add a conformance case only when apps could disagree on the issue, not for coverage. Then sync the copy here with `task spec`.
 
 These open items were deliberately left out of 0.14 and may come back as findings: label keys outside `values`, the loose `language` pattern, codes for nested `null`, and the missing activation test type.
+
+These findings from phase 8 wait for the user's decision. The code follows the reading given:
+
+- **Picks next to a `{` (Format 9, 11.1).** Escaping the chosen option doesn't make a root show what the opening shows when a `{` before the pick, or after it, joins a `{` at the option's edge: `{{{pick::{char::{char}}}}` shows `{{char}}`, but its root is `{{char}}`, which shows the character's name. Read: the option is escaped as written. Proposed: an option can't start or end with `{`.
+- **Sticky entries in groups (Format 7.2).** `sticky` keeps an entry active, but `group` keeps only the highest priority active, chosen by weight among equals. Read: a kept entry competes like any other, so it can lose to a higher priority, or to a draw among equals. Proposed: a kept entry wins its group against equal priorities, without a draw.
+- **Knowledge in activation (Format 7.2, 7.4).** The spec doesn't say whether an entry whoever the message is for doesn't know activates, and so whether it can win its group. Read: it doesn't activate. Proposed: say so in 7.2.
+- **Timing of session entries replaced or removed (Format 7.2, 11.3).** Timing counts from the messages that record an entry, by reference, but a later entry can replace an earlier one with the same ID, or remove it and add it again. Read: timing follows the reference, so a replacement continues its predecessor's `once`, `sticky` and `cooldown`. Proposed: say whether it does.

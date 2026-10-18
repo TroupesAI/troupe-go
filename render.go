@@ -109,6 +109,19 @@ func (st *Story) renderParts(at State, m *Message, r *rand.Rand) []Part {
 	return parts
 }
 
+// Escape returns text written so that, where macros resolve, it resolves to
+// exactly text: each \ as \\ and each {{ as \{{ (Format 9). A writer escapes
+// a player's or a model's words before putting them into a session's
+// characters, worlds or entries, in the fields where macros resolve, such as
+// a description or an entry's text, but not in those used as written, such
+// as a name.
+func Escape(text string) string {
+	return escaper.Replace(text)
+}
+
+// escaper escapes in one left-to-right pass, so {{{ is \{{{.
+var escaper = strings.NewReplacer(`\`, `\\`, "{{", `\{{`)
+
 // renderAt renders the part of a variable's value x that the path's segments
 // below the variable name: x itself, or a keyed variable's key, where char
 // and user mean the macros' characters (Format 9). It renders as nothing when

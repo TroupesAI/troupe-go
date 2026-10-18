@@ -95,8 +95,8 @@ func (p *Point) Eval(expr, self string, scanDepth int) (bool, error) {
 // hit reports whether key matches the scanned text of the last scanDepth
 // messages (Format 7.2).
 func (p *Point) hit(key string, scanDepth int) bool {
-	k, err := keys.Compile(key)
-	if err != nil {
+	k := p.story.key(key)
+	if k == nil {
 		return false
 	}
 	for _, texts := range p.scanned[max(0, len(p.scanned)-scanDepth):] {
@@ -126,6 +126,17 @@ func (st *Story) program(expr, self string) (*condition.Program, error) {
 	return prg, err
 }
 
+// key returns key compiled, compiling it once per story, or nil when it is
+// a regex key that isn't valid.
+func (st *Story) key(key string) *keys.Key {
+	if k, ok := st.keys.Load(key); ok {
+		return k.(*keys.Key)
+	}
+	k, _ := keys.Compile(key)
+	st.keys.Store(key, k)
+	return k
+}
+
 // env returns the environment of the expressions an owner owns, made once per
 // story and owner.
 func (st *Story) env(self string) (*condition.Env, error) {
@@ -146,13 +157,14 @@ func (st *Story) env(self string) (*condition.Env, error) {
 	return e, nil
 }
 
-// conditions are what a Story keeps to evaluate conditions.
+// conditions are what a Story keeps to evaluate conditions and match keys.
 type conditions struct {
 	envOnce  sync.Once
 	base     *condition.Env
 	baseErr  error
 	envs     sync.Map // owner → *condition.Env
 	programs sync.Map // owner and expression → compiled program, or its error
+	keys     sync.Map // key → *keys.Key, nil when it isn't valid
 }
 
 // declarations returns the variables an expression's state type-checks
