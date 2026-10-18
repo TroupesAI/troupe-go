@@ -9,7 +9,9 @@
 // hold a file, and ReplaceFileFields sets them in a document's JSON, keeping
 // every other byte.
 //
-// NewStory makes the story a session plays, and gives its states: Initial,
+// NewStory makes the story a session plays, and NewScenarioStory a scenario
+// played on its own. A story gives its cast, the worlds in use, its mode and
+// what it calls the narrator, and its states: Initial,
 // StateAt for a message, and Apply, which gives a message's state from its
 // parent's, so a caller that keeps each message's state never replays a path.
 // A State marshals to JSON, and UnmarshalState restores it. From a message's

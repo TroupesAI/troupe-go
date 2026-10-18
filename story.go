@@ -20,35 +20,50 @@ type Story struct {
 }
 
 // NewStory returns the story of session s, played with bundle b. Without s, it
-// returns the story of b's first scenario, whose seats are unfilled, so it has
-// no players (conformance README section 2). A session without messages, such
-// as one read from its header alone, serves to compute states with Apply.
+// returns the story of b's first scenario played on its own, as
+// NewScenarioStory does. A session without messages, such as one read from
+// its header alone, serves to compute states with Apply.
 //
 // It fails when b has no scenario, or s's scenario isn't one of b's. b and s
 // are documents that pass Check; the results for others are only bounded,
 // since the spec gives them no meaning (Format 15.1).
 func NewStory(b *Bundle, s *Session) (*Story, error) {
-	st := &Story{index: map[string]int{}}
 	if s == nil {
 		if len(b.Scenarios) == 0 {
 			return nil, errors.New("troupe: the bundle has no scenario")
 		}
-		st.scope = newScope(b, nil, 0)
-	} else {
-		i := scenarioIndex(b, s.Header.Scenario)
-		if i < 0 {
-			return nil, errors.New("troupe: the session's scenario isn't in the bundle")
-		}
-		st.scope = newScope(b, s, i)
-		st.messages = s.Messages
-		for j, m := range s.Messages {
-			if _, ok := st.index[m.ID]; !ok {
-				st.index[m.ID] = j
-			}
+		return newStory(newScope(b, nil, 0), nil), nil
+	}
+	i := scenarioIndex(b, s.Header.Scenario)
+	if i < 0 {
+		return nil, errors.New("troupe: the session's scenario isn't in the bundle")
+	}
+	return newStory(newScope(b, s, i), s.Messages), nil
+}
+
+// NewScenarioStory returns the story of b's scenario with the ID scenario,
+// played on its own: its seats are unfilled, so it has no players
+// (conformance README section 2). It is the scenario as a person starting a
+// session sees it, before choosing whom to play.
+//
+// It fails when b has no such scenario.
+func NewScenarioStory(b *Bundle, scenario string) (*Story, error) {
+	i := scenarioIndex(b, scenario)
+	if i < 0 {
+		return nil, errors.New("troupe: the bundle has no scenario " + scenario)
+	}
+	return newStory(newScope(b, nil, i), nil), nil
+}
+
+// newStory returns the story of sc, with a session's messages.
+func newStory(sc *scope, messages []Message) *Story {
+	st := &Story{scope: sc, messages: messages, index: map[string]int{}, initial: sc.initial()}
+	for j, m := range messages {
+		if _, ok := st.index[m.ID]; !ok {
+			st.index[m.ID] = j
 		}
 	}
-	st.initial = st.scope.initial()
-	return st, nil
+	return st
 }
 
 // Initial returns the state before any message (Format 8.6).

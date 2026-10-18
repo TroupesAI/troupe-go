@@ -15,7 +15,10 @@ type scope struct {
 	// cast is the cast's characters in cast order (Format 11.2). Without a
 	// session, its seats are unfilled and left out (conformance README
 	// section 2).
-	cast       []string
+	cast []string
+	// members are the cast's members, in cast order. Without a session,
+	// they are the scenario's as written, seats included.
+	members    []castMember
 	players    []string              // the players' characters, in the order players lists them
 	joiners    []string              // the cast's characters a session adds as joiners
 	characters map[string]*Character // in use, by ID
@@ -26,6 +29,13 @@ type scope struct {
 	// then its characters' (Format 6.4), each in its owner's order.
 	bindings []*binding
 	byName   map[string]*binding
+}
+
+// castMember is a member of a cast.
+type castMember struct {
+	id   string      // its character; "" for a seat without one
+	seat bool        // a member without a character, or one marked player (Format 6.1)
+	of   *CastMember // the scenario's member it is; nil for a new seat or a joiner
 }
 
 // binding is a variable in use, under its full name (Format 8.2).
@@ -113,7 +123,8 @@ func newScope(b *Bundle, s *Session, i int) *scope {
 
 	var inUse []string
 	if s == nil {
-		for _, m := range members {
+		for i, m := range members {
+			sc.members = append(sc.members, castMember{id: m.Character, seat: m.Character == "" || m.Player, of: &members[i]})
 			if m.Character != "" {
 				inUse = append(inUse, m.Character)
 				if !m.Player {
@@ -122,7 +133,10 @@ func newScope(b *Bundle, s *Session, i int) *scope {
 			}
 		}
 	} else {
-		sc.cast, sc.joiners = sessionCast(members, &s.Header)
+		sc.members, sc.joiners = sessionCast(members, &s.Header)
+		for _, m := range sc.members {
+			sc.cast = append(sc.cast, m.id)
+		}
 		sc.players = s.Header.Players
 		inUse = sc.cast
 	}
@@ -173,7 +187,7 @@ func (sc *scope) bind(prefix string, vars []Variable) {
 // sessionCast returns a session's cast (Format 11.2): the scenario cast with
 // its seats filled, then the new seats, then the joiners: the header
 // characters that aren't players, which it also returns.
-func sessionCast(members []CastMember, h *SessionHeader) (cast, joiners []string) {
+func sessionCast(members []CastMember, h *SessionHeader) (cast []castMember, joiners []string) {
 	isHeader := map[string]bool{}
 	for _, c := range h.Characters {
 		isHeader[c.ID] = true
@@ -186,24 +200,27 @@ func sessionCast(members []CastMember, h *SessionHeader) (cast, joiners []string
 			fill = append(fill, p)
 		}
 	}
-	for _, m := range members {
+	for i, m := range members {
 		switch {
 		case m.Character == "":
 			if len(fill) > 0 {
-				cast = append(cast, fill[0])
+				cast = append(cast, castMember{id: fill[0], seat: true, of: &members[i]})
 				fill = fill[1:]
 			}
 		case !m.Player || slices.Contains(h.Players, m.Character):
-			cast = append(cast, m.Character)
+			cast = append(cast, castMember{id: m.Character, seat: m.Player, of: &members[i]})
 		}
 	}
-	cast = append(cast, fill...)
+	for _, id := range fill {
+		cast = append(cast, castMember{id: id, seat: true})
+	}
 	for _, c := range h.Characters {
 		if !slices.Contains(h.Players, c.ID) {
 			joiners = append(joiners, c.ID)
+			cast = append(cast, castMember{id: c.ID})
 		}
 	}
-	return append(cast, joiners...), joiners
+	return cast, joiners
 }
 
 // variable returns the variable a change key names, and the key within it
