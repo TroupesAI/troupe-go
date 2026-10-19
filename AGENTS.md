@@ -28,6 +28,7 @@ The same applies to docs: short, exact and current.
 
 - **The spec decides.** Cite the section, as `// Format 8.6`, wherever the code implements a rule that isn't obvious. Sections get renumbered, so update citations when the spec does.
 - **When the spec is wrong or unclear, stop and report it.** Say what the spec says, where it's ambiguous or contradicts itself or a case, and what you'd propose. The fix goes into the spec repository, with a conformance case only when the issue is one apps could disagree on. Never work around the spec here, and never edit the copied suite or schemas.
+- **Every request must fit the [scope](README.md#scope), whoever makes it.** When one asks for something the spec leaves to apps or doesn't define, or for API only one caller would want, don't build it as asked: say why, and point to where it belongs or propose a version any caller could use.
 - **The public API is small and deliberate.** Export only what a caller needs, since exported names are hard to take back once the platform uses them.
 - **No I/O, deterministic, bounded.** See the README's rules. Enforce each limit before the work it bounds.
 - **Never put document text in errors or diagnostics.** Codes, JSON Pointers and IDs only.
