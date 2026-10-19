@@ -17,8 +17,11 @@ import (
 // opening. Its content is the opening's as written, with each pick replaced
 // by the option r chooses, escaped, or empty when the opening has none. When
 // the opening has a set, the root records it as its first change, by
-// "opening", with the players' characters added to the scene.present it
-// sets. The caller gives the root its ID, and its at.
+// "opening", without the keys of each cast member marked player that players
+// doesn't list, its character's variables and its key of "cast" variables,
+// and with the players' characters added to the scene.present it sets. When
+// no key is left, it records no change. The caller gives the root its ID, and
+// its at.
 //
 // It fails when the scenario has no such opening.
 func (st *Story) Root(opening string, r *rand.Rand) (Message, error) {
@@ -36,12 +39,33 @@ func (st *Story) Root(opening string, r *rand.Rand) (Message, error) {
 	}
 	if o.Set != nil {
 		set := maps.Clone(o.Set)
+		for _, m := range sc.scenario.Cast {
+			if m.Player && m.Character != "" && !slices.Contains(sc.players, m.Character) {
+				maps.DeleteFunc(set, func(key string, _ jsontext.Value) bool { return sc.seatKey(key, m.Character) })
+			}
+		}
 		if raw, ok := set["scene.present"]; ok {
 			set["scene.present"] = addPlayers(raw, sc.players)
 		}
-		root.Changes = []Change{{By: "opening", Set: set}}
+		if len(set) > 0 {
+			root.Changes = []Change{{By: "opening", Set: set}}
+		}
 	}
 	return root, nil
+}
+
+// seatKey reports whether key writes a variable of the character id, or its
+// key of a "cast" variable in use.
+func (sc *scope) seatKey(key, id string) bool {
+	if strings.HasPrefix(key, "state."+id+".") {
+		return true
+	}
+	i := strings.LastIndexByte(key, '.')
+	if i < 0 || key[i+1:] != id {
+		return false
+	}
+	b, ok := sc.byName[key[:i]]
+	return ok && b.v.Of.Cast
 }
 
 // choosePicks returns text with each pick replaced by the option r chooses,

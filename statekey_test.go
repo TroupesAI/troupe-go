@@ -11,24 +11,33 @@ import (
 // A session's keys follow its cast and what it adds: a "cast" variable has a
 // key for each character the session's cast holds, players and joiners
 // included, and the session's worlds and characters bring their variables.
+// Played on its own, the scenario's "cast" variables also have the keys of
+// its seats marked player, which its openings may set.
 func TestStateKeysSession(t *testing.T) {
-	story, _ := readStory(t, `{"troupe":"0.14","kind":"bundle",
+	bundle := `{"troupe":"0.14","kind":"bundle",
 		"characters":[{"id":"k","name":"Kai","description":"Kai."},{"id":"a","name":"Ann","description":"Ann."}],
 		"scenarios":[{"id":"s","cast":[{},{"character":"k","player":true},{"character":"a"}],
 			"variables":[{"id":"trust","type":"int","of":"cast","description":"T."},
-				{"id":"side","type":"bool","of":["watch","guild"],"description":"S."}]}]}`,
+				{"id":"side","type":"bool","of":["watch","guild"],"description":"S."}]}]}`
+	story, _ := readStory(t, bundle)
+	want := []string{"scene.location", "scene.present", "state.trust.k trust s", "state.trust.a trust s", "state.side.watch side s", "state.side.guild side s"}
+	if got := keys(story); !slices.Equal(got, want) {
+		t.Errorf("on its own, the keys are %q, want %q", got, want)
+	}
+
+	story, _ = readStory(t, bundle,
 		`{"troupe":"0.14","kind":"session","scenario":"s",`+
 			`"characters":[{"id":"p","name":"Pat","description":"Pat.","variables":[{"id":"luck","type":"int","description":"L."}]},`+
 			`{"id":"j","name":"Jo","description":"Jo."}],`+
 			`"players":["p","k"],"worlds":[{"id":"h","name":"H","variables":[{"id":"rain","type":"bool","description":"R."}]}]}`)
-	want := []string{
+	want = []string{
 		"scene.location", "scene.present",
 		"state.trust.p trust s", "state.trust.k trust s", "state.trust.a trust s", "state.trust.j trust s",
 		"state.side.watch side s", "state.side.guild side s",
 		"state.h.rain rain h", "state.p.luck luck p",
 	}
 	if got := keys(story); !slices.Equal(got, want) {
-		t.Errorf("the keys are %q, want %q", got, want)
+		t.Errorf("in the session, the keys are %q, want %q", got, want)
 	}
 }
 

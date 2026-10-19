@@ -1,0 +1,123 @@
+{
+  "description": "A root that records the keys of a cast member marked player whose seat no player fills (Format 6.3, 8.5, 11.1): the session's cast leaves the character out, so the keys are UNKNOWN_VARIABLE, though the opening may set them",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "kai",
+        "name": "Kai",
+        "description": "A thief.",
+        "variables": [
+          {
+            "id": "nerve",
+            "type": "int",
+            "initial": 3,
+            "description": "How steady Kai is."
+          }
+        ]
+      },
+      {
+        "id": "ann",
+        "name": "Ann",
+        "description": "A guard."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "cast": [
+          {
+            "character": "kai",
+            "player": true
+          },
+          {
+            "character": "ann"
+          }
+        ],
+        "variables": [
+          {
+            "id": "trust",
+            "type": "int",
+            "of": "cast",
+            "description": "Trust in the crew."
+          }
+        ],
+        "openings": [
+          {
+            "id": "vault",
+            "set": {
+              "state.kai.nerve": 1,
+              "state.trust.kai": 2,
+              "state.trust.ann": 4
+            },
+            "content": [
+              {
+                "speaker": "ann",
+                "text": "Who goes there?"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "pat",
+          "name": "Pat",
+          "description": "Pat."
+        }
+      ],
+      "players": [
+        "pat"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "system",
+        "opening": "vault",
+        "content": [
+          {
+            "speaker": "ann",
+            "text": "Who goes there?"
+          }
+        ],
+        "changes": [
+          {
+            "by": "opening",
+            "set": {
+              "state.kai.nerve": 1,
+              "state.trust.kai": 2,
+              "state.trust.ann": 4
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "expect": {
+        "codes": [
+          "UNKNOWN_VARIABLE"
+        ],
+        "includes": [
+          {
+            "code": "UNKNOWN_VARIABLE",
+            "at": "message:1/changes/0/set/state.kai.nerve"
+          },
+          {
+            "code": "UNKNOWN_VARIABLE",
+            "at": "message:1/changes/0/set/state.trust.kai"
+          }
+        ]
+      }
+    }
+  ]
+}

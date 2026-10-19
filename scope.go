@@ -16,6 +16,11 @@ type scope struct {
 	// session, its seats are unfilled and left out (conformance README
 	// section 2).
 	cast []string
+	// openingCast is the characters a "cast" variable has as keys in an
+	// opening's set (Format 8.5): every character the cast members name,
+	// seats marked player included. In a session, it is the cast, since a
+	// root leaves out the keys of the seats no player fills (Format 11.1).
+	openingCast []string
 	// members are the cast's members, in cast order. Without a session,
 	// they are the scenario's as written, seats included.
 	members    []castMember
@@ -141,6 +146,7 @@ func newScope(b *Bundle, s *Session, i int) *scope {
 		sc.players = s.Header.Players
 		inUse = sc.cast
 	}
+	sc.openingCast = inUse
 
 	var worldIDs []string
 	switch {
@@ -229,6 +235,17 @@ func sessionCast(members []CastMember, h *SessionHeader) (cast []castMember, joi
 // 8.5): a full name (Format 8.2), followed by a key the variable allows when
 // it is keyed (Format 8.3).
 func (sc *scope) variable(key string) (*binding, string, bool) {
+	return sc.lookup(key, sc.cast)
+}
+
+// openingVariable is variable for a key of an opening's set, where a "cast"
+// variable has the keys of openingCast (Format 8.5).
+func (sc *scope) openingVariable(key string) (*binding, string, bool) {
+	return sc.lookup(key, sc.openingCast)
+}
+
+// lookup is variable, with cast as a "cast" variable's keys.
+func (sc *scope) lookup(key string, cast []string) (*binding, string, bool) {
 	if b, ok := sc.byName[key]; ok {
 		return b, "", !b.v.Of.keyed()
 	}
@@ -237,7 +254,7 @@ func (sc *scope) variable(key string) (*binding, string, bool) {
 		return nil, "", false
 	}
 	b, ok := sc.byName[key[:i]]
-	if !ok || !b.v.Of.keyed() || !sc.allows(b.v, key[i+1:]) {
+	if !ok || !b.v.Of.keyed() || !allows(b.v, key[i+1:], cast) {
 		return nil, "", false
 	}
 	return b, key[i+1:], true
@@ -252,11 +269,12 @@ func (sc *scope) keys(v *Variable) []string {
 	return v.Of.List
 }
 
-// allows reports whether a keyed variable has the key k (Format 8.3).
-func (sc *scope) allows(v *Variable, k string) bool {
+// allows reports whether a keyed variable has the key k, with cast as a
+// "cast" variable's keys (Format 8.3).
+func allows(v *Variable, k string, cast []string) bool {
 	switch {
 	case v.Of.Cast:
-		return slices.Contains(sc.cast, k)
+		return slices.Contains(cast, k)
 	case v.Of.Any:
 		return isKey(k)
 	default:

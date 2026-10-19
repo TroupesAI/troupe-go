@@ -1,0 +1,126 @@
+{
+  "description": "An opening that sets the keys of a cast member marked player (Format 6.3, 8.5, 11.1): its variables and its key of a \"cast\" variable are valid in the opening, since a session may fill its seat; here no player does, so the character is left out of the cast, and the root leaves those keys out",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "kai",
+        "name": "Kai",
+        "description": "A thief.",
+        "variables": [
+          {
+            "id": "nerve",
+            "type": "int",
+            "initial": 3,
+            "description": "How steady Kai is."
+          }
+        ]
+      },
+      {
+        "id": "ann",
+        "name": "Ann",
+        "description": "A guard."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s",
+        "cast": [
+          {
+            "character": "kai",
+            "player": true
+          },
+          {
+            "character": "ann"
+          }
+        ],
+        "variables": [
+          {
+            "id": "trust",
+            "type": "int",
+            "of": "cast",
+            "description": "Trust in the crew."
+          }
+        ],
+        "openings": [
+          {
+            "id": "vault",
+            "set": {
+              "state.kai.nerve": 1,
+              "state.trust.kai": 2,
+              "state.trust.ann": 4
+            },
+            "content": [
+              {
+                "speaker": "ann",
+                "text": "Who goes there?"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session",
+      "scenario": "s",
+      "characters": [
+        {
+          "id": "pat",
+          "name": "Pat",
+          "description": "Pat."
+        }
+      ],
+      "players": [
+        "pat"
+      ]
+    },
+    "messages": [
+      {
+        "id": "1",
+        "from": "system",
+        "opening": "vault",
+        "content": [
+          {
+            "speaker": "ann",
+            "text": "Who goes there?"
+          }
+        ],
+        "changes": [
+          {
+            "by": "opening",
+            "set": {
+              "state.trust.ann": 4
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "expect": {
+        "codes": []
+      }
+    },
+    {
+      "type": "state",
+      "name": "the opening's keys the session has apply; the seat's are left out",
+      "at": "1",
+      "expect": {
+        "scene.present": [
+          "ann",
+          "pat"
+        ],
+        "state.trust.ann": 4,
+        "state.trust.pat": 0
+      },
+      "absent": [
+        "state.kai.nerve",
+        "state.trust.kai"
+      ]
+    }
+  ]
+}

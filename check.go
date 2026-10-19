@@ -567,7 +567,7 @@ func (c *checker) openings(sc *scope) {
 	initial := sc.initial()
 	for j, o := range sc.scenario.Openings {
 		p := ptr("", "scenarios", sc.index, "openings", j, "set")
-		c.set(sc, inBundle, p, o.Set)
+		c.set(sc, inBundle, p, o.Set, sc.openingVariable)
 		c.mapLimit(sc, inBundle, p, o.Set, sc.apply(initial.clone(), o.Set, nil))
 	}
 }
@@ -593,7 +593,7 @@ func (c *checker) messages(sc *scope) {
 			c.report(CodeUnknownOpening, inMessage(i, m), "/opening")
 		}
 		for j, ch := range m.Changes {
-			c.set(sc, inMessage(i, m), ptr("", "changes", j, "set"), ch.Set)
+			c.set(sc, inMessage(i, m), ptr("", "changes", j, "set"), ch.Set, sc.variable)
 		}
 	}
 	// The state along each path, for the "*" map limit. Each message's
@@ -633,9 +633,10 @@ func (c *checker) messages(sc *scope) {
 }
 
 // set checks the keys and values of an opening's set or a recorded change, at
-// p (Format 8.5). Unknown locations and characters in values are only
-// UNKNOWN_LOCATION and UNKNOWN_CHARACTER (Format 15.3).
-func (c *checker) set(sc *scope, at place, p jsontext.Pointer, set map[string]jsontext.Value) {
+// p, with variable resolving its keys (Format 8.5). Unknown locations and
+// characters in values are only UNKNOWN_LOCATION and UNKNOWN_CHARACTER
+// (Format 15.3).
+func (c *checker) set(sc *scope, at place, p jsontext.Pointer, set map[string]jsontext.Value, variable func(string) (*binding, string, bool)) {
 	for key, val := range set {
 		kp := ptr(p, key)
 		switch key {
@@ -658,7 +659,7 @@ func (c *checker) set(sc *scope, at place, p jsontext.Pointer, set map[string]js
 				}
 			}
 		default:
-			b, _, ok := sc.variable(key)
+			b, _, ok := variable(key)
 			switch {
 			case !ok:
 				c.report(CodeUnknownVariable, at, kp)

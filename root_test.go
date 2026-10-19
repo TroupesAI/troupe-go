@@ -94,3 +94,45 @@ func TestRoot(t *testing.T) {
 		t.Error("a root from an opening the scenario doesn't have")
 	}
 }
+
+// A root leaves out the keys of a seat marked player that no player fills:
+// its character's variables and its key of "cast" variables, whoever owns
+// them. A seat a player fills keeps them, and a set left without keys makes
+// no change.
+func TestRootSeatKeys(t *testing.T) {
+	bundle := `{"troupe":"0.14","kind":"bundle",
+		"characters":[{"id":"k","name":"Kai","description":"Kai.","variables":[{"id":"nerve","type":"int","description":"N."}]},
+			{"id":"a","name":"Ann","description":"Ann.","variables":[{"id":"likes","type":"bool","of":"cast","description":"L."}]}],
+		"scenarios":[{"id":"s","cast":[{"character":"k","player":true},{"character":"a"}],
+			"variables":[{"id":"trust","type":"int","of":"cast","description":"T."}],
+			"openings":[{"id":"o","set":{"state.k.nerve":1,"state.trust.k":2,"state.trust.a":3,"state.a.likes.k":true}},
+				{"id":"seat","set":{"state.k.nerve":1}}]}]}`
+	for _, tc := range []struct {
+		players string
+		keys    []string
+	}{
+		{`["p"]`, []string{"state.trust.a"}},
+		{`["p","k"]`, []string{"state.a.likes.k", "state.k.nerve", "state.trust.a", "state.trust.k"}},
+	} {
+		header := `{"troupe":"0.14","kind":"session","scenario":"s","characters":[{"id":"p","name":"Pat","description":"Pat."}],"players":` + tc.players + `}`
+		story, _ := readStory(t, bundle, header)
+		root, err := story.Root("o", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := slices.Sorted(maps.Keys(root.Changes[0].Set)); !slices.Equal(got, tc.keys) {
+			t.Errorf("players %s: the root sets %v, want %v", tc.players, got, tc.keys)
+		}
+		root.ID = "1"
+		line, err := json.Marshal(root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		readStory(t, bundle, header, string(line))
+	}
+
+	story, _ := readStory(t, bundle, `{"troupe":"0.14","kind":"session","scenario":"s","characters":[{"id":"p","name":"Pat","description":"Pat."}],"players":["p"]}`)
+	if root, _ := story.Root("seat", nil); root.Changes != nil {
+		t.Errorf("a root whose set has only a seat's keys records %v", root.Changes)
+	}
+}

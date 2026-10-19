@@ -23,12 +23,13 @@ type StateKey struct {
 }
 
 // StateKeys returns the keys the story's changes and its openings' set can
-// write (Format 6.3, 8.5), in the order State.All yields them:
-// scene.location and scene.present, then each variable in use, the
-// scenario's, its worlds' and its characters', with a keyed variable's keys in
-// their order. A "cast" variable's keys are the characters of the cast the
-// story's states have, so a scenario played on its own leaves out its seats'
-// (conformance README section 2).
+// write (Format 6.3, 8.5): scene.location and scene.present, then each
+// variable in use, the scenario's, its worlds' and its characters', with a
+// keyed variable's keys in their order, as State.All yields them. In a
+// scenario played on its own, a "cast" variable's keys also include the
+// characters of seats marked player, which its openings may set though its
+// states leave them out (Format 8.5); a root leaves them out of a session
+// where no player fills the seat (Format 11.1).
 //
 // It offers what is valid, and Check still judges what is written: for a
 // draft that fails Check, it gives the keys of what reads, each once.
@@ -45,7 +46,11 @@ func (st *Story) StateKeys() []StateKey {
 			// A draft's cast or list may hold a key twice (DUPLICATE_ID,
 			// SCHEMA).
 			seen := map[string]bool{}
-			for _, k := range sc.keys(b.v) {
+			keys := b.v.Of.List
+			if b.v.Of.Cast {
+				keys = sc.openingCast
+			}
+			for _, k := range keys {
 				if !seen[k] {
 					seen[k] = true
 					out = append(out, StateKey{Name: b.name + "." + k, Key: k, Variable: b.v, Owner: b.owner})
