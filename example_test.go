@@ -208,3 +208,40 @@ func ExampleBundle_RenameID() {
 	// taken
 	// [{"op":"add","path":"/characters/0/id","value":"kai"},{"op":"replace","path":"/scenarios/0/cast/1/character","value":"kai"},{"op":"replace","path":"/scenarios/0/entries/0/when","value":"'kai' in scene.present"}] []
 }
+
+// An editor offers the keys an opening's set can write, each with the
+// variable that says how to enter its value.
+func ExampleStory_StateKeys() {
+	b, _, err := troupe.ReadBundle(strings.NewReader(`{"troupe": "0.14", "kind": "bundle",
+		"characters": [{"id": "kai", "name": "Kai", "description": "A thief.",
+			"variables": [{"id": "nerve", "type": "int", "min": 0, "max": 5, "description": "How steady Kai is."}]}],
+		"scenarios": [{"id": "heist", "cast": [{}, {"character": "kai"}],
+			"variables": [
+				{"id": "bell", "type": "int", "description": "The last bell rung."},
+				{"id": "trust", "type": "int", "of": "cast", "description": "Trust in the player."},
+				{"id": "loot", "type": "int", "of": "*", "description": "What the crew carries."}]}]}`))
+	if err != nil {
+		log.Fatal(err)
+	}
+	story, err := troupe.NewScenarioStory(b, "heist")
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, k := range story.StateKeys() {
+		switch {
+		case k.Variable == nil:
+			fmt.Println(k.Name)
+		case k.Key == "*":
+			fmt.Println(k.Name+".<any ID>", k.Variable.Type, k.Owner)
+		default:
+			fmt.Println(k.Name, k.Variable.Type, k.Owner)
+		}
+	}
+	// Output:
+	// scene.location
+	// scene.present
+	// state.bell int heist
+	// state.trust.kai int heist
+	// state.loot.<any ID> int heist
+	// state.kai.nerve int kai
+}

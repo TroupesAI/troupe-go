@@ -40,8 +40,9 @@ type castMember struct {
 
 // binding is a variable in use, under its full name (Format 8.2).
 type binding struct {
-	name string // such as "state.bell" or "state.kai.nerve"
-	v    *Variable
+	name  string // such as "state.bell" or "state.kai.nerve"
+	owner string // the scenario's, world's or character's ID
+	v     *Variable
 }
 
 // names indexes what references can name: the characters, worlds and
@@ -102,7 +103,7 @@ func newScope(b *Bundle, s *Session, i int) *scope {
 	if i >= 0 {
 		scenario = &b.Scenarios[i]
 		sc.scenario = scenario
-		sc.bind("state.", scenario.Variables)
+		sc.bind(scenario.ID, "state.", scenario.Variables)
 		for _, o := range scenario.Openings {
 			sc.openings[o.ID] = true
 		}
@@ -160,23 +161,23 @@ func newScope(b *Bundle, s *Session, i int) *scope {
 		if w, ok := n.worlds[id]; ok && sc.worlds[id] == nil {
 			sc.worlds[id] = w
 			sc.worldIDs = append(sc.worldIDs, id)
-			sc.bind("state."+id+".", w.Variables)
+			sc.bind(id, "state."+id+".", w.Variables)
 		}
 	}
 	for _, id := range inUse {
 		if c, ok := n.characters[id]; ok && sc.characters[id] == nil {
 			sc.characters[id] = c
-			sc.bind("state."+id+".", c.Variables)
+			sc.bind(id, "state."+id+".", c.Variables)
 		}
 	}
 	return sc
 }
 
-// bind puts vars in use, each named prefix and its ID. A name already bound
-// belongs to a variable with a duplicate ID, which is DUPLICATE_ID.
-func (sc *scope) bind(prefix string, vars []Variable) {
+// bind puts owner's vars in use, each named prefix and its ID. A name already
+// bound belongs to a variable with a duplicate ID, which is DUPLICATE_ID.
+func (sc *scope) bind(owner, prefix string, vars []Variable) {
 	for i := range vars {
-		b := &binding{name: prefix + vars[i].ID, v: &vars[i]}
+		b := &binding{name: prefix + vars[i].ID, owner: owner, v: &vars[i]}
 		if _, ok := sc.byName[b.name]; !ok {
 			sc.bindings = append(sc.bindings, b)
 			sc.byName[b.name] = b
