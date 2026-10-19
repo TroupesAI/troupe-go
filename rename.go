@@ -14,11 +14,13 @@ import (
 	"github.com/TroupesAI/troupe-go/internal/macro"
 )
 
-// RenameID returns the patch, for PatchBundle, that gives the object at the
+// RenameID returns the JSON Patch (RFC 6902) that gives the object at the
 // JSON Pointer object the ID id, and rewrites every reference to it in the
-// bundle. The object is a character, world or scenario, such as
-// "/characters/0", a world's location, or an entry, variable or opening, such
-// as "/worlds/1/locations/2" or "/scenarios/0/variables/3".
+// bundle; for the ID the object has, an empty one. The object is a character,
+// world or scenario, such as "/characters/0", a world's location, or an
+// entry, variable or opening, such as "/worlds/1/locations/2" or
+// "/scenarios/0/variables/3". The patch moves a member it renames to the end
+// of its object.
 //
 // The references are the cast members, scenario worlds, parents, knownBy and
 // speakers that name it, the keys of openings' set and the scene values they
@@ -45,12 +47,13 @@ import (
 //     word, and a key whose renamed form its object already has.
 //
 // The error is for a pointer that names no such object, an ID the object can't
-// take (Format 2.3), or an object whose ID another object shares, so that what
-// references to it refer to is ambiguous. In a bundle that fails the schema, a
+// take (Format 2.3), wrapping ErrIDTaken as CheckID's does, or an object whose
+// ID another object shares, so that what references to it refer to is
+// ambiguous. In a bundle that fails the schema, a
 // value that reads as absent is left as written, and not returned. A session
 // played with the bundle isn't changed, so its references to the old ID name
 // nothing.
-func (b *Bundle) RenameID(object, id string) ([]Operation, []string, error) {
+func (b *Bundle) RenameID(object, id string) (jsontext.Value, []string, error) {
 	p := jsontext.Pointer(object)
 	sc, ok := b.idScope(p.Parent())
 	i, isIndex := arrayIndex(p.LastToken())
@@ -62,10 +65,10 @@ func (b *Bundle) RenameID(object, id string) ([]Operation, []string, error) {
 		return nil, nil, fmt.Errorf("troupe: the ID of %q isn't unique, so what references to it refer to is ambiguous", object)
 	}
 	if id == old {
-		return nil, nil, nil
+		return jsontext.Value("[]"), nil, nil
 	}
-	if !sc.available(id) {
-		return nil, nil, fmt.Errorf("troupe: %q isn't an ID the %s can take", id, sc.kind)
+	if err := sc.check(id); err != nil {
+		return nil, nil, err
 	}
 	r := &renamer{
 		names:  newNames(b, nil),
@@ -76,11 +79,23 @@ func (b *Bundle) RenameID(object, id string) ([]Operation, []string, error) {
 		inUse:  map[any][]*Scenario{},
 	}
 	// The ID may be absent, in a bundle that fails the schema.
-	r.ops = append(r.ops, Operation{Op: "add", Path: string(ptr(p, "id")), Value: quote(id)})
+	r.ops = append(r.ops, operation{Op: "add", Path: string(ptr(p, "id")), Value: quote(id)})
 	if old != "" {
 		r.bundle(b)
 	}
-	return r.ops, r.left, nil
+	patch, err := json.Marshal(r.ops)
+	if err != nil {
+		panic(err) // the operations are JSON
+	}
+	return patch, r.left, nil
+}
+
+// operation is an operation of a JSON Patch (RFC 6902).
+type operation struct {
+	Op    string         `json:"op"`
+	From  string         `json:"from,omitempty"`
+	Path  string         `json:"path"`
+	Value jsontext.Value `json:"value,omitzero"`
 }
 
 // renamer finds the references to an object being renamed.
@@ -91,7 +106,7 @@ type renamer struct {
 	word    *regexp.Regexp // the old ID as a word
 	// inUse are the scenarios each character and world is in use in.
 	inUse map[any][]*Scenario
-	ops   []Operation
+	ops   []operation
 	left  []string
 }
 
@@ -512,11 +527,11 @@ func (r *renamer) move(p jsontext.Pointer, members map[string]jsontext.Value, fr
 		r.leave(ptr(p, from))
 		return
 	}
-	r.ops = append(r.ops, Operation{Op: "move", From: string(ptr(p, from)), Path: string(ptr(p, to))})
+	r.ops = append(r.ops, operation{Op: "move", From: string(ptr(p, from)), Path: string(ptr(p, to))})
 }
 
 func (r *renamer) replace(p jsontext.Pointer, s string) {
-	r.ops = append(r.ops, Operation{Op: "replace", Path: string(p), Value: quote(s)})
+	r.ops = append(r.ops, operation{Op: "replace", Path: string(p), Value: quote(s)})
 }
 
 // leave records p as a place the renaming leaves as written.

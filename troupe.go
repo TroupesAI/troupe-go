@@ -9,10 +9,9 @@
 // hold a file, and ReplaceFileFields sets them in a document's JSON, keeping
 // every other byte.
 //
-// PatchBundle applies a JSON Patch to a bundle's JSON, keeping every byte it
-// doesn't change, and works on drafts that don't conform yet. For an editor,
-// Bundle.SuggestID makes the ID of a new object from its name, and
-// Bundle.RenameID the patch that renames one with every reference to it.
+// For an editor, Bundle.CheckID checks the ID of an object being added, and
+// Bundle.RenameID makes the JSON Patch that renames one with every reference
+// to it.
 //
 // NewStory makes the story a session plays, and NewScenarioStory a scenario
 // played on its own. A story gives its cast, the worlds in use, its mode and

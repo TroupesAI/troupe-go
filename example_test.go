@@ -3,6 +3,7 @@ package troupe_test
 import (
 	"bytes"
 	"encoding/json/v2"
+	"errors"
 	"fmt"
 	"log"
 	"math/rand/v2"
@@ -185,51 +186,25 @@ func ExampleReadPackageBundle() {
 	// PARSE bundle.json /cover
 }
 
-// An editor adds a character with the ID SuggestID makes of its name, then
-// renames it, and every reference to it, with patches to the stored
-// bundle.json, which keep every byte they don't change.
-func ExamplePatchBundle() {
-	doc := []byte(`{"troupe": "0.14", "kind": "bundle",
-  "scenarios": [{"id": "heist", "cast": [{}], "ext": {"x.y": [1, 2.0]}}]}`)
-	b, _, err := troupe.ReadBundle(bytes.NewReader(doc))
+// An editor renames a character, and every reference to it, with a JSON
+// Patch, which a patch library applies to the stored bundle.json.
+func ExampleBundle_RenameID() {
+	b, _, err := troupe.ReadBundle(strings.NewReader(`{"troupe": "0.14", "kind": "bundle",
+		"characters": [{"id": "kai_moreau", "name": "Kai Moreau", "description": "A thief."}],
+		"scenarios": [{"id": "heist", "cast": [{}, {"character": "kai_moreau"}],
+			"entries": [{"id": "watch", "text": "The guard is near.", "when": "'kai_moreau' in scene.present"}]}]}`))
 	if err != nil {
 		log.Fatal(err)
 	}
-	id, err := b.SuggestID("/characters", "Kai Moreau")
-	if err != nil {
-		log.Fatal(err)
-	}
-	character, err := json.Marshal([]troupe.Character{{ID: id, Name: "Kai Moreau", Description: "A thief."}})
-	if err != nil {
-		log.Fatal(err)
-	}
-	doc, err = troupe.PatchBundle(doc, []troupe.Operation{
-		{Op: "add", Path: "/characters", Value: character},
-		{Op: "add", Path: "/scenarios/0/cast/-", Value: []byte(`{"character": "` + id + `"}`)},
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(string(doc))
-
-	b, _, err = troupe.ReadBundle(bytes.NewReader(doc))
-	if err != nil {
-		log.Fatal(err)
+	if err := b.CheckID("/characters", "kai_moreau"); errors.Is(err, troupe.ErrIDTaken) {
+		fmt.Println("taken")
 	}
 	patch, left, err := b.RenameID("/characters/0", "kai")
 	if err != nil {
 		log.Fatal(err)
 	}
-	doc, err = troupe.PatchBundle(doc, patch)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(string(doc), left)
+	fmt.Println(string(patch), left)
 	// Output:
-	// {"troupe": "0.14", "kind": "bundle",
-	//   "scenarios": [{"id": "heist", "cast": [{},{"character":"kai_moreau"}], "ext": {"x.y": [1, 2.0]}}],
-	//   "characters": [{"id":"kai_moreau","name":"Kai Moreau","description":"A thief."}]}
-	// {"troupe": "0.14", "kind": "bundle",
-	//   "scenarios": [{"id": "heist", "cast": [{},{"character":"kai"}], "ext": {"x.y": [1, 2.0]}}],
-	//   "characters": [{"id":"kai","name":"Kai Moreau","description":"A thief."}]} []
+	// taken
+	// [{"op":"add","path":"/characters/0/id","value":"kai"},{"op":"replace","path":"/scenarios/0/cast/1/character","value":"kai"},{"op":"replace","path":"/scenarios/0/entries/0/when","value":"'kai' in scene.present"}] []
 }

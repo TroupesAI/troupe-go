@@ -1,9 +1,12 @@
 package troupe_test
 
 import (
+	"encoding/json/jsontext"
 	"encoding/json/v2"
+	"errors"
 	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -65,20 +68,13 @@ func TestRenameID(t *testing.T) {
 			t.Errorf("%s: %v, left %v", c.object, err, left)
 			continue
 		}
-		got, err := troupe.PatchBundle([]byte(references), patch)
-		if err != nil {
-			t.Errorf("%s: %v", c.object, err)
-			continue
-		}
-		var gotJSON, wantJSON any
-		if err := json.Unmarshal(got, &gotJSON); err != nil {
+		got := apply(t, references, patch)
+		var want any
+		if err := json.Unmarshal([]byte(strings.ReplaceAll(references, c.old, c.id)), &want); err != nil {
 			t.Fatal(err)
 		}
-		if err := json.Unmarshal([]byte(strings.ReplaceAll(references, c.old, c.id)), &wantJSON); err != nil {
-			t.Fatal(err)
-		}
-		if !reflect.DeepEqual(gotJSON, wantJSON) {
-			t.Errorf("%s: got %s", c.object, got)
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("%s: %s gives %v", c.object, patch, got)
 		}
 	}
 }
@@ -131,7 +127,11 @@ func TestRenameIDLeaves(t *testing.T) {
 		if err != nil || !slices.Equal(slices.Sorted(slices.Values(left)), c.left) {
 			t.Errorf("%s: %v, left %q, want %q", c.object, err, left, c.left)
 		}
-		for _, op := range patch {
+		var ops []operation
+		if err := json.Unmarshal(patch, &ops); err != nil {
+			t.Fatal(err)
+		}
+		for _, op := range ops {
 			if slices.Contains(left, op.Path) || slices.Contains(left, op.From) {
 				t.Errorf("%s: %s %s, which it leaves", c.object, op.Op, op.Path)
 			}
@@ -139,9 +139,10 @@ func TestRenameIDLeaves(t *testing.T) {
 	}
 }
 
-// RenameID refuses an ID the object can't take (Format 2.3), a pointer that
-// names no object with an ID, and an object whose ID another shares, and
-// renaming to the same ID changes nothing.
+// RenameID refuses an ID the object can't take (Format 2.3), wrapping
+// ErrIDTaken for one another object has, a pointer that names no object with
+// an ID, and an object whose ID another shares. Renaming to the same ID is an
+// empty patch.
 func TestRenameIDErrors(t *testing.T) {
 	b, _, err := troupe.ReadBundle(strings.NewReader(`{"troupe": "0.14", "kind": "bundle",
 		"characters": [{"id": "kai", "name": "Kai", "description": "d"}, {"id": "mara", "name": "Mara", "description": "d"},
@@ -150,25 +151,94 @@ func TestRenameIDErrors(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, c := range [][2]string{
-		{"/characters/0", "mara"},
-		{"/characters/0", "heist"},
-		{"/characters/0", "bell"},
-		{"/characters/0", "state"},
-		{"/characters/0", "in"},
-		{"/characters/0", "Kai"},
-		{"/scenarios/0/variables/0", "kai"},
-		{"/characters/1", "elena"},
-		{"/characters/3", "elena"},
-		{"/characters", "elena"},
-		{"/characters/0/id", "elena"},
-		{"/cast/0", "elena"},
+	for _, c := range []struct {
+		object, id string
+		taken      bool
+	}{
+		{"/characters/0", "mara", true},
+		{"/characters/0", "heist", true},
+		{"/characters/0", "bell", true},
+		{"/scenarios/0/variables/0", "kai", true},
+		{"/characters/0", "state", false},
+		{"/characters/0", "in", false},
+		{"/characters/0", "Kai", false},
+		{"/characters/1", "elena", false},
+		{"/characters/3", "elena", false},
+		{"/characters", "elena", false},
+		{"/characters/0/id", "elena", false},
+		{"/cast/0", "elena", false},
 	} {
-		if patch, _, err := b.RenameID(c[0], c[1]); err == nil {
-			t.Errorf("%s to %s: no error, and %v", c[0], c[1], patch)
+		if patch, _, err := b.RenameID(c.object, c.id); err == nil || errors.Is(err, troupe.ErrIDTaken) != c.taken {
+			t.Errorf("%s to %s: %v, and %s", c.object, c.id, err, patch)
 		}
 	}
-	if patch, left, err := b.RenameID("/characters/0", "kai"); patch != nil || left != nil || err != nil {
-		t.Errorf("to its own ID: %v, %v, %v", patch, left, err)
+	if patch, left, err := b.RenameID("/characters/0", "kai"); string(patch) != "[]" || left != nil || err != nil {
+		t.Errorf("to its own ID: %s, %v, %v", patch, left, err)
 	}
+}
+
+// operation is an operation of the JSON Patch RenameID returns.
+type operation struct {
+	Op    string `json:"op"`
+	From  string `json:"from"`
+	Path  string `json:"path"`
+	Value any    `json:"value"`
+}
+
+// apply returns doc with patch applied, failing for an operation other than
+// the add, replace and move RenameID writes, or one RFC 6902 can't apply.
+func apply(t *testing.T, doc string, patch jsontext.Value) any {
+	t.Helper()
+	var v any
+	var ops []operation
+	if err := json.Unmarshal([]byte(doc), &v); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(patch, &ops); err != nil {
+		t.Fatal(err)
+	}
+	// at returns the object or array holding the value at p, and its token.
+	at := func(p string) (any, string) {
+		tokens := slices.Collect(jsontext.Pointer(p).Tokens())
+		parent := v
+		for _, tok := range tokens[:len(tokens)-1] {
+			switch c := parent.(type) {
+			case map[string]any:
+				parent = c[tok]
+			case []any:
+				i, _ := strconv.Atoi(tok)
+				parent = c[i]
+			}
+		}
+		return parent, tokens[len(tokens)-1]
+	}
+	for _, op := range ops {
+		value := op.Value
+		if op.Op == "move" {
+			parent, tok := at(op.From)
+			m, _ := parent.(map[string]any)
+			var ok bool
+			if value, ok = m[tok]; !ok {
+				t.Fatalf("%s: from names no member", op.From)
+			}
+			delete(m, tok)
+		}
+		parent, tok := at(op.Path)
+		switch c := parent.(type) {
+		case map[string]any:
+			if _, ok := c[tok]; !ok && op.Op == "replace" {
+				t.Fatalf("%s: replaces no member", op.Path)
+			}
+			c[tok] = value
+		case []any:
+			i, err := strconv.Atoi(tok)
+			if err != nil || i >= len(c) || op.Op != "replace" {
+				t.Fatalf("%s %s: not a replace of an item", op.Op, op.Path)
+			}
+			c[i] = value
+		default:
+			t.Fatalf("%s %s", op.Op, op.Path)
+		}
+	}
+	return v
 }

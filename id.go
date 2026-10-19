@@ -2,76 +2,31 @@ package troupe
 
 import (
 	"encoding/json/jsontext"
+	"errors"
 	"fmt"
 	"slices"
 	"strconv"
 	"strings"
-	"unicode"
-
-	"golang.org/x/text/unicode/norm"
 )
 
-// SuggestID returns an ID for an object named name, such as "kai_moreau" for
-// "Kai Moreau", that can be added to the list at the JSON Pointer list:
-// "/characters", "/worlds", "/scenarios", a world's "/worlds/0/locations", or
-// the entries, variables or openings of a character, world or scenario, such
-// as "/scenarios/0/openings". The ID follows Format 2.3: it fits the grammar,
-// is no reserved word or ID, and is unique in the bundle where the list's
-// objects must be.
-//
-// It is name's letters and digits, lowercased and without accents, with an
-// underscore between words, and a number after it when that ID is taken. A
-// name that gives none, or that starts with a digit, is given the kind of
-// object first, as "character_2" or "scenario_7th_seal". The error is for a
-// pointer that names no such list.
-func (b *Bundle) SuggestID(list, name string) (string, error) {
+// ErrIDTaken is what CheckID's and RenameID's errors wrap when another object
+// has the ID where it must be unique.
+var ErrIDTaken = errors.New("the ID is taken")
+
+// CheckID reports whether an object added to the list at the JSON Pointer
+// list can take the ID id (Format 2.3). The list is "/characters", "/worlds",
+// "/scenarios", a world's "/worlds/0/locations", or the entries, variables or
+// openings of a character, world or scenario, such as
+// "/scenarios/0/openings". The error wraps ErrIDTaken when an object the
+// list's objects must be unique among has id. Otherwise it is for an id that
+// doesn't fit the grammar or is reserved, or a pointer that names no such
+// list.
+func (b *Bundle) CheckID(list, id string) error {
 	sc, ok := b.idScope(jsontext.Pointer(list))
 	if !ok {
-		return "", fmt.Errorf("troupe: %q names no list of objects with IDs", list)
+		return fmt.Errorf("troupe: %q names no list of objects with IDs", list)
 	}
-	base := slug(name)
-	if base == "" || base[0] >= '0' && base[0] <= '9' {
-		base = strings.TrimSuffix(sc.kind+"_"+base, "_")
-	}
-	for n := 1; ; n++ {
-		suffix := ""
-		if n > 1 {
-			suffix = "_" + strconv.Itoa(n)
-		}
-		id := strings.TrimRight(base[:min(len(base), maxID-len(suffix))], "_") + suffix
-		if sc.available(id) {
-			return id, nil
-		}
-	}
-}
-
-// maxID is the length of the longest author ID (Format 2.3).
-const maxID = 64
-
-// slug returns name's letters and digits, lowercased and without accents,
-// with an underscore between words. An apostrophe doesn't end a word, and
-// letters and digits an ID can't hold are left out.
-func slug(name string) string {
-	var b strings.Builder
-	gap := false
-	for _, r := range norm.NFKD.String(name) {
-		switch {
-		case 'a' <= r && r <= 'z', '0' <= r && r <= '9':
-		case 'A' <= r && r <= 'Z':
-			r += 'a' - 'A'
-		case r == '\'' || r == '’' || unicode.In(r, unicode.L, unicode.M, unicode.N):
-			continue
-		default:
-			gap = true
-			continue
-		}
-		if gap && b.Len() > 0 {
-			b.WriteByte('_')
-		}
-		gap = false
-		b.WriteRune(r)
-	}
-	return b.String()
+	return sc.check(id)
 }
 
 // The IDs characters, worlds and scenarios can't have, and those variables
@@ -95,7 +50,7 @@ type idScope struct {
 	taken map[string]int
 }
 
-// idScope returns the scope of the list at p, as SuggestID names lists, and
+// idScope returns the scope of the list at p, as CheckID names lists, and
 // reports whether there is one.
 func (b *Bundle) idScope(p jsontext.Pointer) (*idScope, bool) {
 	if !p.IsValid() {
@@ -205,7 +160,23 @@ func take[T any](sc *idScope, objects []T, id func(*T) string) {
 	}
 }
 
-// available reports whether an object of the list can take the ID id.
-func (sc *idScope) available(id string) bool {
-	return authorID.MatchString(id) && !slices.Contains(celReserved, id) && !slices.Contains(sc.reserved, id) && sc.taken[id] == 0
+// check reports whether an object of the list can take the ID id.
+func (sc *idScope) check(id string) error {
+	switch {
+	case !authorID.MatchString(id) || slices.Contains(celReserved, id) || slices.Contains(sc.reserved, id):
+		return fmt.Errorf("troupe: %q isn't a valid %s ID", id, sc.kind)
+	case sc.taken[id] > 0:
+		return fmt.Errorf("troupe: %q: %w", id, ErrIDTaken)
+	}
+	return nil
+}
+
+// arrayIndex reads tok as an array index: 0, or digits that don't start with
+// 0 (RFC 6901 section 4).
+func arrayIndex(tok string) (int, bool) {
+	if tok == "" || tok[0] == '0' && tok != "0" || strings.Trim(tok, "0123456789") != "" {
+		return 0, false
+	}
+	i, err := strconv.Atoi(tok)
+	return i, err == nil
 }

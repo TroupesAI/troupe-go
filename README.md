@@ -2,7 +2,7 @@
 
 A Go library for [Troupe](https://github.com/TroupesAI/troupe), an open file format for AI roleplay. It reads Troupe files, checks them, and computes what they mean: the state at a message, how macros render, how conditions evaluate and who knows what.
 
-**Status:** in development, targeting Troupe 0.14, the spec's current draft. It passes the whole conformance suite: it reads files, checks them, and computes the state at a message, who knows each part, macros and conditions. It gives the files a package and a bundle hold, replaces a bundle's file fields in its JSON, and reads a package's bundle.json stored apart from its ZIP. It gives a story's cast and worlds, activates entries, makes roots from openings, escapes text for writing, and stores and restores states. For editing, it applies JSON Patches to a bundle's JSON, suggests IDs, and renames an ID with every reference to it. Retrieving `pull` entries, checking proposed changes and writing sessions and packages back are still to come; the [plan](docs/plan.md) says what is being built and in what order.
+**Status:** in development, targeting Troupe 0.14, the spec's current draft. It passes the whole conformance suite: it reads files, checks them, and computes the state at a message, who knows each part, macros and conditions. It gives the files a package and a bundle hold, replaces a bundle's file fields in its JSON, and reads a package's bundle.json stored apart from its ZIP. It gives a story's cast and worlds, activates entries, makes roots from openings, escapes text for writing, and stores and restores states. For editing, it checks IDs and renames an ID with every reference to it. Retrieving `pull` entries, checking proposed changes and writing sessions and packages back are still to come; the [plan](docs/plan.md) says what is being built and in what order.
 
 ## Scope
 
@@ -13,7 +13,7 @@ In scope: everything the [spec](https://github.com/TroupesAI/troupe/blob/main/sp
 - The state at a message (Format 8.6).
 - Macros (Format 9) and conditions in CEL (Format 10).
 - Entry activation (Format 7.2) and knowledge (Format 7.4, 11.5).
-- Writing: roots made from openings (Format 11.1), escaping (Format 9), files written back and edited with every `ext` unchanged (Format 13), and IDs made and renamed as Format 2.3 requires.
+- Writing: roots made from openings (Format 11.1), escaping (Format 9), files written back with every `ext` unchanged (Format 13), and IDs checked as Format 2.3 requires and renamed with their references.
 - Upgrading documents from the previous spec version, while the spec is before 1.0.
 
 Out of scope: everything the spec leaves to apps (Format 1.1). That includes prompt assembly, choosing which active entries reach a model, model calls, storage and UI.

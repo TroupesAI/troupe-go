@@ -121,17 +121,8 @@ The cost is that a change touching both the engine and the platform can't land i
 | `Cast` leaves out a member that names no character | A nil `Character` | Only `UNKNOWN_CHARACTER` names none, and a nil `Character` means a seat without one |
 | A scope computes its cast's members once, each with the scenario member it comes from, and the cast its states use from them | Computing `Cast` apart | One computation, so they can't disagree |
 | `Story.Worlds`, `Story.Mode` and `Story.Narrator` apply the defaults | Leaving them to callers | Defaults are normative (Format 2.2), and callers shouldn't repeat them |
-| `PatchBundle(doc, patch)` applies a JSON Patch (RFC 6902) to a bundle's JSON | Edits of our own, or editing the typed model | The editor sends JSON Patch, so the platform translates nothing, and the typed model drops the wrong-typed values a draft holds |
-| `Operation` is RFC 6902's object, with `Value` a `jsontext.Value` | Taking the patch's bytes | A patch decodes into `[]Operation` with `encoding/json` or v2, and `RenameID` returns one |
-| A patched document keeps a value's bytes until an operation reaches inside it, then those of its members or items and of what is between them | Re-encoding it, or splicing its bytes once per operation | Every byte the patch doesn't change is kept, `ext` included (Format 13), and each operation reads only the arrays and objects on its path. The document is checked as JSON once, before the first |
-| A member or item a patch adds is written compactly, spaced like the one it displaces or the last one | Indenting it to match the document | It sits like its neighbors without a formatter, and its value is as the editor wrote it |
-| No `copy` | All six operations of RFC 6902 | The editor sends add, remove, replace, move and test |
-| The size limit is checked after every operation, and the depth of every value added or moved. Other limits are left to reading | Reading the result | No operation works on more than 32 MiB, so a patch's work grows with its operations, and the caller reads the result for its diagnostics anyway, which reports the other limits as `PARSE` |
-| `ErrTestFailed` | Only plain errors | A failed test means the editor's copy is out of date, which a caller answers differently from a patch that is wrong |
-| A test compares numbers as the doubles they mean | As written | RFC 6902 compares numbers by value, and a number means the nearest double (Format 2.2) |
-| `Bundle.SuggestID(list, name)`, where `list` is the pointer of the list the object joins | A kind and an owner's ID | It is the pointer of the editor's add operation, and an owner's ID may be shared in a draft |
-| A suggested ID is the name decomposed (NFKD), without marks or apostrophes, other non-ASCII letters left out, words joined by `_`; the kind of object first for a name that gives none or starts with a digit; `_2` and up for a taken ID | ASCII letters alone, or a transliteration table | Names with accents keep their letters. `golang.org/x/text` was already required, so it adds no module |
-| `Bundle.RenameID(object, id)` returns a patch, and the pointers of what it leaves | Returning the renamed document | The platform applies it with `PatchBundle` and can send the editor the same patch. A member it renames moves to the end of its object, and set and initial members have no order |
+| `Bundle.CheckID(list, id)` checks an ID for the list at a pointer, such as `/characters`, and wraps `ErrIDTaken` when it is taken | Suggesting IDs from names | Making an ID from a name is an app's policy, and the grammar, reserved words and uniqueness are Format 2.3's. An app adds `_2` and up while the ID is taken, so it needs to tell that apart. The list is the pointer the editor adds at, since an owner's ID may be shared in a draft |
+| `Bundle.RenameID(object, id)` returns a JSON Patch (RFC 6902) as a `jsontext.Value`, and the pointers of what it leaves | Applying it, or a patch type of our own | Applying a patch is generic JSON work, which a patch library does, so the library has none. A caller applies the patch and can send it to an editor as it is. A member it renames moves to the end of its object, and set and initial members have no order |
 | A reference resolves as macros and `Check` resolve it, in each scenario its text or condition is used in (Format 6.4, 9, 10.2), and is rewritten only when every scenario agrees, as written and as renamed | Matching the ID as text | A character's `state.bell` is each scenario's own `bell`, so renaming one scenario's can't rewrite it when another declares one too |
 | A keyed variable's key that is a renamed character's ID is renamed with it, in `of`, `initial`, set keys, macros and conditions | Leaving keys | It shows as the character's name, and `char` looks it up (Format 9, 10.1) |
 | String values that are a renamed character's or location's ID are left, and returned | Rewriting them | Such a value shows as its name (Format 9), but a string can hold the ID by chance, so whether it means the character is the author's to say. The platform blocks the rename |
@@ -168,7 +159,7 @@ conformance_test.go package troupe_test: the runner
 
 ## The public API
 
-The API has to do two things: everything the conformance runner asks for, through exported names only, and everything the platform needs (see [What the platform needs](#what-the-platform-needs)). Everything the suite tests is built: `ReadBundle`, `ReadSession`, `ReadPackage`, the typed model, `Diagnostic`, `Check`, `NewStory`, `Story`, `State`, `Story.KnownBy`, `Story.Render`, `Story.RenderParts`, `Story.PointAt` and `Point.Eval`. Beyond the suite, importing bundles uses `Package.Files`, `Package.Open`, `Package.BundleJSON`, `Bundle.FileFields`, `ReplaceFileFields` and `ReadPackageBundle`, playing uses `NewScenarioStory`, `Story.Cast`, `Member`, `Story.Worlds`, `Story.Mode`, `Story.Narrator`, `Story.Root`, `Point.Active`, `ActiveEntry`, `Escape`, `State.MarshalJSON` and `Story.UnmarshalState`, and editing uses `PatchBundle`, `Operation`, `ErrTestFailed`, `Bundle.SuggestID` and `Bundle.RenameID`.
+The API has to do two things: everything the conformance runner asks for, through exported names only, and everything the platform needs (see [What the platform needs](#what-the-platform-needs)). Everything the suite tests is built: `ReadBundle`, `ReadSession`, `ReadPackage`, the typed model, `Diagnostic`, `Check`, `NewStory`, `Story`, `State`, `Story.KnownBy`, `Story.Render`, `Story.RenderParts`, `Story.PointAt` and `Point.Eval`. Beyond the suite, importing bundles uses `Package.Files`, `Package.Open`, `Package.BundleJSON`, `Bundle.FileFields`, `ReplaceFileFields` and `ReadPackageBundle`, playing uses `NewScenarioStory`, `Story.Cast`, `Member`, `Story.Worlds`, `Story.Mode`, `Story.Narrator`, `Story.Root`, `Point.Active`, `ActiveEntry`, `Escape`, `State.MarshalJSON` and `Story.UnmarshalState`, and editing uses `Bundle.CheckID`, `ErrIDTaken` and `Bundle.RenameID`.
 
 The suite's operations map onto it like this (conformance README section 3):
 
@@ -193,7 +184,7 @@ These are what the platform needs that the suite doesn't test. Build them in the
 
 - Retrieving entries with `pull` (Format 7.2).
 - Checking one proposed change, key and value, before the platform records it (Format 8.5).
-- Writing sessions and packages back, keeping every `ext` and a package's other files (Format 12.3, 13). The model marshals as the spec writes it, `ReplaceFileFields` replaces a bundle's file fields, and `PatchBundle` edits a bundle.
+- Writing sessions and packages back, keeping every `ext` and a package's other files (Format 12.3, 13). The model marshals as the spec writes it, and `ReplaceFileFields` replaces a bundle's file fields.
 - A session's file fields, for importing packages with sessions.
 - Upgrading documents from the previous minor version. This starts mattering once the platform stores documents.
 
@@ -205,7 +196,7 @@ The platform's API (its architecture is in `docs/stack.md` of the platform repos
 - **Start a session** from an opening.
 - **Prepare each generation:** the state at the evaluation point, the active entries, macros rendered for the character being written for, and what each character knows. A path can be 100,000 messages long, so the state at a message must be computable from its parent's state and that message's changes. Replaying the whole path on every turn won't do.
 - **Record a turn**, after checking the changes a player or model proposes.
-- **Edit** a stored bundle.json as people type, though a draft may not conform yet: apply the editor's JSON Patches, suggest the ID of each object added, and rename an ID with every reference to it.
+- **Edit** a stored bundle.json as people type, though a draft may not conform yet: check the ID of each object added, and rename an ID with every reference to it. The platform applies the editor's JSON Patches itself, then reads and checks the result.
 - **Export** a package with its images and sessions.
 
 Prompt assembly, the choice of which active entries reach the model, model calls and storage stay in the platform.
