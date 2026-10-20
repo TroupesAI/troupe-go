@@ -3,7 +3,6 @@ package macro
 
 import (
 	"regexp"
-	"slices"
 	"strings"
 )
 
@@ -53,6 +52,9 @@ func Parse(text string) (tokens []Token, unknown bool) {
 	// open is where the text from the first {{ that is no macro to the next
 	// }} ends, while the scan has found no macro in it; -1 otherwise.
 	open := -1
+	// r is the text up to the next }}, which every {{ before it shares, so it
+	// is searched once, however many {{ the scan tries.
+	var r region
 	for i := 0; i < len(text); {
 		if open >= 0 && i >= open {
 			unknown, open = true, -1
@@ -65,10 +67,13 @@ func Parse(text string) (tokens []Token, unknown bool) {
 			lit.WriteString("{{")
 			i += 3
 		case strings.HasPrefix(text[i:], "{{"):
-			end := strings.Index(text[i+2:], "}}")
-			if end >= 0 {
-				src := text[i : i+2+end+2]
-				if t, ok := form(src, text[i+2:i+2+end]); ok {
+			if r.end < i+2 {
+				r = find(text, i+2)
+			}
+			if r.end < len(text) {
+				src, body := text[i:r.end+2], text[i+2:r.end]
+				options := strings.HasPrefix(body, "pick::") && r.options(text, i+2+len("pick::"))
+				if t, ok := form(src, body, options); ok {
 					flush()
 					if t != nil {
 						t.Offset = i
@@ -93,9 +98,51 @@ func Parse(text string) (tokens []Token, unknown bool) {
 	return tokens, unknown || open >= 0
 }
 
+// region is the text from a {{ to the next }}.
+type region struct {
+	end   int // where the }} starts; len(text) when there is none
+	sep   int // where the last :: in the region starts; -1 for none
+	quad  int // where the last :::: in the region starts; -1 for none
+	colon int // the colons right before end, in the region
+}
+
+// find returns the region from start to the next }}.
+func find(text string, start int) region {
+	end := strings.Index(text[start:], "}}")
+	if end < 0 {
+		return region{end: len(text)}
+	}
+	r := region{end: start + end, sep: -1, quad: -1}
+	in := text[start:r.end]
+	if i := strings.LastIndex(in, "::"); i >= 0 {
+		r.sep = start + i
+	}
+	if i := strings.LastIndex(in, "::::"); i >= 0 {
+		r.quad = start + i
+	}
+	for r.colon < len(in) && in[len(in)-1-r.colon] == ':' {
+		r.colon++
+	}
+	return r
+}
+
+// options reports whether text[s:r.end] is a pick's options: at least two,
+// none empty, as splitting it at each :: from the left gives them. Splitting
+// takes the colons of each run two at a time from its start, so an option is
+// empty only at a run of two or more at the start, an even run at the end,
+// or a run of four or more, which the region's ends answer at once.
+func (r *region) options(text string, s int) bool {
+	if r.sep < s || r.quad >= s || strings.HasPrefix(text[s:], "::") {
+		return false
+	}
+	colons := min(r.colon, r.end-s)
+	return colons < 2 || colons%2 == 1
+}
+
 // form returns the macro whose source is src and body the text between its
-// braces, or nil for a comment, and whether body is a macro at all.
-func form(src, body string) (*Token, bool) {
+// braces, or nil for a comment, and whether body is a macro at all. options
+// reports whether a pick's body holds valid options.
+func form(src, body string, options bool) (*Token, bool) {
 	switch {
 	case strings.HasPrefix(body, "//"):
 		return nil, true
@@ -108,13 +155,10 @@ func form(src, body string) (*Token, bool) {
 	case body == "scene.present":
 		return &Token{Kind: Present, Text: src}, true
 	case strings.HasPrefix(body, "pick::"):
-		// At least two options, none empty; none can hold :: or }}, so
-		// splitting finds them.
-		options := strings.Split(body[len("pick::"):], "::")
-		if len(options) < 2 || slices.Contains(options, "") {
+		if !options {
 			return nil, false
 		}
-		return &Token{Kind: Pick, Text: src, Options: options}, true
+		return &Token{Kind: Pick, Text: src, Options: strings.Split(body[len("pick::"):], "::")}, true
 	}
 	for _, k := range []struct {
 		prefix string

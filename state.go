@@ -57,7 +57,7 @@ func (sc *scope) initial() *state {
 	for _, b := range sc.bindings {
 		v := b.v
 		if !v.Of.keyed() {
-			st.values[b.name] = initialValue(v, v.Initial)
+			st.values[b.name] = initialValue(b, v.Initial)
 			continue
 		}
 		// A keyed variable's initial is one value for every key, or an object
@@ -72,11 +72,11 @@ func (sc *scope) initial() *state {
 		for _, k := range sc.keys(v) {
 			switch {
 			case members == nil:
-				m[k] = initialValue(v, v.Initial)
+				m[k] = initialValue(b, v.Initial)
 			case members[k] != nil:
-				m[k] = initialValue(v, members[k])
+				m[k] = initialValue(b, members[k])
 			default:
-				m[k] = initialValue(v, members["*"])
+				m[k] = initialValue(b, members["*"])
 			}
 		}
 		st.values[b.name] = m
@@ -84,15 +84,15 @@ func (sc *scope) initial() *state {
 	return st
 }
 
-// initialValue returns raw as a value of v, or v's default when raw is absent
-// or not valid.
-func initialValue(v *Variable, raw jsontext.Value) any {
+// initialValue returns raw as a value of b's variable, or its default when
+// raw is absent or not valid.
+func initialValue(b *binding, raw jsontext.Value) any {
 	if raw != nil {
-		if x, ok := value(v, raw); ok {
+		if x, ok := value(b.v, b.values, raw); ok {
 			return x
 		}
 	}
-	return zero(v)
+	return zero(b.v)
 }
 
 // apply applies an opening's set or a recorded change to st (Format 8.6),
@@ -123,7 +123,7 @@ func (sc *scope) apply(st *state, set map[string]jsontext.Value, undo *[]edit) [
 			if !ok {
 				continue
 			}
-			x, ok := value(b.v, raw)
+			x, ok := value(b.v, b.values, raw)
 			if !ok {
 				continue
 			}

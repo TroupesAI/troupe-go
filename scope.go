@@ -48,6 +48,8 @@ type binding struct {
 	name  string // such as "state.bell" or "state.kai.nerve"
 	owner string // the scenario's, world's or character's ID
 	v     *Variable
+	// values and keys are index(v.Values) and index(v.Of.List).
+	values, keys map[string]int
 }
 
 // names indexes what references can name: the characters, worlds and
@@ -183,7 +185,8 @@ func newScope(b *Bundle, s *Session, i int) *scope {
 // bound belongs to a variable with a duplicate ID, which is DUPLICATE_ID.
 func (sc *scope) bind(owner, prefix string, vars []Variable) {
 	for i := range vars {
-		b := &binding{name: prefix + vars[i].ID, owner: owner, v: &vars[i]}
+		v := &vars[i]
+		b := &binding{name: prefix + v.ID, owner: owner, v: v, values: index(v.Values), keys: index(v.Of.List)}
 		if _, ok := sc.byName[b.name]; !ok {
 			sc.bindings = append(sc.bindings, b)
 			sc.byName[b.name] = b
@@ -254,7 +257,7 @@ func (sc *scope) lookup(key string, cast []string) (*binding, string, bool) {
 		return nil, "", false
 	}
 	b, ok := sc.byName[key[:i]]
-	if !ok || !b.v.Of.keyed() || !allows(b.v, key[i+1:], cast) {
+	if !ok || !b.v.Of.keyed() || !allows(b, key[i+1:], cast) {
 		return nil, "", false
 	}
 	return b, key[i+1:], true
@@ -271,14 +274,15 @@ func (sc *scope) keys(v *Variable) []string {
 
 // allows reports whether a keyed variable has the key k, with cast as a
 // "cast" variable's keys (Format 8.3).
-func allows(v *Variable, k string, cast []string) bool {
+func allows(b *binding, k string, cast []string) bool {
 	switch {
-	case v.Of.Cast:
+	case b.v.Of.Cast:
 		return slices.Contains(cast, k)
-	case v.Of.Any:
+	case b.v.Of.Any:
 		return isKey(k)
 	default:
-		return slices.Contains(v.Of.List, k)
+		_, ok := b.keys[k]
+		return ok
 	}
 }
 

@@ -126,7 +126,7 @@ func (sc *scope) valid(key string, raw jsontext.Value) bool {
 		return json.Unmarshal(raw, &ids) == nil
 	}
 	b, _, ok := sc.variable(key)
-	return ok && validValue(b.v, raw)
+	return ok && validValue(b.v, b.values, raw)
 }
 
 // A stored state writes U+0000 as U+0001 0, and U+0001 as U+0001 U+0001.

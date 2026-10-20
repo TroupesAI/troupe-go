@@ -1,6 +1,7 @@
 package troupe
 
 import (
+	"cmp"
 	"encoding/json/jsontext"
 	"encoding/json/v2"
 	"math"
@@ -13,19 +14,37 @@ const (
 	maxSetMembers  = 256
 )
 
-// validValue reports whether raw is a valid value of v (Format 8.5).
-func validValue(v *Variable, raw jsontext.Value) bool {
-	_, ok := value(v, raw)
+// index returns the position of each string of list, the first of any
+// repeated, or nil for a nil list. Format 14 bounds a variable's values and
+// keys only by the file's size, so they are looked up in an index, never
+// searched.
+func index(list []string) map[string]int {
+	if list == nil {
+		return nil
+	}
+	m := make(map[string]int, len(list))
+	for i, s := range list {
+		if _, ok := m[s]; !ok {
+			m[s] = i
+		}
+	}
+	return m
+}
+
+// validValue reports whether raw is a valid value of v (Format 8.5). values
+// is index(v.Values).
+func validValue(v *Variable, values map[string]int, raw jsontext.Value) bool {
+	_, ok := value(v, values, raw)
 	return ok
 }
 
 // value returns raw as a value of v, normalized (Format 8.6): a bool, an
 // int64, a string or a []string. It reports false when raw isn't valid: not
 // of v's type, using a member v doesn't list, an int outside ±(2^53 − 1), or
-// past a value limit (Format 8.5, 14). A variable of a type the spec doesn't
-// define fails only the schema, so any value is valid for it, and holds as
-// written.
-func value(v *Variable, raw jsontext.Value) (any, bool) {
+// past a value limit (Format 8.5, 14). values is index(v.Values). A variable
+// of a type the spec doesn't define fails only the schema, so any value is
+// valid for it, and holds as written.
+func value(v *Variable, values map[string]int, raw jsontext.Value) (any, bool) {
 	var x any
 	if json.Unmarshal(raw, &x) != nil {
 		return nil, false
@@ -45,31 +64,34 @@ func value(v *Variable, raw jsontext.Value) (any, bool) {
 		return s, ok && len(s) <= maxStringValue
 	case "enum":
 		s, ok := x.(string)
-		return s, ok && len(s) <= maxStringValue && slices.Contains(v.Values, s)
+		_, listed := values[s]
+		return s, ok && len(s) <= maxStringValue && listed
 	case "set":
 		items, ok := x.([]any)
 		if !ok {
 			return nil, false
 		}
-		var members []string
+		members := []string{}
+		seen := map[string]bool{}
 		for _, item := range items {
 			s, ok := item.(string)
-			if !ok || len(s) > maxStringValue || v.Values != nil && !slices.Contains(v.Values, s) {
+			_, listed := values[s]
+			if !ok || len(s) > maxStringValue || values != nil && !listed {
 				return nil, false
 			}
-			if !slices.Contains(members, s) {
-				members = append(members, s)
+			if seen[s] {
+				continue
 			}
+			// Stopping at the limit bounds the work, whatever the value's length.
+			if len(members) == maxSetMembers {
+				return nil, false
+			}
+			seen[s] = true
+			members = append(members, s)
 		}
-		if len(members) > maxSetMembers {
-			return nil, false
-		}
-		if v.Values != nil {
+		if values != nil {
 			// A set with values is ordered as they are declared.
-			members = slices.DeleteFunc(slices.Clone(v.Values), func(s string) bool { return !slices.Contains(members, s) })
-		}
-		if members == nil {
-			members = []string{}
+			slices.SortFunc(members, func(a, b string) int { return cmp.Compare(values[a], values[b]) })
 		}
 		return members, true
 	}

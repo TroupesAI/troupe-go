@@ -537,8 +537,9 @@ func (c *checker) initial(at place, p jsontext.Pointer, v *Variable) {
 		return
 	}
 	p = ptr(p, "initial")
+	values := index(v.Values)
 	if !v.Of.keyed() || v.Initial.Kind() != '{' {
-		if !validValue(v, v.Initial) {
+		if !validValue(v, values, v.Initial) {
 			c.report(CodeInvalidValue, at, p)
 		}
 		return
@@ -547,16 +548,18 @@ func (c *checker) initial(at place, p jsontext.Pointer, v *Variable) {
 	if err := json.Unmarshal(v.Initial, &members); err != nil {
 		panic(err) // an object that read without PARSE
 	}
+	keys := index(v.Of.List)
 	for k, val := range members {
+		_, listed := keys[k]
 		switch {
 		case k == "*":
 		case v.Of.Cast && c.characters[k] == nil:
 			c.report(CodeUnknownCharacter, at, ptr(p, k))
 			continue
-		case v.Of.List != nil && !slices.Contains(v.Of.List, k):
+		case keys != nil && !listed:
 			continue
 		}
-		if !validValue(v, val) {
+		if !validValue(v, values, val) {
 			c.report(CodeInvalidValue, at, ptr(p, k))
 		}
 	}
@@ -663,7 +666,7 @@ func (c *checker) set(sc *scope, at place, p jsontext.Pointer, set map[string]js
 			switch {
 			case !ok:
 				c.report(CodeUnknownVariable, at, kp)
-			case !validValue(b.v, val):
+			case !validValue(b.v, b.values, val):
 				c.report(CodeInvalidValue, at, kp)
 			}
 		}
