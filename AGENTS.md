@@ -20,21 +20,21 @@ The same applies to docs: short, exact and current.
 
 ## Rules
 
-- **The spec decides**, at the commit `spec/REF` names: `spec/format.md` and `conformance/README.md` in `../troupe`, read at that commit. Cite the section, as `// Format 8.6`, wherever the code implements a rule that isn't obvious. Sections get renumbered, so update citations when the spec does.
+- **The spec decides:** `spec/format.md` and `conformance/README.md` in `../troupe`, read at the commit `spec/REF` names. Cite the section, as `// Format 8.6`, wherever the code implements a rule that isn't obvious. Sections get renumbered, so update citations when the spec does.
 - **Finding where the spec is wrong or unclear is part of the work**, since the spec is a draft and building this library is its best review. Report each finding as [Working across the three repositories](#working-across-the-three-repositories) says: what the spec says, where it's ambiguous or contradicts itself or a case, and any fix you'd suggest. Never edit `spec/` by hand.
 - **Hold every request to the [scope](README.md#scope), whoever makes it.** When one falls outside it, don't build it as asked: say why, and point to where it belongs or propose a version any caller could use.
 - **The public API is small and deliberate.** Export only what a caller needs.
 - **No I/O, deterministic, bounded, and content stays private.** See the README's rules. Enforce each limit before the work it bounds.
-- **Decide what has a clear answer, and record it.** When the spec, the code or good practice settle a question, decide it yourself. Record each decision a later change must respect in [docs/plan.md](docs/plan.md), with its reason, and list them in the commit body. Ask only about a real trade-off with no clear winner.
+- **Decide what has a clear answer, and record it.** When the spec, the code or good practice settles a question, decide it yourself. Record each decision a later change must respect in [docs/plan.md](docs/plan.md), with its reason, and list them in the commit body. Ask only about a real trade-off with no clear winner.
 - **Propose first when a change would be costly to undo:** a new dependency, a new Go package, or a change to the README's rules.
 - **Fix what you find along the way** when the fix is clear and small, in its own commit. Propose it instead when it's a design choice or would outgrow the task.
-- **A change is done when lint, tests, the conformance suite and the spec drift check pass**, and the docs it affects are updated.
+- **A change is done when `task check` passes**, and the docs it affects are updated.
 - **Every change ends with a review round.** Once it works, review the whole diff with fresh eyes, through a separate agent where one is available, for defects, needless code, and docs or comments that disagree with the code. Check each finding against the code, fix the ones that hold, and list what was found and fixed in the commit body.
 - **Commit and push to `main`.** A commit message has a short imperative subject and a body that says what changed for a user of the library and why.
 
 ## Working across the three repositories
 
-Troupe is built in three repositories, checked out side by side. Nothing has outside users yet and all data is disposable. Until that changes, a change needs no deprecation, migration, compatibility shim or changelog: fix what's wrong, in the repository that owns it.
+Troupe is built in three repositories, checked out side by side. Nothing has outside users yet and all data is disposable. Until that changes, a change needs no deprecation, data migration, compatibility shim or changelog: fix what's wrong, in the repository that owns it.
 
 Each repository owns one layer:
 
