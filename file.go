@@ -6,7 +6,6 @@ import (
 	"encoding/json/jsontext"
 	"errors"
 	"fmt"
-	"io"
 	"iter"
 	"maps"
 	"regexp"
@@ -68,8 +67,11 @@ func (b *Bundle) FileFields() iter.Seq[FileField] {
 var dataURI = regexp.MustCompile(`^data:(image/(?:png|jpeg|webp|avif|gif));base64,`)
 
 // fileValue reads the value of a field that holds a file, reporting false
-// when it has none of the forms of Format 12.2.
+// when it has none of the forms of Format 12.2, as the schema judges them.
 func fileValue(v string) (FileField, bool) {
+	if schemas().image.Validate(v) != nil {
+		return FileField{}, false
+	}
 	switch {
 	case packagePath.MatchString(v):
 		return FileField{Path: v}, true
@@ -77,11 +79,8 @@ func fileValue(v string) (FileField, bool) {
 		return FileField{URL: v}, true
 	}
 	m := dataURI.FindStringSubmatch(v)
-	if m == nil {
-		return FileField{}, false
-	}
-	data, err := base64.StdEncoding.DecodeString(v[len(m[0]):])
-	return FileField{MediaType: m[1], Data: data}, err == nil
+	data, _ := base64.StdEncoding.DecodeString(v[len(m[0]):]) // the schema's pattern is base64
+	return FileField{MediaType: m[1], Data: data}, true
 }
 
 // ReplaceFileFields returns doc, a document's JSON, with the fields that hold
@@ -103,29 +102,24 @@ func ReplaceFileFields(doc []byte, values map[string]string) ([]byte, error) {
 		start, end int64
 		value      []byte
 	}
+	if !jsontext.Value(doc).IsValid() {
+		return nil, errors.New("troupe: the document isn't one JSON value")
+	}
 	var spans []span
 	dec := jsontext.NewDecoder(bytes.NewReader(doc))
-	for {
-		var err error
-		kind, n := dec.StackIndex(dec.StackDepth())
-		switch k := dec.PeekKind(); {
-		case k == '{' || k == '[' || k == '}' || k == ']' || kind == '{' && n%2 == 0:
-			_, err = dec.ReadToken()
-		default:
-			var v jsontext.Value
-			v, err = dec.ReadValue()
-			p := string(dec.StackPointer())
-			if q, ok := quoted[p]; ok && err == nil && v.Kind() == '"' {
-				end := dec.InputOffset()
-				spans = append(spans, span{end - int64(len(v)), end, q})
-				delete(quoted, p)
-			}
+	// The document is valid, so reading it can't fail, and its kind is 0
+	// only at its end.
+	for k := dec.PeekKind(); k != 0; k = dec.PeekKind() {
+		if kind, n := dec.StackIndex(dec.StackDepth()); k == '{' || k == '[' || k == '}' || k == ']' || kind == '{' && n%2 == 0 {
+			_, _ = dec.ReadToken()
+			continue
 		}
-		if errors.Is(err, io.EOF) {
-			break
-		}
-		if err != nil {
-			return nil, errors.New("troupe: the document isn't JSON")
+		v, _ := dec.ReadValue()
+		p := string(dec.StackPointer())
+		if q, ok := quoted[p]; ok && v.Kind() == '"' {
+			end := dec.InputOffset()
+			spans = append(spans, span{end - int64(len(v)), end, q})
+			delete(quoted, p)
 		}
 	}
 	if len(quoted) > 0 {

@@ -15,7 +15,9 @@ func TestFileFields(t *testing.T) {
 	b := &troupe.Bundle{
 		Cover:      "https://x.test/cover.png",
 		Characters: []troupe.Character{{}, {Avatar: "images/kai.png"}},
-		Worlds:     []troupe.World{{Locations: []troupe.Location{{Image: "data:image/gif;base64,R0lG"}, {Image: "data:text/plain;base64,R0lG"}}}},
+		Worlds: []troupe.World{{Locations: []troupe.Location{
+			{Image: "data:image/gif;base64,R0lG"}, {Image: "data:text/plain;base64,R0lG"}, {Image: "https://x.test/a b.png"},
+		}}},
 		Scenarios: []troupe.Scenario{{Openings: []troupe.Opening{{Content: []troupe.Part{
 			{Text: "Hi."},
 			{Type: "image", Src: "map.webp"},
@@ -46,7 +48,9 @@ func TestReplaceFileFieldsErrors(t *testing.T) {
 			t.Errorf("%v: no error", values)
 		}
 	}
-	if _, err := troupe.ReplaceFileFields([]byte(`{"cover":"a.png"`), map[string]string{"/cover": "c.png"}); err == nil {
-		t.Error("JSON cut short: no error")
+	for _, doc := range []string{`{"cover":"a.png"`, `{"cover":"a.png"} {"cover":"b.png"}`} {
+		if _, err := troupe.ReplaceFileFields([]byte(doc), map[string]string{"/cover": "c.png"}); err == nil {
+			t.Errorf("%s: no error", doc)
+		}
 	}
 }
