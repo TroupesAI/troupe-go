@@ -2,13 +2,7 @@
 
 Guidance for coding agents working on troupe-go, the Go library for the Troupe format.
 
-Read the [README](README.md) for scope and rules, and [docs/plan.md](docs/plan.md) for what is being built. The spec is the authority on behavior: [`spec/format.md`](https://github.com/TroupesAI/troupe/blob/main/spec/format.md) and the [conformance protocol](https://github.com/TroupesAI/troupe/blob/main/conformance/README.md). A checkout of the spec repository is usually at `../troupe`.
-
-## Context
-
-- The main user is the [TroupesAI platform](https://troupes.ai), a multi-user roleplay app with a Go API. It's a private repository, usually checked out at `../platform`, and its `docs/stack.md` records its architecture. The platform imports this module for everything the spec defines and does the rest itself: prompts, models, storage and HTTP.
-- This repository is public. Write code and docs for anyone who reads Troupe files in Go, not only the platform.
-- The spec is a draft that is still changing. Building this library is its best remaining review, so finding where the spec is wrong or unclear is part of the work.
+Read the [README](README.md) for scope and rules, and [docs/plan.md](docs/plan.md) for what is being built.
 
 ## Quality bar
 
@@ -19,20 +13,41 @@ The bar is high: every change should be one a demanding senior reviewer approves
 - **No defensive noise.** Validate at the boundary, where bytes come in, and trust what's inside it. Don't check for states that can't happen.
 - **Match the surrounding code** in naming, structure and idiom. Consistency beats personal preference.
 - **Add a dependency only when it removes real complexity.** Prefer the standard library.
-- **Every test earns its place.** The conformance suite is the main test. Write a test of your own only for behavior the suite doesn't cover that a caller relies on, or for a bug that got through once. Before adding one, check whether an existing test already fails when that behavior breaks. Don't re-test what a library guarantees.
+- **Every test earns its place.** The conformance suite is the main test. Write a test of your own only for behavior the suite doesn't cover that a caller relies on, or for a bug that got through once. Before adding one, check whether an existing test already fails when that behavior breaks; if so, extend it rather than adding a near-copy. Don't re-test what a library guarantees, and don't assert values nobody relies on, such as tuning constants. A regression test must fail reliably when its bug comes back; if no test can, explain the guarantee in a comment where the code provides it.
 - **Tests check behavior through the public API.** The conformance runner lives in an external test package, so the API has to be able to do everything the suite asks.
 
 The same applies to docs: short, exact and current.
 
 ## Rules
 
-- **The spec decides.** Cite the section, as `// Format 8.6`, wherever the code implements a rule that isn't obvious. Sections get renumbered, so update citations when the spec does.
-- **When the spec is wrong or unclear, stop and report it.** Say what the spec says, where it's ambiguous or contradicts itself or a case, and what you'd propose. The fix goes into the spec repository, with a conformance case only when the issue is one apps could disagree on. Never work around the spec here, and never edit the copied suite or schemas.
-- **Every request must fit the [scope](README.md#scope), whoever makes it.** When one asks for something the spec leaves to apps or doesn't define, or for API only one caller would want, don't build it as asked: say why, and point to where it belongs or propose a version any caller could use.
-- **The public API is small and deliberate.** Export only what a caller needs, since exported names are hard to take back once the platform uses them.
-- **No I/O, deterministic, bounded.** See the README's rules. Enforce each limit before the work it bounds.
-- **Never put document text in errors or diagnostics.** Codes, JSON Pointers and IDs only.
-- **Decide what has a clear answer, and keep going.** When the spec, the plan, the platform's needs or good practice settle a question, including exported API, dependencies and architecture, decide it yourself. Record each decision in [docs/plan.md](docs/plan.md) with its reason, and list the decisions you made in the report at the end of each phase.
-- **Ask only when you truly can't decide:** a real trade-off with no clear winner, a spec issue that needs a spec change, or something only the user can do, such as creating the GitHub repository, committing or pushing.
+- **The spec decides**, at the commit `spec/REF` names: `spec/format.md` and `conformance/README.md` in `../troupe`, read at that commit. Cite the section, as `// Format 8.6`, wherever the code implements a rule that isn't obvious. Sections get renumbered, so update citations when the spec does.
+- **Finding where the spec is wrong or unclear is part of the work**, since the spec is a draft and building this library is its best review. Report each finding as [Working across the three repositories](#working-across-the-three-repositories) says: what the spec says, where it's ambiguous or contradicts itself or a case, and any fix you'd suggest. Never edit `spec/` by hand.
+- **Hold every request to the [scope](README.md#scope), whoever makes it.** When one falls outside it, don't build it as asked: say why, and point to where it belongs or propose a version any caller could use.
+- **The public API is small and deliberate.** Export only what a caller needs.
+- **No I/O, deterministic, bounded, and content stays private.** See the README's rules. Enforce each limit before the work it bounds.
+- **Decide what has a clear answer, and record it.** When the spec, the code or good practice settle a question, decide it yourself. Record each decision a later change must respect in [docs/plan.md](docs/plan.md), with its reason, and list them in the commit body. Ask only about a real trade-off with no clear winner.
+- **Propose first when a change would be costly to undo:** a new dependency, a new Go package, or a change to the README's rules.
+- **Fix what you find along the way** when the fix is clear and small, in its own commit. Propose it instead when it's a design choice or would outgrow the task.
 - **A change is done when lint, tests, the conformance suite and the spec drift check pass**, and the docs it affects are updated.
-- **Commit messages** have a short imperative subject and a body that says what changed for a user of the library and why.
+- **Every change ends with a review round.** Once it works, review the whole diff with fresh eyes, through a separate agent where one is available, for defects, needless code, and docs or comments that disagree with the code. Check each finding against the code, fix the ones that hold, and list what was found and fixed in the commit body.
+- **Commit and push to `main`.** A commit message has a short imperative subject and a body that says what changed for a user of the library and why.
+
+## Working across the three repositories
+
+Troupe is built in three repositories, checked out side by side. Nothing has outside users yet and all data is disposable. Until that changes, a change needs no deprecation, migration, compatibility shim or changelog: fix what's wrong, in the repository that owns it.
+
+Each repository owns one layer:
+
+- **troupe** (`../troupe`), the spec. Owns what a Troupe file contains and means, and what every conforming app must do with it: the format, the schemas, the conformance suite and the guides. Doesn't own any implementation, library API, or behavior the spec leaves to apps. *Test: without it, could two apps reading the same file disagree?*
+- **troupe-go** (`../troupe-go`), the Go library. Owns computing what the spec defines, for any Go caller: reading, checks, state, macros, conditions, activation and writing. Doesn't own anything the spec leaves undefined, or API only one caller would use. *Test: would Go programs other than the platform need it, in this form?*
+- **platform** (`../platform`), the TroupesAI app. Owns everything the spec leaves to apps (Format 1.1): prompts, models, storage, HTTP, UI, and app-only data in `ext`. Doesn't own any Troupe semantics; it gets those from troupe-go. *Test: is it a product choice for this app?*
+
+Their full scopes are Format 1.1, troupe-go's README and the platform's `docs/stack.md`. A workaround is code in one layer that does another layer's work: reimplementing, patching or second-guessing it, or making up for its bug or gap. Never write one.
+
+- **Read the other repositories; never change them.**
+- **When the task needs another repository to change, don't finish it.** Go through the rest of the task and collect everything it needs from other repositories, without building on an assumed answer. Then stop and give the user a prompt for each repository, in the order troupe, troupe-go, platform. When one depends on another's answer, give only the first, and write the next from its hand-back. A finding the task doesn't depend on doesn't stop it: finish, and end with a prompt for it.
+- **A prompt stands on its own**, since the agent that receives it doesn't share this conversation. It says what's needed, why, and how the result will be used, cites the spec sections involved, and leaves the design to that repository.
+- **The receiving repository decides.** When it declines a request or proposes another design, adopt its answer or argue against it on the merits. Never build the declined version locally.
+- **End a change another repository waits on with a hand-back:** what changed, the pushed commit to depend on, what it breaks, and each dependent repository's next step, such as `task spec REF=<commit>` in troupe-go or `go get github.com/TroupesAI/troupe-go@<commit>` in the platform's `apps/api`.
+- **Adopt upstream changes fully.** Depend on a pushed commit. A local `replace` or copy is only for trying a change, never committed. Delete what the change makes redundant, and fix what it breaks without a shim.
+- **This section is the same in all three repositories.** A change to it, or to a repository's scope, goes to the other two as a request, so all three change together.

@@ -24,7 +24,7 @@ The cost is that a change touching both the engine and the platform can't land i
 | Copy the spec's `examples/` too, into `spec/examples` | Skipping the cases that read them | Four cases read their bundle and session from `../../../examples/`, so the same layout keeps those paths working. The examples are CC BY 4.0, as the README's License section says |
 | Copy a commit of the 0.14 draft until it is tagged | Waiting for a tag | Fixes found here land in the draft as commits, and `spec/REF` names the one copied |
 | The drift check downloads `spec/REF` into a temporary directory and diffs it against `spec/` | Overwriting `spec/` and asking git | It never touches the working tree, and it catches added and removed files |
-| Tags `v<spec version>.<patch>`, as `v0.14.2` | Versions of its own | The version shows which spec it reads. Revisit at spec 1.0: an API break during 1.x would then need a `/v2` module path |
+| No releases before 1.0, then tags `v<spec version>.<patch>`, as `v1.0.2` | Versions of its own | Before 1.0, callers require a pushed commit as a pseudo-version. From 1.0, the version shows which spec it reads; an API break during 1.x would then need a `/v2` module path |
 | `go 1.27.0` in `go.mod` | `go 1.27.2` | It's the minimum for everyone who imports the module, and 1.27 is what `encoding/json/v2` needs. mise pins 1.27.2 for development |
 | No clock interface | Passing in the current time | Every time a rule reads comes from a message's `at` (Format 10.1), so nothing reads the clock |
 | `encoding/json/jsontext` for the strict pass, `encoding/json/v2` with `WithUnmarshalers` for the typed model | `encoding/json` v1, or a third-party decoder | Stable since Go 1.27. `jsontext` rejects duplicate names, invalid UTF-8 and unpaired surrogates by default, and `StackPointer` locates failures without document text. Caller-supplied unmarshalers handle `8.0` and wrong-typed values without changing exported types. The cost: a program built with `GOEXPERIMENT=nojsonv2` can't import the module |
@@ -122,7 +122,7 @@ The cost is that a change touching both the engine and the platform can't land i
 | Keys compile once per story | Compiling them on every match | A platform matches every key in use on every turn |
 | `State.MarshalJSON` and `Story.UnmarshalState(data)` | A method on `State` taking a story, or `encoding.BinaryMarshaler` | A state is read back as a story's. `MarshalJSON` lets a caller pass a `State` as a JSON parameter, such as PostgreSQL's `jsonb` |
 | A stored state names the Troupe version, holds its values by the keys changes write (Format 8.5), and holds what else `Apply` keeps under names of its own | The internal structure | The keys are the spec's, so the format doesn't follow internals and later releases read it. A key the stored state doesn't hold takes its initial value, as a joiner added to the header needs (Format 8.3) |
-| `UnmarshalState` fails for another Troupe version, and for a key or value that isn't valid in the story | Skipping them | A state restored into the wrong story would be silently wrong. Upgrading stored states belongs with upgrading documents |
+| `UnmarshalState` fails for another Troupe version, and for a key or value that isn't valid in the story | Skipping them | A state restored into the wrong story would be silently wrong |
 | A state stored in a format the release doesn't read, another Troupe version's or one from before a field `Apply` needs, fails with an error wrapping `ErrStateFormat` | A default for the missing field, or one error for every failure | What a stored state lacks depends on the path, which it doesn't hold, so a default would be silently wrong. The caller computes such states again with `Apply`, and tells them from corrupt ones with `errors.Is` |
 | A state keeps every character present in the state at a message on its path, and `State.Spoilers()` returns the spoiler cast members' characters it lacks, as IDs in cast order | The caller tracking presence, or keeping only spoilers | Whether a member is still a spoiler is Format 6.1's, and keeping every character keeps a stored state right if the bundle marks another member spoiler |
 | A stored state writes U+0000 as U+0001 `0`, and U+0001 as U+0001 U+0001, in every string | Base64, or refusing U+0000 | `jsonb` refuses `\u0000`, which a state value or session entry may hold, and text without either character stays as it is |
@@ -196,7 +196,6 @@ Each phase ends with its part of the work tested, lint clean, and its decisions 
 
 These are what the platform needs that the suite doesn't test. Build them in the order the platform asks for them, with tests of our own, since the suite has no cases for them:
 
-- Upgrading documents from the previous minor version. The platform stores 0.14 bundles, sessions and states, so this must land before the library targets the next spec version, or none of them read.
 - Checking one proposed change, key and value, before the platform records it (Format 8.5), once players or models change state. `Check` already judges keys and values.
 - Writing sessions and packages back, keeping every `ext` and a package's other files (Format 12.3, 13), with a session's file fields, so packages with sessions can be imported and exported. The model marshals as the spec writes it, and `ReplaceFileFields` replaces a bundle's file fields.
 - The `pull` entries a point could retrieve (Format 7.2), once the platform retrieves them. Retrieving them, by search or at a model's request, is the platform's.
@@ -213,7 +212,3 @@ The platform's API (its architecture is in `docs/stack.md` of the platform repos
 - **Export** a package with its images and sessions.
 
 Prompt assembly, the choice of which active entries reach the model, model calls and storage stay in the platform.
-
-## Spec feedback
-
-When the code shows the spec is wrong or unclear, write it up for the user: what the spec says, the case or input where it matters, and a proposed fix. The user decides, and changes the spec repository. Add a conformance case only when apps could disagree on the issue, not for coverage. Then sync the copy here with `task spec`.
