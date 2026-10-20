@@ -26,9 +26,8 @@ type Member struct {
 // Spoilers returns the characters of the cast members marked spoiler that are
 // still spoilers for players at s, in cast order: those that no state at a
 // message on its path, the root's included, has present (Format 6.1). The
-// initial state has the whole cast present, but it counts for nothing, so a
-// member stays a spoiler only when the root leaves it out of scene.present,
-// such as through an opening's set.
+// cast starts present, so only a root that leaves a member out of
+// scene.present, such as through an opening's set, keeps it a spoiler.
 func (s State) Spoilers() []string {
 	if s.s == nil {
 		return nil

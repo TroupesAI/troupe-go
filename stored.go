@@ -28,20 +28,18 @@ type stored struct {
 	Appeared *[]string `json:"appeared"`
 }
 
-// ErrStateFormat is what UnmarshalState's error wraps when the state was
-// stored in a format this release doesn't read: by a release of another
-// Troupe version, or of this one before states kept who has been present.
-// The state can't be restored, only computed again with Apply.
+// ErrStateFormat is what UnmarshalState's error wraps for a state stored in a
+// format this release doesn't read, as another Troupe version's or an earlier
+// release's may be. Apply computes it again.
 var ErrStateFormat = errors.New("the stored state is in a format this release doesn't read")
 
 // MarshalJSON returns s as JSON that UnmarshalState reads back: every key and
 // value s holds, and what else it keeps that depends on the path, such as
 // the rounds, the session entries in use, when entries were recorded as
 // activated and who has been present. The JSON names this module's Troupe
-// version, which reads it back, later releases of the module included,
-// unless their UnmarshalState wraps ErrStateFormat. No string in it holds
-// U+0000, so a database's JSON type that refuses it, such as PostgreSQL's
-// jsonb, can hold it.
+// version; a later release reads it back or wraps ErrStateFormat. No string
+// in it holds U+0000, so a database's JSON type that refuses it, such as
+// PostgreSQL's jsonb, can hold it.
 //
 // It fails for the zero State.
 func (s State) MarshalJSON() ([]byte, error) {
