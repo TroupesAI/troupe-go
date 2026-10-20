@@ -1,5 +1,5 @@
 {
-  "description": "A disabled bundle entry is still in use (Format 6.4, 7.2, 11.4, 15.3), so activated may name it: a session isn't pinned to a version of its bundle. A session entry a message removed is UNKNOWN_ENTRY instead (checks/session-entries.json)",
+  "description": "A disabled bundle entry is still in use (Format 6.4, 7.2, 11.4, 15.3), so activated may name it: a session isn't pinned to a version of its bundle. A reply may also name a session entry its own entries disable, since activated is judged at its evaluation point. A session entry an earlier message removed is UNKNOWN_ENTRY instead (checks/session-entries.json)",
   "bundle": {
     "kind": "bundle",
     "characters": [
@@ -52,6 +52,12 @@
             "speaker": "p",
             "text": "Hi."
           }
+        ],
+        "entries": [
+          {
+            "id": "clue",
+            "text": "The key is under the mat."
+          }
         ]
       },
       {
@@ -66,6 +72,28 @@
           {
             "speaker": "a",
             "text": "Hello."
+          }
+        ]
+      },
+      {
+        "id": "3",
+        "parent": "1",
+        "from": "model",
+        "char": "a",
+        "activated": [
+          "session/clue"
+        ],
+        "content": [
+          {
+            "speaker": "a",
+            "text": "Under the mat. I'll forget it now."
+          }
+        ],
+        "entries": [
+          {
+            "id": "clue",
+            "text": "Forgotten.",
+            "disabled": true
           }
         ]
       }

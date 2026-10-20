@@ -1,5 +1,5 @@
 {
-  "description": "UNKNOWN_SCENARIO (Format 15.3): the header's scenario must name a scenario; a character's ID doesn't name one",
+  "description": "UNKNOWN_SCENARIO (Format 15.3): the header's scenario must name a scenario; a character's ID doesn't name one. The session is then reported with UNKNOWN_SCENARIO, SCHEMA and UNKNOWN_FIELD only: its unknown property is reported, but not its opening, its change to a variable or its activated entry",
   "bundle": {
     "kind": "bundle",
     "characters": [
@@ -11,7 +11,34 @@
     ],
     "scenarios": [
       {
-        "id": "s"
+        "id": "s",
+        "variables": [
+          {
+            "id": "v",
+            "type": "int",
+            "by": [
+              "model"
+            ],
+            "description": "A count."
+          }
+        ],
+        "entries": [
+          {
+            "id": "e",
+            "text": "An entry."
+          }
+        ],
+        "openings": [
+          {
+            "id": "o",
+            "content": [
+              {
+                "speaker": "a",
+                "text": "Hello."
+              }
+            ]
+          }
+        ]
       }
     ]
   },
@@ -23,10 +50,46 @@
     "messages": [
       {
         "id": "1",
+        "opening": "o",
+        "from": "system",
+        "content": [
+          {
+            "speaker": "a",
+            "text": "Hello."
+          }
+        ]
+      },
+      {
+        "id": "2",
+        "parent": "1",
         "from": "player",
         "content": [
           {
             "text": "Hi."
+          }
+        ],
+        "mood": "cheerful"
+      },
+      {
+        "id": "3",
+        "parent": "2",
+        "from": "model",
+        "char": "a",
+        "activated": [
+          "s/e"
+        ],
+        "content": [
+          {
+            "speaker": "a",
+            "text": "Welcome."
+          }
+        ],
+        "changes": [
+          {
+            "by": "model",
+            "set": {
+              "state.v": 1
+            }
           }
         ]
       }
@@ -37,12 +100,17 @@
       "type": "check",
       "expect": {
         "codes": [
+          "UNKNOWN_FIELD",
           "UNKNOWN_SCENARIO"
         ],
         "includes": [
           {
             "code": "UNKNOWN_SCENARIO",
             "at": "header/scenario"
+          },
+          {
+            "code": "UNKNOWN_FIELD",
+            "at": "message:2/mood"
           }
         ]
       }

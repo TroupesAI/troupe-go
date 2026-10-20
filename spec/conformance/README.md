@@ -42,7 +42,7 @@ Every test starts from a fresh copy of the case's inputs. Tests don't affect eac
 
 - **Levels.** An implementation that reads only bundles (Format 15.2) skips the tests of reading sessions: `parse` tests of `kind: "session"`, `check` tests of cases with a `session` or `sessionFile`, and `parse` tests marked `"level": "session"`. Other tests use a case's session only as the chat they run on.
 - **Conforming inputs.** `state`, `macro`, `cel` and `knows` tests run only on inputs that conform (Format 15.1), since the spec gives files that fail a check no meaning to test. Every case with such tests also has a `check` test that expects no codes, which a runner that doesn't skip it uses to confirm them.
-- **The story.** The session's `scenario` names the scenario, and its header's `players` lists every player (Format 11.2). Without a session, use the bundle's first scenario, whose seats, those marked `player` included, are then unfilled and left out of the cast (Format 6.1), so there are no players. A `check` test checks the bundle once for each scenario (Format 6.4, 10.2), with a session as without one, and then checks the session against its scenario.
+- **The story.** The session's `scenario` names the scenario, and its header's `players` lists every player (Format 11.2). Without a session, use the bundle's first scenario, whose seats, those marked `player` included, are then unfilled and left out of the cast (Format 6.1), so there are no players. A `check` test checks the bundle once for each scenario (Format 6.4, 10.2), with a session as without one, and then checks the session against its scenario, or as Format 15.3 says when it names none.
 
 ## 3. Tests
 

@@ -1,5 +1,5 @@
 {
-  "description": "Session entries (Format 6.4, 11.3, 15.3): an entry disabled by a later message is no longer in use, so a message after that can't list it in activated (UNKNOWN_ENTRY); one message can't add two entries with one ID (DUPLICATE_ID)",
+  "description": "Session entries (Format 6.4, 11.3, 11.4, 15.3): activated names entries in use at the message's evaluation point. An entry disabled by an earlier message is no longer in use, so a message after that can't list it (UNKNOWN_ENTRY); a reply can't list an entry its own entries add (UNKNOWN_ENTRY); one message can't add two entries with one ID (DUPLICATE_ID)",
   "bundle": {
     "kind": "bundle",
     "characters": [
@@ -121,6 +121,27 @@
             "text": "Two."
           }
         ]
+      },
+      {
+        "id": "7",
+        "parent": "1",
+        "from": "model",
+        "char": "a",
+        "activated": [
+          "session/hunch"
+        ],
+        "content": [
+          {
+            "speaker": "a",
+            "text": "I have a hunch."
+          }
+        ],
+        "entries": [
+          {
+            "id": "hunch",
+            "text": "Ann suspects the mat is a decoy."
+          }
+        ]
       }
     ]
   },
@@ -140,6 +161,10 @@
           {
             "code": "DUPLICATE_ID",
             "at": "message:5/entries/1/id"
+          },
+          {
+            "code": "UNKNOWN_ENTRY",
+            "at": "message:7/activated/0"
           }
         ]
       }

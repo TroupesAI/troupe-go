@@ -42,6 +42,7 @@ type RenderContext struct {
 // renders as nothing.
 func (st *Story) Render(text string, c RenderContext, r *rand.Rand) string {
 	sc := st.scope
+	own := sc.all.ownOf(sc.scenario, c.Owner)
 	tokens, _ := macro.Parse(text)
 	var b strings.Builder
 	for _, t := range tokens {
@@ -74,7 +75,7 @@ func (st *Story) Render(text string, c RenderContext, r *rand.Rand) string {
 		case macro.Pick:
 			b.WriteString(t.Options[r.IntN(len(t.Options))])
 		case macro.State, macro.Own:
-			name, v, below, ok := sc.all.declared(sc.scenario, c.Owner, t.Kind == macro.Own, t.Path)
+			name, v, below, ok := sc.all.declared(sc.scenario, own, t.Kind == macro.Own, t.Path)
 			if !ok {
 				b.WriteString(t.Text)
 				continue
@@ -228,7 +229,7 @@ func (sc *scope) characterNames(ids []string) string {
 
 // narrator returns what text calls the narrator (Format 6).
 func (sc *scope) narrator() string {
-	if sc.scenario != nil && sc.scenario.Narrator != "" {
+	if sc.scenario.Narrator != "" {
 		return sc.scenario.Narrator
 	}
 	return "the narrator"

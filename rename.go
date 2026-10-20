@@ -142,34 +142,34 @@ func (r *renamer) bundle(b *Bundle) {
 	for i := range b.Characters {
 		c, p := &b.Characters[i], ptr("", "characters", i)
 		in := r.scenarios(c)
-		r.text(ptr(p, "description"), c.Description, in, c.ID)
-		r.text(ptr(p, "summary"), c.Summary, in, c.ID)
+		r.text(ptr(p, "description"), c.Description, in, c.own())
+		r.text(ptr(p, "summary"), c.Summary, in, c.own())
 		for j, exchange := range c.Examples {
 			for k, l := range exchange {
 				r.character(ptr(p, "examples", j, k, "speaker"), l.Speaker)
-				r.text(ptr(p, "examples", j, k, "text"), l.Text, in, c.ID)
+				r.text(ptr(p, "examples", j, k, "text"), l.Text, in, c.own())
 			}
 		}
-		r.owner(p, c.Entries, c.Variables, in, c.ID)
+		r.owner(p, c.Entries, in, c.own())
 	}
 	for i := range b.Worlds {
 		w, p := &b.Worlds[i], ptr("", "worlds", i)
 		in := r.scenarios(w)
-		r.text(ptr(p, "description"), w.Description, in, w.ID)
+		r.text(ptr(p, "description"), w.Description, in, w.own())
 		for j, l := range w.Locations {
 			r.location(ptr(p, "locations", j, "parent"), l.Parent)
-			r.text(ptr(p, "locations", j, "description"), l.Description, in, w.ID)
+			r.text(ptr(p, "locations", j, "description"), l.Description, in, w.own())
 		}
-		r.owner(p, w.Entries, w.Variables, in, w.ID)
+		r.owner(p, w.Entries, in, w.own())
 	}
 	for i := range b.Scenarios {
 		s, p := &b.Scenarios[i], ptr("", "scenarios", i)
 		in := []*Scenario{s}
-		r.text(ptr(p, "premise"), s.Premise, in, s.ID)
-		r.text(ptr(p, "briefing"), s.Briefing, in, s.ID)
+		r.text(ptr(p, "premise"), s.Premise, in, s.own())
+		r.text(ptr(p, "briefing"), s.Briefing, in, s.own())
 		for j, m := range s.Cast {
 			r.character(ptr(p, "cast", j, "character"), m.Character)
-			r.text(ptr(p, "cast", j, "notes"), m.Notes, in, s.ID)
+			r.text(ptr(p, "cast", j, "notes"), m.Notes, in, s.own())
 		}
 		if s.Worlds != nil {
 			for j, w := range *s.Worlds {
@@ -182,11 +182,11 @@ func (r *renamer) bundle(b *Bundle) {
 				pp := ptr(p, "openings", j, "content", k)
 				r.character(ptr(pp, "speaker"), part.Speaker)
 				r.characters(ptr(pp, "knownBy"), part.KnownBy)
-				r.text(ptr(pp, "text"), part.Text, in, s.ID)
-				r.text(ptr(pp, "alt"), part.Alt, in, s.ID)
+				r.text(ptr(pp, "text"), part.Text, in, s.own())
+				r.text(ptr(pp, "alt"), part.Alt, in, s.own())
 			}
 		}
-		r.owner(p, s.Entries, s.Variables, in, s.ID)
+		r.owner(p, s.Entries, in, s.own())
 	}
 }
 
@@ -200,23 +200,24 @@ func (r *renamer) scenarios(o any) []*Scenario {
 	return []*Scenario{nil}
 }
 
-// owner rewrites the references in the entries and variables of owner, read
-// in the scenarios in.
-func (r *renamer) owner(p jsontext.Pointer, entries []Entry, vars []Variable, in []*Scenario, owner string) {
+// owner rewrites the references in the entries and variables, own, of an
+// owner, read in the scenarios in.
+func (r *renamer) owner(p jsontext.Pointer, entries []Entry, in []*Scenario, own ownVars) {
 	for i, e := range entries {
 		r.characters(ptr(p, "entries", i, "knownBy"), e.KnownBy)
-		r.text(ptr(p, "entries", i, "text"), e.Text, in, owner)
-		r.condition(ptr(p, "entries", i, "when"), e.When, in, owner)
+		r.text(ptr(p, "entries", i, "text"), e.Text, in, own)
+		r.condition(ptr(p, "entries", i, "when"), e.When, in, own)
 	}
+	vars := own.list()
 	for i := range vars {
-		r.variable(ptr(p, "variables", i), &vars[i], in, owner)
+		r.variable(ptr(p, "variables", i), &vars[i], in, own)
 	}
 }
 
 // variable rewrites the references in a variable's description, of and
 // initial value, and leaves its values that are the old ID.
-func (r *renamer) variable(p jsontext.Pointer, v *Variable, in []*Scenario, owner string) {
-	r.text(ptr(p, "description"), v.Description, in, owner)
+func (r *renamer) variable(p jsontext.Pointer, v *Variable, in []*Scenario, own ownVars) {
+	r.text(ptr(p, "description"), v.Description, in, own)
 	for i, s := range v.Values {
 		r.value(ptr(p, "values", i), s)
 	}
@@ -273,7 +274,7 @@ func (r *renamer) set(p jsontext.Pointer, s *Scenario, set map[string]jsontext.V
 			if !ok {
 				continue
 			}
-			switch path, safe := r.path([]*Scenario{s}, "", false, strings.Split(name, ".")); {
+			switch path, safe := r.path([]*Scenario{s}, ownVars{}, false, strings.Split(name, ".")); {
 			case path == nil:
 			case !safe:
 				r.leave(ptr(p, key))
@@ -284,9 +285,9 @@ func (r *renamer) set(p jsontext.Pointer, s *Scenario, set map[string]jsontext.V
 	}
 }
 
-// text rewrites the state and own paths of the macros in a text of owner,
-// read in the scenarios in.
-func (r *renamer) text(p jsontext.Pointer, text string, in []*Scenario, owner string) {
+// text rewrites the state and own paths of the macros in a text, with own
+// the variables own names in it, read in the scenarios in.
+func (r *renamer) text(p jsontext.Pointer, text string, in []*Scenario, own ownVars) {
 	tokens, _ := macro.Parse(text)
 	var b strings.Builder
 	last := 0
@@ -294,7 +295,7 @@ func (r *renamer) text(p jsontext.Pointer, text string, in []*Scenario, owner st
 		if t.Kind != macro.State && t.Kind != macro.Own {
 			continue
 		}
-		path, safe := r.path(in, owner, t.Kind == macro.Own, t.Path)
+		path, safe := r.path(in, own, t.Kind == macro.Own, t.Path)
 		if path == nil {
 			continue
 		}
@@ -318,9 +319,10 @@ func (r *renamer) text(p jsontext.Pointer, text string, in []*Scenario, owner st
 	}
 }
 
-// condition rewrites the names a condition of owner reads, in the scenarios
-// in, and the string literals it compares with IDs.
-func (r *renamer) condition(p jsontext.Pointer, expr string, in []*Scenario, owner string) {
+// condition rewrites the names a condition reads, with own the variables own
+// names in it, in the scenarios in, and the string literals it compares with
+// IDs.
+func (r *renamer) condition(p jsontext.Pointer, expr string, in []*Scenario, own ownVars) {
 	if expr == "" {
 		return
 	}
@@ -342,7 +344,7 @@ func (r *renamer) condition(p jsontext.Pointer, expr string, in []*Scenario, own
 		if s.Key != nil {
 			path, at = append(slices.Clone(path), s.Key.Value), append(slices.Clone(at), s.Key.At)
 		}
-		renamed, safe := r.path(in, owner, s.Names[0] == "own", path)
+		renamed, safe := r.path(in, own, s.Names[0] == "own", path)
 		if s.Key != nil && (renamed == nil || renamed[len(path)-1] == s.Key.Value) {
 			// A key that isn't a keyed variable's, as in 'kai' in
 			// state.crew, is a literal like any other.
@@ -430,15 +432,15 @@ func opening(s *Scenario, id string) *Opening {
 	return &s.Openings[i]
 }
 
-// path returns a state or own path, read in a text, condition or key of owner,
-// with the names that refer to the object, in any of the scenarios in, as
-// the new ID, or nil when none does. It reports whether that is safe: whether,
-// in every one of the scenarios, each of those names refers to the object, or
-// to nothing as it is and as renamed.
-func (r *renamer) path(in []*Scenario, owner string, own bool, path []string) ([]string, bool) {
+// path returns a state or own path, as isOwn says, read in a text, condition or
+// key with own the variables own names there, with the names that refer to
+// the object, in any of the scenarios in, as the new ID, or nil when none does. It reports whether
+// that is safe: whether, in every one of the scenarios, each of those names
+// refers to the object, or to nothing as it is and as renamed.
+func (r *renamer) path(in []*Scenario, own ownVars, isOwn bool, path []string) ([]string, bool) {
 	var at []int
 	for _, s := range in {
-		for k, x := range r.refs(s, owner, own, path) {
+		for k, x := range r.refs(s, own, isOwn, path) {
 			if x == r.target && !slices.Contains(at, k) {
 				at = append(at, k)
 			}
@@ -452,13 +454,13 @@ func (r *renamer) path(in []*Scenario, owner string, own bool, path []string) ([
 		renamed[k] = r.id
 	}
 	for _, s := range in {
-		before, after := r.refs(s, owner, own, path), r.refs(s, owner, own, renamed)
+		before, after := r.refs(s, own, isOwn, path), r.refs(s, own, isOwn, renamed)
 		for _, k := range at {
 			if before[k] != r.target && (before[k] != nil || after[k] != nil) {
 				return renamed, false
 			}
 		}
-		if _, v, below, ok := r.names.declared(s, owner, own, path); ok && r.used && v.Of.keyed() && !v.Of.Cast &&
+		if _, v, below, ok := r.names.declared(s, own, isOwn, path); ok && r.used && v.Of.keyed() && !v.Of.Cast &&
 			len(below) > 0 && slices.Contains(at, len(path)-len(below)) {
 			return renamed, false
 		}
@@ -467,12 +469,13 @@ func (r *renamer) path(in []*Scenario, owner string, own bool, path []string) ([
 }
 
 // refs returns what each name of a state or own path refers to, read in a
-// text or condition of owner as scenario s plays it (Format 9, 10.2): the
-// character or world whose variable it selects, the variable, and the
-// character whose ID is the key of a keyed variable; nil for any other name.
-func (r *renamer) refs(s *Scenario, owner string, own bool, path []string) []any {
+// text or condition with own the variables own names there, as scenario s
+// plays it (Format 9, 10.2): the character or world whose variable it
+// selects, the variable, and the character whose ID is the key of a keyed
+// variable; nil for any other name.
+func (r *renamer) refs(s *Scenario, own ownVars, isOwn bool, path []string) []any {
 	refs := make([]any, len(path))
-	_, v, below, ok := r.names.declared(s, owner, own, path)
+	_, v, below, ok := r.names.declared(s, own, isOwn, path)
 	if !ok {
 		return refs
 	}

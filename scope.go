@@ -9,9 +9,9 @@ import (
 // scope is what a scenario has in use, as a session plays it or, without a
 // session, as the scenario is written (Format 6.4).
 type scope struct {
-	all      *names    // every character, world and location of the bundle and session
-	scenario *Scenario // nil when the session names none
-	index    int       // the scenario's index in the bundle
+	all      *names // every character, world and location of the bundle and session
+	scenario *Scenario
+	index    int // the scenario's index in the bundle
 	// cast is the cast's characters in cast order (Format 11.2). Without a
 	// session, its seats are unfilled and left out (conformance README
 	// section 2).
@@ -95,33 +95,26 @@ func scenarioIndex(b *Bundle, id string) int {
 }
 
 // newScope returns the scope of the bundle's scenario i, played in s when s
-// isn't nil, or of no scenario when i is -1.
+// isn't nil.
 func newScope(b *Bundle, s *Session, i int) *scope {
 	n := newNames(b, s)
+	scenario := &b.Scenarios[i]
 	sc := &scope{
 		all:        n,
+		scenario:   scenario,
 		index:      i,
 		characters: map[string]*Character{},
 		worlds:     map[string]*World{},
 		openings:   map[string]bool{},
 		byName:     map[string]*binding{},
 	}
-	var scenario *Scenario
-	if i >= 0 {
-		scenario = &b.Scenarios[i]
-		sc.scenario = scenario
-		sc.bind(scenario.ID, "state.", scenario.Variables)
-		for _, o := range scenario.Openings {
-			sc.openings[o.ID] = true
-		}
+	sc.bind(scenario.ID, "state.", scenario.Variables)
+	for _, o := range scenario.Openings {
+		sc.openings[o.ID] = true
 	}
 
-	var members []CastMember
-	switch {
-	case scenario == nil:
-	case scenario.Cast != nil:
-		members = scenario.Cast
-	default:
+	members := scenario.Cast
+	if members == nil {
 		// One player seat, then every bundle character (Format 6.1).
 		members = []CastMember{{}}
 		for _, c := range b.Characters {
@@ -151,13 +144,11 @@ func newScope(b *Bundle, s *Session, i int) *scope {
 	sc.openingCast = inUse
 
 	var worldIDs []string
-	switch {
-	case scenario == nil:
-	case scenario.Worlds != nil:
+	if scenario.Worlds != nil {
 		// A copy, since the session's are appended, and the bundle may be
 		// shared.
 		worldIDs = slices.Clone(*scenario.Worlds)
-	default:
+	} else {
 		for _, w := range b.Worlds {
 			worldIDs = append(worldIDs, w.ID)
 		}
@@ -293,7 +284,7 @@ func allows(b *binding, k string, cast []string) bool {
 func (sc *scope) entry(owner, id string) bool {
 	var entries []Entry
 	switch {
-	case sc.scenario != nil && sc.scenario.ID == owner:
+	case sc.scenario.ID == owner:
 		entries = sc.scenario.Entries
 	case sc.characters[owner] != nil:
 		entries = sc.characters[owner].Entries
@@ -325,43 +316,61 @@ func isKey(k string) bool {
 // (Format 9): its full name, its declaration, and the path's segments below
 // it. It reports false when the path names no declared variable, as Format
 // 10.2 counts declarations: state against scenario's variables, when it isn't
-// nil, and those of every character and world; own against those of owner, a
-// character, world or scenario ID.
-func (n *names) declared(scenario *Scenario, owner string, own bool, path []string) (string, *Variable, []string, bool) {
-	var vars []Variable
-	var prefix string
+// nil, and those of every character and world; own against own.
+func (n *names) declared(scenario *Scenario, own ownVars, isOwn bool, path []string) (string, *Variable, []string, bool) {
+	owner := own
 	switch {
-	case own:
-		vars, prefix = n.own(scenario, owner)
+	case isOwn:
 	case scenario != nil && variableOf(scenario.Variables, path[0]) != nil:
-		vars, prefix = scenario.Variables, "state."
+		owner = scenario.own()
 	case len(path) < 2:
 		return "", nil, nil, false
 	default:
 		// A character's or world's variable: what own means in its own text.
-		vars, prefix = n.own(nil, path[0])
+		owner = n.ownOf(nil, path[0])
 		path = path[1:]
 	}
-	v := variableOf(vars, path[0])
+	v := variableOf(owner.list(), path[0])
 	if v == nil {
 		return "", nil, nil, false
 	}
-	return prefix + path[0], v, path[1:], true
+	return owner.prefix + path[0], v, path[1:], true
 }
 
-// own returns the variables own means for owner, a character, world or
-// scenario ID, and what their full names start with; none for any other
-// owner, such as a session entry's (Format 8.2).
-func (n *names) own(scenario *Scenario, owner string) ([]Variable, string) {
-	switch {
-	case scenario != nil && owner == scenario.ID:
-		return scenario.Variables, "state."
-	case n.characters[owner] != nil:
-		return n.characters[owner].Variables, "state." + owner + "."
-	case n.worlds[owner] != nil:
-		return n.worlds[owner].Variables, "state." + owner + "."
+// ownVars are the variables own means in an owner's texts and conditions,
+// and what their full names start with (Format 8.2). vars is the owner's
+// field, so two are equal only for the same owner, even when owners share an
+// ID. A session entry's are the zero ownVars, since it has none.
+type ownVars struct {
+	vars   *[]Variable
+	prefix string
+}
+
+func (o ownVars) list() []Variable {
+	if o.vars == nil {
+		return nil
 	}
-	return nil, ""
+	return *o.vars
+}
+
+func (sc *Scenario) own() ownVars { return ownVars{&sc.Variables, "state."} }
+func (c *Character) own() ownVars { return ownVars{&c.Variables, "state." + c.ID + "."} }
+func (w *World) own() ownVars     { return ownVars{&w.Variables, "state." + w.ID + "."} }
+
+// ownOf returns the ownVars of the owner with the ID id: scenario, when it
+// isn't nil, or the first character or world; none for any other ID, such as
+// "session". Only without DUPLICATE_ID does an ID name one owner, so a caller
+// holding the owner takes its own instead.
+func (n *names) ownOf(scenario *Scenario, id string) ownVars {
+	switch {
+	case scenario != nil && id == scenario.ID:
+		return scenario.own()
+	case n.characters[id] != nil:
+		return n.characters[id].own()
+	case n.worlds[id] != nil:
+		return n.worlds[id].own()
+	}
+	return ownVars{}
 }
 
 // variableOf returns the variable of vars with the ID id, or nil.

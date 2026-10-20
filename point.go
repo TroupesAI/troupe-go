@@ -154,7 +154,7 @@ func (st *Story) env(self string) (*condition.Env, error) {
 	if e, ok := st.envs.Load(self); ok {
 		return e.(*condition.Env), nil
 	}
-	e, err := st.base.With(ownDeclarations(st.scope.scenario, st.scope.all, self))
+	e, err := st.base.With(ownDeclarations(st.scope.all.ownOf(st.scope.scenario, self)))
 	if err != nil {
 		return nil, err
 	}
@@ -194,12 +194,10 @@ func declarations(scenario *Scenario, n *names) []condition.Var {
 	return vars
 }
 
-// ownDeclarations returns the variables own means for an owner: its own, as
-// own.<id>. A session entry has none (Format 8.2).
-func ownDeclarations(scenario *Scenario, n *names, self string) []condition.Var {
-	vs, _ := n.own(scenario, self)
+// ownDeclarations returns the variables own means, as own.<id> (Format 8.2).
+func ownDeclarations(own ownVars) []condition.Var {
 	var vars []condition.Var
-	for _, v := range vs {
+	for _, v := range own.list() {
 		vars = append(vars, conditionVar("own."+v.ID, v))
 	}
 	return vars

@@ -18,8 +18,10 @@ import (
 //
 // The bundle is checked once for each of its scenarios, as written and played
 // without players, whether or not a session comes with it. A session is then
-// checked against its scenario (conformance README section 2). Diagnostics are
-// sorted as reading's are, and their File is empty.
+// checked against its scenario (conformance README section 2). When its
+// scenario names none, it is reported only as UNKNOWN_SCENARIO, and not at
+// all when it is missing, which is the schema's (Format 15.3).
+// Diagnostics are sorted as reading's are, and their File is empty.
 func Check(b *Bundle, s *Session) []Diagnostic {
 	c := &checker{
 		b:             b,
@@ -31,10 +33,16 @@ func Check(b *Bundle, s *Session) []Diagnostic {
 	c.owners(inBundle, b.Characters, b.Worlds)
 	c.scenarios()
 	if s != nil {
-		c.s = s
-		c.add(s.Header.Characters, s.Header.Worlds)
-		c.owners(inHeader, s.Header.Characters, s.Header.Worlds)
-		c.session()
+		scenario := scenarioIndex(b, s.Header.Scenario)
+		switch {
+		case scenario >= 0:
+			c.s = s
+			c.add(s.Header.Characters, s.Header.Worlds)
+			c.owners(inHeader, s.Header.Characters, s.Header.Worlds)
+			c.session(scenario)
+		case s.Header.Scenario != "":
+			c.report(CodeUnknownScenario, inHeader, "/scenario")
+		}
 	}
 	return sortDiagnostics(c.diags)
 }
@@ -175,14 +183,14 @@ func (c *checker) scenarios() {
 		scope := newScope(b, nil, i)
 		c.openings(scope)
 
-		c.text(inBundle, ptr(p, "premise"), sc.Premise, sc, sc.ID)
-		c.text(inBundle, ptr(p, "briefing"), sc.Briefing, sc, sc.ID)
+		c.text(inBundle, ptr(p, "premise"), sc.Premise, sc, sc.own())
+		c.text(inBundle, ptr(p, "briefing"), sc.Briefing, sc, sc.own())
 		for j, m := range sc.Cast {
-			c.text(inBundle, ptr(p, "cast", j, "notes"), m.Notes, sc, sc.ID)
+			c.text(inBundle, ptr(p, "cast", j, "notes"), m.Notes, sc, sc.own())
 		}
-		c.ownerUses(inBundle, p, sc.Entries, sc.Variables, sc, sc.ID)
+		c.ownerUses(inBundle, p, sc.Entries, sc, sc.own())
 		for j, o := range sc.Openings {
-			c.partUses(inBundle, ptr(p, "openings", j, "content"), o.Content, sc, sc.ID)
+			c.partUses(inBundle, ptr(p, "openings", j, "content"), o.Content, sc, sc.own())
 		}
 		for j := range b.Characters {
 			if scope.characters[b.Characters[j].ID] == &b.Characters[j] {
@@ -210,8 +218,8 @@ func (c *checker) scenarios() {
 }
 
 // session checks a session's header and messages, after its characters and
-// worlds, against its scenario.
-func (c *checker) session() {
+// worlds, against the bundle's scenario at index scenario, which it names.
+func (c *checker) session(scenario int) {
 	b, s, h := c.b, c.s, &c.s.Header
 	// A session's character or world that takes a scenario variable's ID is
 	// the session's to report, since the bundle is valid without it.
@@ -221,19 +229,13 @@ func (c *checker) session() {
 	for i, w := range h.Worlds {
 		c.scenarioVariable(w.ID, ptr("", "worlds", i, "id"))
 	}
-	scenario := scenarioIndex(b, h.Scenario)
-	if scenario < 0 && h.Scenario != "" {
-		c.report(CodeUnknownScenario, inHeader, "/scenario")
-	}
 	// A person plays a header character or a cast member (Format 11.2).
 	for j, p := range h.Players {
 		player := slices.ContainsFunc(h.Characters, func(ch Character) bool { return ch.ID == p })
-		if scenario >= 0 {
-			if cast := b.Scenarios[scenario].Cast; cast != nil {
-				player = player || slices.ContainsFunc(cast, func(m CastMember) bool { return m.Character == p })
-			} else {
-				player = player || slices.ContainsFunc(b.Characters, func(ch Character) bool { return ch.ID == p })
-			}
+		if cast := b.Scenarios[scenario].Cast; cast != nil {
+			player = player || slices.ContainsFunc(cast, func(m CastMember) bool { return m.Character == p })
+		} else {
+			player = player || slices.ContainsFunc(b.Characters, func(ch Character) bool { return ch.ID == p })
 		}
 		if !player {
 			c.report(CodeInvalidPlayer, inHeader, ptr("", "players", j))
@@ -272,9 +274,9 @@ func (c *checker) session() {
 	}
 	for i := range s.Messages {
 		m := &s.Messages[i]
-		c.ownerUses(inMessage(i, m), "", m.Entries, nil, scope.scenario, "")
+		c.ownerUses(inMessage(i, m), "", m.Entries, scope.scenario, ownVars{})
 		if m.Parent == "" && m.Opening != "" {
-			c.partUses(inMessage(i, m), "/content", m.Content, scope.scenario, h.Scenario)
+			c.partUses(inMessage(i, m), "/content", m.Content, scope.scenario, scope.scenario.own())
 		}
 	}
 }
@@ -282,54 +284,55 @@ func (c *checker) session() {
 // characterUses checks the macros in a character's texts, and its entries'
 // conditions, owned by it, against scenario's variables.
 func (c *checker) characterUses(at place, p jsontext.Pointer, ch *Character, scenario *Scenario) {
-	c.text(at, ptr(p, "description"), ch.Description, scenario, ch.ID)
-	c.text(at, ptr(p, "summary"), ch.Summary, scenario, ch.ID)
+	c.text(at, ptr(p, "description"), ch.Description, scenario, ch.own())
+	c.text(at, ptr(p, "summary"), ch.Summary, scenario, ch.own())
 	for i, exchange := range ch.Examples {
 		for j, l := range exchange {
-			c.text(at, ptr(p, "examples", i, j, "text"), l.Text, scenario, ch.ID)
+			c.text(at, ptr(p, "examples", i, j, "text"), l.Text, scenario, ch.own())
 		}
 	}
-	c.ownerUses(at, p, ch.Entries, ch.Variables, scenario, ch.ID)
+	c.ownerUses(at, p, ch.Entries, scenario, ch.own())
 }
 
 // worldUses checks the macros in a world's texts, and its entries'
 // conditions, owned by it, against scenario's variables.
 func (c *checker) worldUses(at place, p jsontext.Pointer, w *World, scenario *Scenario) {
-	c.text(at, ptr(p, "description"), w.Description, scenario, w.ID)
+	c.text(at, ptr(p, "description"), w.Description, scenario, w.own())
 	for i, l := range w.Locations {
-		c.text(at, ptr(p, "locations", i, "description"), l.Description, scenario, w.ID)
+		c.text(at, ptr(p, "locations", i, "description"), l.Description, scenario, w.own())
 	}
-	c.ownerUses(at, p, w.Entries, w.Variables, scenario, w.ID)
+	c.ownerUses(at, p, w.Entries, scenario, w.own())
 }
 
 // ownerUses checks the macros in the texts of an owner's entries and the
-// descriptions of its variables, and its entries' conditions.
-func (c *checker) ownerUses(at place, p jsontext.Pointer, entries []Entry, vars []Variable, scenario *Scenario, owner string) {
+// descriptions of its variables, own, and its entries' conditions.
+func (c *checker) ownerUses(at place, p jsontext.Pointer, entries []Entry, scenario *Scenario, own ownVars) {
 	for i, e := range entries {
-		c.text(at, ptr(p, "entries", i, "text"), e.Text, scenario, owner)
-		c.condition(at, ptr(p, "entries", i, "when"), e.When, scenario, owner)
+		c.text(at, ptr(p, "entries", i, "text"), e.Text, scenario, own)
+		c.condition(at, ptr(p, "entries", i, "when"), e.When, scenario, own)
 	}
-	for i, v := range vars {
-		c.text(at, ptr(p, "variables", i, "description"), v.Description, scenario, owner)
+	for i, v := range own.list() {
+		c.text(at, ptr(p, "variables", i, "description"), v.Description, scenario, own)
 	}
 }
 
 // partUses checks the macros in the text and alt of the parts at p.
-func (c *checker) partUses(at place, p jsontext.Pointer, parts []Part, scenario *Scenario, owner string) {
+func (c *checker) partUses(at place, p jsontext.Pointer, parts []Part, scenario *Scenario, own ownVars) {
 	for i, part := range parts {
-		c.text(at, ptr(p, i, "text"), part.Text, scenario, owner)
-		c.text(at, ptr(p, i, "alt"), part.Alt, scenario, owner)
+		c.text(at, ptr(p, i, "text"), part.Text, scenario, own)
+		c.text(at, ptr(p, i, "alt"), part.Alt, scenario, own)
 	}
 }
 
-// condition checks a condition, owned by owner, against scenario's variables,
-// when it isn't nil, and those of every character and world (Format 10.2): a
-// condition that doesn't compile is CEL_ERROR.
-func (c *checker) condition(at place, p jsontext.Pointer, expr string, scenario *Scenario, owner string) {
+// condition checks a condition, with own the variables own names in it,
+// against scenario's variables, when it isn't nil, and those of every
+// character and world (Format 10.2): a condition that doesn't compile is
+// CEL_ERROR.
+func (c *checker) condition(at place, p jsontext.Pointer, expr string, scenario *Scenario, own ownVars) {
 	if expr == "" {
 		return
 	}
-	env, err := c.env(scenario, owner)
+	env, err := c.env(scenario, own)
 	if err == nil {
 		_, err = env.Compile(expr)
 	}
@@ -338,27 +341,28 @@ func (c *checker) condition(at place, p jsontext.Pointer, expr string, scenario 
 	}
 }
 
-// env returns the environment of an owner's conditions, against scenario's
-// variables, made once per scenario and owner while the names stay the same.
-func (c *checker) env(scenario *Scenario, owner string) (*condition.Env, error) {
+// env returns the environment of the conditions of the owner whose variables
+// are own, against scenario's variables, made once per scenario and owner
+// while the names stay the same.
+func (c *checker) env(scenario *Scenario, own ownVars) (*condition.Env, error) {
 	type key struct {
 		scenario    *Scenario
-		owner       string
+		own         ownVars
 		withSession bool
 	}
-	k := key{scenario, owner, c.s != nil}
+	k := key{scenario, own, c.s != nil}
 	if e, ok := c.envs[k]; ok {
 		return e, nil
 	}
-	base, ok := c.envs[key{scenario, "", c.s != nil}]
+	base, ok := c.envs[key{scenario, ownVars{}, c.s != nil}]
 	if !ok {
 		var err error
 		if base, err = condition.NewEnv(declarations(scenario, c.names)); err != nil {
 			return nil, err
 		}
-		c.envs[key{scenario, "", c.s != nil}] = base
+		c.envs[key{scenario, ownVars{}, c.s != nil}] = base
 	}
-	e, err := base.With(ownDeclarations(scenario, c.names, owner))
+	e, err := base.With(ownDeclarations(own))
 	if err != nil {
 		return nil, err
 	}
@@ -369,11 +373,11 @@ func (c *checker) env(scenario *Scenario, owner string) (*condition.Env, error) 
 // text checks the macros in a text where they resolve, at p: each is a macro,
 // and names a declared variable, as Format 10.2 counts declarations with the
 // variables of scenario, when it isn't nil (Format 9, 15.3).
-func (c *checker) text(at place, p jsontext.Pointer, text string, scenario *Scenario, owner string) {
+func (c *checker) text(at place, p jsontext.Pointer, text string, scenario *Scenario, own ownVars) {
 	tokens, unknown := macro.Parse(text)
 	for _, t := range tokens {
 		if t.Kind == macro.State || t.Kind == macro.Own {
-			if _, _, _, ok := c.declared(scenario, owner, t.Kind == macro.Own, t.Path); !ok {
+			if _, _, _, ok := c.declared(scenario, own, t.Kind == macro.Own, t.Path); !ok {
 				unknown = true
 			}
 		}
@@ -612,9 +616,8 @@ func (c *checker) messages(sc *scope) {
 			over := sc.apply(st, ch.Set, &undo[i])
 			c.mapLimit(sc, inMessage(i, m), ptr("", "changes", j, "set"), ch.Set, over)
 		}
-		for _, e := range m.Entries {
-			disabled[e.ID] = append(disabled[e.ID], e.Disabled)
-		}
+		// activated names the entries in use at the message's evaluation
+		// point, its parent, so before its own entries apply (Format 11.4).
 		for j, ref := range m.Activated {
 			owner, id, _ := strings.Cut(ref, "/")
 			found := sc.entry(owner, id)
@@ -625,6 +628,9 @@ func (c *checker) messages(sc *scope) {
 			if !found {
 				c.report(CodeUnknownEntry, inMessage(i, m), ptr("", "activated", j))
 			}
+		}
+		for _, e := range m.Entries {
+			disabled[e.ID] = append(disabled[e.ID], e.Disabled)
 		}
 	}, func(i int) {
 		st.revert(undo[i])
