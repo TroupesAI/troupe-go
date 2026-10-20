@@ -154,7 +154,9 @@ func newScope(b *Bundle, s *Session, i int) *scope {
 	switch {
 	case scenario == nil:
 	case scenario.Worlds != nil:
-		worldIDs = *scenario.Worlds
+		// A copy, since the session's are appended, and the bundle may be
+		// shared.
+		worldIDs = slices.Clone(*scenario.Worlds)
 	default:
 		for _, w := range b.Worlds {
 			worldIDs = append(worldIDs, w.ID)

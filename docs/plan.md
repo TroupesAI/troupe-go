@@ -58,6 +58,8 @@ The cost is that a change touching both the engine and the platform can't land i
 | Initial values are checked once, for every variable | Checking each variable in each scenario that uses it | A character's or world's variable may be in no scenario, and a `"cast"` initial member is checked whenever it names a character (Format 8.3) |
 | A session's character or world that takes a scenario variable's ID is reported at the session's ID | At the variable's ID | The bundle is valid without the session (conformance README section 3.4) |
 | `NewStory(b, s)` with `Initial`, `Apply` and `StateAt` | Only `StateAt` | The platform keeps each message's state and applies the next message's changes to it, so it never replays a path of up to 100,000 messages. A session given without messages serves `Apply` alone |
+| The package only reads the documents it's given, and copies any of their lists it extends | Callers reading a bundle again for each use | The platform keeps one read bundle for every chat of a version, since reading one holds about six times its JSON in memory |
+| The package only reads the documents it's given, and copies any of their lists it extends | Callers reading a bundle again for each use | One read bundle can then serve every story, check and call at once, and reading one holds about six times its JSON in memory |
 | `State` is immutable, and `Apply` returns a new one | Changing a state in place | A caller can keep any state, and states share what a change doesn't touch |
 | `State.Get` takes the keys changes write (Format 8.5), and `All` yields them | Accessors per kind of value, or exported fields | One set of keys for writing and reading, and the suite's flattened form is exactly what `All` yields |
 | Values are a `bool`, `int64`, `string` or `[]string` in an `any` | A value type of our own | They are the JSON types a state holds, and `Get` copies sets so callers can't change a state |
@@ -215,7 +217,7 @@ Prompt assembly, the choice of which active entries reach the model, model calls
 
 When the code shows the spec is wrong or unclear, write it up for the user: what the spec says, the case or input where it matters, and a proposed fix. The user decides, and changes the spec repository. Add a conformance case only when apps could disagree on the issue, not for coverage. Then sync the copy here with `task spec`.
 
-These findings wait for Format 7.2 to settle them. The platform activates entries for every generation, so they decide what its models see. The code keeps the reading given until then:
+Format 7.2 is silent on these, and the code keeps the reading given. They go to the spec repository when an app needs them settled: when the suite gains activation tests, another implementation reads them differently, or the platform's authors depend on one. Until then a spec change would settle nothing anyone disagrees on:
 
 - **Sticky entries in groups (Format 7.2).** `sticky` keeps an entry active, but `group` keeps only the highest priority active, chosen by weight among equals. Read: a kept entry competes like any other, so it can lose to a higher priority, or to a draw among equals. Proposed: a kept entry wins its group against equal priorities, without a draw.
 - **Knowledge in activation (Format 7.2, 7.4).** The spec doesn't say whether an entry whoever the message is for doesn't know activates, and so whether it can win its group. Read: it doesn't activate. Proposed: say so in 7.2.

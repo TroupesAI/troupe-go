@@ -38,7 +38,9 @@
 //
 // The package does no I/O, and is deterministic: randomness comes from a
 // source the caller passes. Stories, states and points are safe for
-// concurrent use.
+// concurrent use, and the package only reads the documents it is given, so
+// a bundle or session read once can serve any number of stories, checks and
+// calls at once.
 package troupe
 
 // Version is the Troupe version this module reads.

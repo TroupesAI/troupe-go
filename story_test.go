@@ -1,9 +1,11 @@
 package troupe_test
 
 import (
+	"fmt"
 	"maps"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/TroupesAI/troupe-go"
@@ -86,4 +88,37 @@ func TestStoryApply(t *testing.T) {
 	if got, _ := states["1"].Get("state.tags"); !reflect.DeepEqual(got, []string{"a"}) {
 		t.Errorf("state.tags is %v after changing what Get and All return", got)
 	}
+}
+
+// One read bundle serves stories of different sessions at once: the package
+// only reads it.
+func TestSharedBundle(t *testing.T) {
+	b, diags, err := troupe.ReadBundle(strings.NewReader(`{"troupe":"0.14","kind":"bundle",
+		"worlds":[{"id":"w1","name":"W","description":"d"},{"id":"w2","name":"W","description":"d"},{"id":"w3","name":"W","description":"d"}],
+		"scenarios":[{"id":"s","worlds":["w1","w2","w3"]}]}`))
+	if err != nil || diags != nil {
+		t.Fatal(err, diags)
+	}
+	var wg sync.WaitGroup
+	for i := range 4 {
+		id := fmt.Sprintf("x%d", i)
+		s, diags, err := troupe.ReadSession(strings.NewReader(`{"troupe":"0.14","kind":"session","scenario":"s","worlds":[{"id":"` + id + `","name":"X","description":"d"}]}`))
+		if err != nil || diags != nil {
+			t.Fatal(err, diags)
+		}
+		wg.Go(func() {
+			for range 100 {
+				story, err := troupe.NewStory(b, s)
+				if err != nil {
+					t.Error(err)
+					return
+				}
+				if w := story.Worlds(); len(w) != 4 || w[3].ID != id {
+					t.Errorf("session %s: %d worlds", id, len(w))
+					return
+				}
+			}
+		})
+	}
+	wg.Wait()
 }
