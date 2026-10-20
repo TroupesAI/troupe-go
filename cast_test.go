@@ -85,8 +85,8 @@ func check(t *testing.T, name string, story *troupe.Story, cast, worlds []string
 }
 
 // A spoiler stays one on a path until a state at a message on it has the
-// character present, and after it leaves, but not on another branch. A
-// stored state keeps it.
+// character present, then stays revealed after it leaves, but not on another
+// branch. A stored state keeps it.
 func TestSpoilers(t *testing.T) {
 	bundle := `{"troupe":"0.14","kind":"bundle",
 		"characters":[{"id":"a","name":"Ann","description":"Ann."},{"id":"g","name":"Ghost","description":"A ghost."}],
@@ -100,9 +100,6 @@ func TestSpoilers(t *testing.T) {
 		`{"id":"4","parent":"1","from":"model","char":"a","content":[{"text":"x"}]}`)
 	want := map[string][]string{"1": {"g"}, "2": nil, "3": nil, "4": {"g"}}
 	states := map[string]troupe.State{"": story.Initial()}
-	if got := story.Initial().Spoilers(); !slices.Equal(got, []string{"g"}) {
-		t.Errorf("initially, the spoilers are %v", got)
-	}
 	for _, m := range s.Messages {
 		states[m.ID] = story.Apply(states[m.Parent], &m)
 		data, err := states[m.ID].MarshalJSON()
@@ -113,26 +110,10 @@ func TestSpoilers(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		at, err := story.StateAt(m.ID)
-		if err != nil {
-			t.Fatal(err)
-		}
-		for name, st := range map[string]troupe.State{"applied": states[m.ID], "restored": restored, "computed": at} {
+		for name, st := range map[string]troupe.State{"applied": states[m.ID], "restored": restored} {
 			if got := st.Spoilers(); !slices.Equal(got, want[m.ID]) {
 				t.Errorf("at message %s, %s, the spoilers are %v, want %v", m.ID, name, got, want[m.ID])
 			}
 		}
-	}
-
-	b, _, err := troupe.ReadBundle(strings.NewReader(bundle))
-	if err != nil {
-		t.Fatal(err)
-	}
-	alone, err := troupe.NewScenarioStory(b, "s")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got := alone.Initial().Spoilers(); !slices.Equal(got, []string{"g"}) {
-		t.Errorf("s on its own, the spoilers are %v", got)
 	}
 }

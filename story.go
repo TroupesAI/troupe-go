@@ -96,7 +96,7 @@ func (st *Story) apply(s *state, m *Message) {
 	}
 	for _, id := range s.present {
 		if !slices.Contains(s.appeared, id) {
-			// Clipped, so the append can't write into another state's.
+			// Clipped: states cloned from one parent share this array.
 			s.appeared = append(slices.Clip(s.appeared), id)
 		}
 	}
