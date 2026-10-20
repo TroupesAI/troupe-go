@@ -1,0 +1,60 @@
+{
+  "description": "A session without a scenario is SCHEMA at its header, not UNKNOWN_SCENARIO (Format 15.3), and its other checks are skipped as for an unknown scenario: its opening and its change to a variable, which no scenario defines, aren't reported",
+  "bundle": {
+    "kind": "bundle",
+    "characters": [
+      {
+        "id": "a",
+        "name": "Ann",
+        "description": "Ann."
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "s"
+      }
+    ]
+  },
+  "session": {
+    "header": {
+      "kind": "session"
+    },
+    "messages": [
+      {
+        "id": "1",
+        "opening": "x",
+        "from": "system",
+        "content": [
+          {
+            "speaker": "a",
+            "text": "Hello."
+          }
+        ],
+        "changes": [
+          {
+            "by": "opening",
+            "set": {
+              "state.w": 1
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "tests": [
+    {
+      "type": "check",
+      "expect": {
+        "codes": [
+          "SCHEMA"
+        ],
+        "includes": [
+          {
+            "code": "SCHEMA",
+            "at": "header"
+          }
+        ]
+      }
+    }
+  ]
+}

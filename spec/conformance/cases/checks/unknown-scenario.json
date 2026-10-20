@@ -1,5 +1,5 @@
 {
-  "description": "UNKNOWN_SCENARIO (Format 15.3): the header's scenario must name a scenario; a character's ID doesn't name one. The session is then reported with UNKNOWN_SCENARIO, SCHEMA and UNKNOWN_FIELD only: its unknown property is reported, but not its opening, its change to a variable or its activated entry",
+  "description": "UNKNOWN_SCENARIO (Format 15.3): the header's scenario must name a scenario; a character's ID doesn't name one. The session is then reported with UNKNOWN_SCENARIO, SCHEMA and UNKNOWN_FIELD only: its unknown property is reported, but not its opening, its change to a variable or its activated entry, which no scenario defines",
   "bundle": {
     "kind": "bundle",
     "characters": [
@@ -11,34 +11,7 @@
     ],
     "scenarios": [
       {
-        "id": "s",
-        "variables": [
-          {
-            "id": "v",
-            "type": "int",
-            "by": [
-              "model"
-            ],
-            "description": "A count."
-          }
-        ],
-        "entries": [
-          {
-            "id": "e",
-            "text": "An entry."
-          }
-        ],
-        "openings": [
-          {
-            "id": "o",
-            "content": [
-              {
-                "speaker": "a",
-                "text": "Hello."
-              }
-            ]
-          }
-        ]
+        "id": "s"
       }
     ]
   },
@@ -50,7 +23,7 @@
     "messages": [
       {
         "id": "1",
-        "opening": "o",
+        "opening": "x",
         "from": "system",
         "content": [
           {
@@ -88,7 +61,7 @@
           {
             "by": "model",
             "set": {
-              "state.v": 1
+              "state.w": 1
             }
           }
         ]
