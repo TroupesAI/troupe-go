@@ -1,5 +1,5 @@
 {
-  "description": "The CEL environment (Format 10.1) at Format Appendix B's messages: turn, opening, scenario, players, char, self, own, user, scene, elapsed and keyed variables read with brackets; expressions type-check against the declared variables and have type bool (Format 10.2)",
+  "description": "The CEL environment (Format 10.1) at Format Appendix B's messages: turn, opening, scenario, players, char, self, own, user, scene, elapsed and keyed variables read with brackets; expressions type-check against the declared variables, a field between backticks included, and have type bool (Format 10.2)",
   "note": "State at 4: bell 7 and trust.kai 50 from its change; scene.location rooftops from the root. At 3, Kai has left and his nerve is 1. Message 2 is at 21:04 on Saturday 17 October 2026, at +02:00.",
   "bundleFile": "../../../examples/lantern-heist/bundle.json",
   "sessionFile": "../../../examples/lantern-heist/sessions/heist.troupe-session.jsonl",
@@ -124,6 +124,22 @@
       "type": "cel",
       "name": "undeclared variables fail the type check",
       "expr": "state.nope",
+      "expect": {
+        "checkError": true
+      }
+    },
+    {
+      "type": "cel",
+      "name": "a field between backticks is that one field",
+      "at": "3",
+      "expr": "state.`kai`.nerve == 1",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "no variable is a field named kai.nerve",
+      "expr": "state.`kai.nerve` == 1",
+      "note": "CEL selects a field written between backticks by its name as written. An implementation that declares state.kai.nerve as one CEL variable by its full name must not resolve it.",
       "expect": {
         "checkError": true
       }

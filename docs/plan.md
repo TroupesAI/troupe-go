@@ -217,9 +217,10 @@ When the code shows the spec is wrong or unclear, write it up for the user: what
 
 These open items were deliberately left out of 0.14 and may come back as findings: label keys outside `values`, the loose `language` pattern, codes for nested `null`, and the missing activation test type.
 
-These findings from phase 8 wait for the user's decision. The code follows the reading given:
+These findings are parked: the spec repository deferred them together, since the suite has no activation tests yet, and picks next to a `{` only happen in contrived text. The code keeps the reading given:
 
 - **Picks next to a `{` (Format 9, 11.1).** Escaping the chosen option doesn't make a root show what the opening shows when a `{` before the pick, or after it, joins a `{` at the option's edge: `{{{pick::{char::{char}}}}` shows `{{char}}`, but its root is `{{char}}`, which shows the character's name. Read: the option is escaped as written. Proposed: an option can't start or end with `{`.
 - **Sticky entries in groups (Format 7.2).** `sticky` keeps an entry active, but `group` keeps only the highest priority active, chosen by weight among equals. Read: a kept entry competes like any other, so it can lose to a higher priority, or to a draw among equals. Proposed: a kept entry wins its group against equal priorities, without a draw.
 - **Knowledge in activation (Format 7.2, 7.4).** The spec doesn't say whether an entry whoever the message is for doesn't know activates, and so whether it can win its group. Read: it doesn't activate. Proposed: say so in 7.2.
+- **Sticky entries out of use (Format 7.1, 7.2).** An entry stays active "through round *t* + *s*", but the spec doesn't say whether that holds once its owner is out of use or its `when` turns false. Read: an entry out of use is dropped, and `when`, keys and `chance` aren't evaluated again for a kept entry.
 - **Timing of session entries replaced or removed (Format 7.2, 11.3).** Timing counts from the messages that record an entry, by reference, but a later entry can replace an earlier one with the same ID, or remove it and add it again. Read: timing follows the reference, so a replacement continues its predecessor's `once`, `sticky` and `cooldown`. Proposed: say whether it does.
