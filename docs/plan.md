@@ -204,7 +204,7 @@ These are what the platform needs that the suite doesn't test. Build them in the
 
 The platform's API (its architecture is in `docs/stack.md` of the platform repository) uses the library to:
 
-- **Import** a single file or a package that a person uploads, show its diagnostics with their locations, and store it as JSONB. Fields it queries come from the typed model: name, rating, tags.
+- **Import** a single file or a package that a person uploads, show its diagnostics with their locations, and store it as `json`. Fields it queries come from the typed model: name, rating, tags.
 - **Start a session** from an opening.
 - **Prepare each generation:** the state at the evaluation point, the active entries, macros rendered for the character being written for, and what each character knows. A path can be 100,000 messages long, so the state at a message must be computable from its parent's state and that message's changes. Replaying the whole path on every turn won't do.
 - **Record a turn**, after checking the changes a player or model proposes.
