@@ -149,10 +149,6 @@ The cost is that a change touching both the engine and the platform can't land i
 | Tools pinned with mise, tasks in Task, `golangci-lint` v2 | Whatever is installed | The same setup as the platform, so one toolchain works in both |
 | The platform's lint config without `bodyclose`, `noctx` and `rowserrcheck` | An identical copy | Those linters only check HTTP and database code, which this library has none of |
 
-## Open decisions
-
-Settle these with the user before the phase that needs them. None are open now.
-
 ## Layout
 
 A starting point. Change it once the code argues for something else.
@@ -197,11 +193,10 @@ Each phase ends with its part of the work tested, lint clean, and its decisions 
 
 These are what the platform needs that the suite doesn't test. Build them in the order the platform asks for them, with tests of our own, since the suite has no cases for them:
 
-- Retrieving entries with `pull` (Format 7.2).
-- Checking one proposed change, key and value, before the platform records it (Format 8.5).
-- Writing sessions and packages back, keeping every `ext` and a package's other files (Format 12.3, 13). The model marshals as the spec writes it, and `ReplaceFileFields` replaces a bundle's file fields.
-- A session's file fields, for importing packages with sessions.
-- Upgrading documents from the previous minor version. This starts mattering once the platform stores documents.
+- Upgrading documents from the previous minor version. The platform stores 0.14 bundles, sessions and states, so this must land before the library targets the next spec version, or none of them read.
+- Checking one proposed change, key and value, before the platform records it (Format 8.5), once players or models change state. `Check` already judges keys and values.
+- Writing sessions and packages back, keeping every `ext` and a package's other files (Format 12.3, 13), with a session's file fields, so packages with sessions can be imported and exported. The model marshals as the spec writes it, and `ReplaceFileFields` replaces a bundle's file fields.
+- The `pull` entries a point could retrieve (Format 7.2), once the platform retrieves them. Retrieving them, by search or at a model's request, is the platform's.
 
 ## What the platform needs
 
@@ -220,12 +215,9 @@ Prompt assembly, the choice of which active entries reach the model, model calls
 
 When the code shows the spec is wrong or unclear, write it up for the user: what the spec says, the case or input where it matters, and a proposed fix. The user decides, and changes the spec repository. Add a conformance case only when apps could disagree on the issue, not for coverage. Then sync the copy here with `task spec`.
 
-These open items were deliberately left out of 0.14 and may come back as findings: label keys outside `values`, the loose `language` pattern, codes for nested `null`, and the missing activation test type.
+These findings wait for Format 7.2 to settle them. The platform activates entries for every generation, so they decide what its models see. The code keeps the reading given until then:
 
-These findings are parked: the spec repository deferred them together, since the suite has no activation tests yet, and picks next to a `{` only happen in contrived text. The code keeps the reading given:
-
-- **Picks next to a `{` (Format 9, 11.1).** Escaping the chosen option doesn't make a root show what the opening shows when a `{` before the pick, or after it, joins a `{` at the option's edge: `{{{pick::{char::{char}}}}` shows `{{char}}`, but its root is `{{char}}`, which shows the character's name. Read: the option is escaped as written. Proposed: an option can't start or end with `{`.
 - **Sticky entries in groups (Format 7.2).** `sticky` keeps an entry active, but `group` keeps only the highest priority active, chosen by weight among equals. Read: a kept entry competes like any other, so it can lose to a higher priority, or to a draw among equals. Proposed: a kept entry wins its group against equal priorities, without a draw.
 - **Knowledge in activation (Format 7.2, 7.4).** The spec doesn't say whether an entry whoever the message is for doesn't know activates, and so whether it can win its group. Read: it doesn't activate. Proposed: say so in 7.2.
-- **Sticky entries out of use (Format 7.1, 7.2).** An entry stays active "through round *t* + *s*", but the spec doesn't say whether that holds once its owner is out of use or its `when` turns false. Read: an entry out of use is dropped, and `when`, keys and `chance` aren't evaluated again for a kept entry.
-- **Timing of session entries replaced or removed (Format 7.2, 11.3).** Timing counts from the messages that record an entry, by reference, but a later entry can replace an earlier one with the same ID, or remove it and add it again. Read: timing follows the reference, so a replacement continues its predecessor's `once`, `sticky` and `cooldown`. Proposed: say whether it does.
+- **Sticky entries out of use (Format 7.1, 7.2).** An entry stays active "through round *t* + *s*", but the spec doesn't say whether that holds once its owner is out of use or its `when` turns false. Read: an entry out of use is dropped, and `when`, keys and `chance` aren't evaluated again for a kept entry. Proposed: say so in 7.2.
+- **Timing of session entries replaced or removed (Format 7.2, 11.3).** Timing counts from the messages that record an entry, by reference, but a later entry can replace an earlier one with the same ID, or remove it and add it again. Read: timing follows the reference, so a replacement continues its predecessor's `once`, `sticky` and `cooldown`. Proposed: say so in 7.2.
