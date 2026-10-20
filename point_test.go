@@ -62,3 +62,37 @@ func TestPointAtRecent(t *testing.T) {
 		before = story.Apply(before, &path[k])
 	}
 }
+
+// Format 10.2's rules hold for own as for state: selecting char or user from
+// a keyed variable is a CEL_ERROR. A field written between backticks is the
+// field as written, so one holding a dot names no variable.
+func TestConditionRules(t *testing.T) {
+	b, diags, err := troupe.ReadBundle(strings.NewReader(`{"troupe":"0.14","kind":"bundle",
+		"characters":[{"id":"kai","name":"Kai","description":"d",
+			"variables":[{"id":"nerve","type":"int","initial":1,"description":"d"},
+				{"id":"feelings","type":"int","of":"cast","description":"d"}]}],
+		"scenarios":[{"id":"s","cast":[{"character":"kai"}]}]}`))
+	if err != nil || diags != nil {
+		t.Fatal(err, diags)
+	}
+	story, err := troupe.NewStory(b, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := story.PointAt(story.Initial(), nil, "kai")
+	for _, c := range []struct {
+		expr, self string
+		valid      bool
+	}{
+		{"own.feelings.char == 0", "kai", false},
+		{"own.feelings.user == 0", "kai", false},
+		{"own.feelings[char] == 0", "kai", true},
+		{"state.`kai`.nerve == 1", "s", true},
+		{"state.`kai.nerve` == 1", "s", false},
+		{"has(state.`kai.nerve`)", "s", false},
+	} {
+		if _, err := p.Eval(c.expr, c.self, 4); (err == nil) != c.valid {
+			t.Errorf("%s: %v", c.expr, err)
+		}
+	}
+}

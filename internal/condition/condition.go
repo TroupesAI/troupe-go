@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 
 	"cel.dev/cel-go/cel"
 	"cel.dev/cel-go/common/ast"
@@ -64,8 +65,7 @@ var builtins = []Var{
 
 // Env is the environment expressions compile in.
 type Env struct {
-	env   *cel.Env
-	keyed map[string]bool // the keyed variables' names
+	env *cel.Env
 }
 
 // macros are the macros expressions are parsed with. The comprehensions and
@@ -82,39 +82,32 @@ var macros = []cel.EnvOption{
 // NewEnv returns the environment of builtins and vars. A name declared twice,
 // which a duplicate ID makes, is declared once.
 func NewEnv(vars []Var) (*Env, error) {
-	e := &Env{keyed: map[string]bool{}}
 	opts := append(slices.Clone(macros),
 		cel.Variable(hits, cel.MapType(cel.StringType, cel.BoolType)),
 		cel.Function(hasValue, cel.Overload("has_value", []*cel.Type{cel.DynType}, cel.BoolType,
 			cel.OverloadIsNonStrict(),
 			cel.UnaryBinding(func(v ref.Val) ref.Val { return types.Bool(!types.IsError(v) && !types.IsUnknown(v)) }))),
-		cel.ASTValidators(cel.ValidateHomogeneousAggregateLiterals(), rules{e.keyed}),
+		cel.ASTValidators(cel.ValidateHomogeneousAggregateLiterals(), rules{}),
 	)
-	opts = append(opts, e.declare(builtins)...)
-	opts = append(opts, e.declare(vars)...)
+	opts = append(opts, declare(builtins)...)
+	opts = append(opts, declare(vars)...)
 	env, err := cel.NewEnv(opts...)
 	if err != nil {
 		return nil, err
 	}
-	e.env = env
-	return e, nil
+	return &Env{env}, nil
 }
 
 // With returns e with vars added, such as an owner's own variables.
 func (e *Env) With(vars []Var) (*Env, error) {
-	x := &Env{keyed: map[string]bool{}}
-	for name := range e.keyed {
-		x.keyed[name] = true
-	}
-	env, err := e.env.Extend(x.declare(vars)...)
+	env, err := e.env.Extend(declare(vars)...)
 	if err != nil {
 		return nil, err
 	}
-	x.env = env
-	return x, nil
+	return &Env{env}, nil
 }
 
-func (e *Env) declare(vars []Var) []cel.EnvOption {
+func declare(vars []Var) []cel.EnvOption {
 	var opts []cel.EnvOption
 	seen := map[string]bool{}
 	for _, v := range vars {
@@ -125,7 +118,6 @@ func (e *Env) declare(vars []Var) []cel.EnvOption {
 		t := []*cel.Type{cel.BoolType, cel.IntType, cel.StringType, cel.ListType(cel.StringType), cel.DynType}[v.Kind]
 		if v.Keyed {
 			t = cel.MapType(cel.StringType, t)
-			e.keyed[v.Name] = true
 		}
 		opts = append(opts, cel.Variable(v.Name, t))
 	}
@@ -142,7 +134,14 @@ type Program struct {
 // it doesn't parse or type-check, isn't a bool, or breaks a rule of Format
 // 10.2.
 func (e *Env) Compile(expr string) (*Program, error) {
-	a, iss := e.env.Compile(expr)
+	parsed, iss := e.env.Parse(expr)
+	if iss.Err() != nil {
+		return nil, iss.Err()
+	}
+	if dotted(parsed.NativeRep().Expr()) {
+		return nil, errors.New("condition: a field name holds a dot")
+	}
+	a, iss := e.env.Check(parsed)
 	if iss.Err() != nil {
 		return nil, iss.Err()
 	}
@@ -162,6 +161,20 @@ func (e *Env) Compile(expr string) (*Program, error) {
 		}
 	}))
 	return p, nil
+}
+
+// dotted reports whether x selects a field whose name holds a dot, which only
+// backticks can write. Variables are declared by full name, so the type check
+// would resolve state.`kai.nerve` to the variable state.kai.nerve, though state
+// has no field kai.nerve (Format 10.1).
+func dotted(x ast.Expr) bool {
+	found := false
+	ast.PreOrderVisit(x, ast.NewExprVisitor(func(x ast.Expr) {
+		if x.Kind() == ast.SelectKind && strings.Contains(x.AsSelect().FieldName(), ".") {
+			found = true
+		}
+	}))
+	return found
 }
 
 // Keys returns the keys the program's hit() calls take.
@@ -234,14 +247,12 @@ var allowed = []string{
 // rules validates what the type check doesn't (Format 10.2): only the allowed
 // functions; only bool, int, string, list and map values, so no double,
 // bytes, uint or null literal and no type name used as a value; and no char
-// or user selected from a keyed variable, which brackets look up.
-type rules struct {
-	keyed map[string]bool
-}
+// or user selected from a keyed variable, a map, which brackets look up.
+type rules struct{}
 
 func (rules) Name() string { return "troupe.rules" }
 
-func (r rules) Validate(_ *cel.Env, _ cel.ValidatorConfig, a *ast.AST, iss *cel.Issues) {
+func (rules) Validate(_ *cel.Env, _ cel.ValidatorConfig, a *ast.AST, iss *cel.Issues) {
 	refs := a.ReferenceMap()
 	ast.PreOrderVisit(a.Expr(), ast.NewExprVisitor(func(x ast.Expr) {
 		if a.GetType(x.ID()).Kind() == types.TypeKind {
@@ -259,7 +270,8 @@ func (r rules) Validate(_ *cel.Env, _ cel.ValidatorConfig, a *ast.AST, iss *cel.
 			}
 		case ast.SelectKind:
 			s := x.AsSelect()
-			if ref, ok := refs[s.Operand().ID()]; ok && r.keyed[ref.Name] && (s.FieldName() == "char" || s.FieldName() == "user") {
+			keyed := a.GetType(s.Operand().ID()).Kind() == types.MapKind
+			if ref, ok := refs[s.Operand().ID()]; ok && keyed && (s.FieldName() == "char" || s.FieldName() == "user") {
 				iss.ReportErrorAtID(x.ID(), "%s.%s selects a key named %s; brackets look up a computed key", ref.Name, s.FieldName(), s.FieldName())
 			}
 		}

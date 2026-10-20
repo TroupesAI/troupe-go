@@ -43,8 +43,9 @@ import (
 //     the object in one scenario that uses it, and to something else in
 //     another;
 //   - a string literal that refers to the object but is written with escapes
-//     or as a raw string, a condition that doesn't parse and has the ID as a
-//     word, and a key whose renamed form its object already has.
+//     or as a raw string, a name that does but is written between backticks,
+//     a condition that doesn't parse and has the ID as a word, and a key
+//     whose renamed form its object already has.
 //
 // The error is for a pointer that names no such object, an ID the object can't
 // take (Format 2.3), wrapping ErrIDTaken as CheckID's does, or an object whose

@@ -81,9 +81,9 @@ func TestRenameID(t *testing.T) {
 
 // RenameID leaves whole, and returns, what it can't rewrite without changing
 // what it means: string values that are the ID, literals compared with them,
-// literals written with escapes, conditions that don't parse, keys that would
-// clash, and names that refer to something else in another scenario using
-// them, as written or as renamed.
+// literals written with escapes, names written between backticks, conditions
+// that don't parse, keys that would clash, and names that refer to something
+// else in another scenario using them, as written or as renamed.
 func TestRenameIDLeaves(t *testing.T) {
 	b, _, err := troupe.ReadBundle(strings.NewReader(`{"troupe": "0.14", "kind": "bundle",
 		"characters": [
@@ -91,7 +91,8 @@ func TestRenameIDLeaves(t *testing.T) {
 				{"id": "a", "text": "t", "when": "char == 'kai' || state.lead == 'kai'"},
 				{"id": "b", "text": "t", "when": "char == r'kai'"},
 				{"id": "c", "text": "t", "when": "state.kai.nerve >"},
-				{"id": "d", "text": "t", "when": "opening == 'dawn'"}],
+				{"id": "d", "text": "t", "when": "opening == 'dawn'"},
+				{"id": "e", "text": "t", "when": "state.` + "`kai`" + `.nerve > 0"}],
 				"variables": [{"id": "nerve", "type": "int", "description": "d"},
 					{"id": "mood", "type": "enum", "values": ["kai", "calm"], "labels": {"kai": "Kai's"}, "description": "d"}]},
 			{"id": "mara", "name": "Mara", "description": "{{state.bell}}"}],
@@ -113,6 +114,7 @@ func TestRenameIDLeaves(t *testing.T) {
 			"/characters/0/entries/0/when",
 			"/characters/0/entries/1/when",
 			"/characters/0/entries/2/when",
+			"/characters/0/entries/4/when",
 			"/characters/0/variables/1/labels/kai",
 			"/characters/0/variables/1/values/0",
 			"/scenarios/0/openings/0/set/state.lead",

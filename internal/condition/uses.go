@@ -13,8 +13,9 @@ import (
 
 // Selection is a name an expression selects from state or own, such as
 // state.kai.nerve: its names, from state or own, and where each is written,
-// as a byte offset in the expression. Key is the string literal it is
-// indexed with, as in state.trust['kai'] or 'kai' in state.trust, if any.
+// as a byte offset in the expression, or -1 for a name written between
+// backticks, which can't be replaced in place. Key is the string literal it
+// is indexed with, as in state.trust['kai'] or 'kai' in state.trust, if any.
 type Selection struct {
 	Names []string
 	At    []int
@@ -173,8 +174,12 @@ func (u *uses) selection(x ast.Expr) (Selection, bool) {
 	var s Selection
 	for x.Kind() == ast.SelectKind {
 		sel := x.AsSelect()
+		at := u.field(u.offset(x.ID()))
+		if !strings.HasPrefix(u.expr[at:], sel.FieldName()) {
+			at = -1
+		}
 		s.Names = append(s.Names, sel.FieldName())
-		s.At = append(s.At, u.field(u.offset(x.ID())))
+		s.At = append(s.At, at)
 		x = sel.Operand()
 	}
 	if len(s.Names) == 0 || x.Kind() != ast.IdentKind || x.AsIdent() != "state" && x.AsIdent() != "own" {
