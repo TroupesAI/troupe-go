@@ -26,7 +26,8 @@ type RenderContext struct {
 	// narrator, so {{char}}, without Char, is the scenario's narrator.
 	Narrator bool
 	// Owner is the text's owner, which own means: a character, world or
-	// scenario ID, or "" for none, as for a session's entries (Format 8.2).
+	// scenario ID, or "session" or "" for a session entry, which has none
+	// (Format 8.2).
 	Owner string
 }
 

@@ -65,7 +65,8 @@ func TestPointAtRecent(t *testing.T) {
 
 // Format 10.2's rules hold for own as for state: selecting char or user from
 // a keyed variable is a CEL_ERROR. A field written between backticks is the
-// field as written, so one holding a dot names no variable.
+// field as written, so one holding a dot names no variable. The error holds
+// no text of the condition, which apps log.
 func TestConditionRules(t *testing.T) {
 	b, diags, err := troupe.ReadBundle(strings.NewReader(`{"troupe":"0.14","kind":"bundle",
 		"characters":[{"id":"kai","name":"Kai","description":"d",
@@ -91,7 +92,8 @@ func TestConditionRules(t *testing.T) {
 		{"state.`kai.nerve` == 1", "s", false},
 		{"has(state.`kai.nerve`)", "s", false},
 	} {
-		if _, err := p.Eval(c.expr, c.self, 4); (err == nil) != c.valid {
+		_, err := p.Eval(c.expr, c.self, 4)
+		if (err == nil) != c.valid || err != nil && strings.Contains(err.Error(), c.expr) {
 			t.Errorf("%s: %v", c.expr, err)
 		}
 	}

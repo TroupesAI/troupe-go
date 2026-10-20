@@ -239,22 +239,25 @@ type Change struct {
 	Ext jsontext.Value            `json:"ext,omitzero"`
 }
 
-// MarshalJSON writes b as a bundle document, its kind included.
+// MarshalJSON writes b as a bundle document, its kind included, with the
+// members of maps such as an opening's set sorted, so the same bundle always
+// gives the same bytes.
 func (b Bundle) MarshalJSON() ([]byte, error) {
 	type fields Bundle
 	return json.Marshal(struct {
 		Kind string `json:"kind"`
 		fields
-	}{"bundle", fields(b)})
+	}{"bundle", fields(b)}, json.Deterministic(true))
 }
 
-// MarshalJSON writes h as a session's header line, its kind included.
+// MarshalJSON writes h as a session's header line, its kind included, with
+// the members of maps sorted, as Bundle.MarshalJSON does.
 func (h SessionHeader) MarshalJSON() ([]byte, error) {
 	type fields SessionHeader
 	return json.Marshal(struct {
 		Kind string `json:"kind"`
 		fields
-	}{"session", fields(h)})
+	}{"session", fields(h)}, json.Deterministic(true))
 }
 
 // MarshalJSON writes p with the fields its type has: text for a text part,

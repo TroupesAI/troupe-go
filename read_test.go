@@ -261,6 +261,11 @@ func TestReadLimits(t *testing.T) {
 			`{"id":"a","parent":"r","from":"player","content":[{"text":""}],"entries":[`+entries(6000)+`]}`,
 			`{"id":"b","parent":"a","from":"player","content":[{"text":""}],"entries":[`+strings.ReplaceAll(entries(4001), `"e`, `"f`)+`]}`,
 		), true},
+		// A message without an ID fails the schema, but roots stay roots.
+		{"10,000 session entries on each root, one root without an ID", session(
+			`{"from":"player","content":[{"text":""}],"entries":[`+entries(6000)+`]}`,
+			`{"id":"b","from":"player","content":[{"text":""}],"entries":[`+strings.ReplaceAll(entries(4001), `"e`, `"f`)+`]}`,
+		), false},
 		{"10,000 session entries on each branch", session(
 			root,
 			`{"id":"a","parent":"r","from":"player","content":[{"text":""}],"entries":[`+entries(6000)+`]}`,

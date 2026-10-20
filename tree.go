@@ -3,7 +3,9 @@ package troupe
 // walkPaths visits a session's messages depth first, calling enter on the way
 // down to a message and leave on the way back up, so what enter adds and leave
 // removes is always the path to the current message. A message whose parent
-// names no message on an earlier line is a root (Format 11.1).
+// names no message on an earlier line is a root (Format 11.1). A message
+// without an ID, which fails the schema, is no parent, so a root's absent
+// parent never names it.
 func walkPaths(msgs []Message, enter, leave func(i int)) {
 	roots := len(msgs) // the index whose children are the roots
 	children := make([][]int, roots+1)
@@ -14,7 +16,7 @@ func walkPaths(msgs []Message, enter, leave func(i int)) {
 			parent = roots
 		}
 		children[parent] = append(children[parent], i)
-		if _, dup := index[m.ID]; !dup {
+		if _, dup := index[m.ID]; !dup && m.ID != "" {
 			index[m.ID] = i
 		}
 	}

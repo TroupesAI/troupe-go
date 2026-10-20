@@ -12,7 +12,7 @@ import (
 
 // The model marshals as the spec writes it, so a conforming document read
 // and marshaled again is the same JSON, every ext included: the spec's
-// examples here.
+// examples here. A bundle marshals as the same bytes every time.
 func TestMarshalModel(t *testing.T) {
 	for _, name := range []string{"elena-card.troupe.json", "mira-card.troupe.json", "lantern-heist/bundle.json"} {
 		data, err := fs.ReadFile(spec, "examples/"+name)
@@ -25,6 +25,16 @@ func TestMarshalModel(t *testing.T) {
 		}
 		if same, err := sameJSON(b, data); err != nil || !same {
 			t.Errorf("%s marshals as different JSON: %v", name, err)
+		}
+		first, err := json.Marshal(b)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for range 20 {
+			if again, _ := json.Marshal(b); !bytes.Equal(again, first) {
+				t.Errorf("%s marshals as different bytes", name)
+				break
+			}
 		}
 	}
 

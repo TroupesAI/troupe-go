@@ -81,7 +81,7 @@ func (rd *reader) pkg(src *source, size int64) *Package {
 	files := map[string]*zip.File{}
 	names := map[string]bool{}
 	for _, f := range zr.File {
-		folded := strings.Map(asciiLower, f.Name)
+		folded := asciiLower(f.Name)
 		if !validEntry(f) || names[folded] {
 			rd.reportEntry(f.Name)
 		}
@@ -171,11 +171,16 @@ func (rd *reader) reportEntry(name string) {
 	rd.diags = append(rd.diags, d)
 }
 
-func asciiLower(r rune) rune {
-	if 'A' <= r && r <= 'Z' {
-		return r + ('a' - 'A')
+// asciiLower returns name with A to Z as a to z, byte by byte, so a name that
+// isn't UTF-8 keeps its other bytes (Format 12.3).
+func asciiLower(name string) string {
+	b := []byte(name)
+	for i, c := range b {
+		if 'A' <= c && c <= 'Z' {
+			b[i] = c + ('a' - 'A')
+		}
 	}
-	return r
+	return string(b)
 }
 
 // source records the first error of a caller's io.ReaderAt, so a failure to

@@ -89,11 +89,21 @@ func comparePointers(a, b string) int {
 	return cmp.Compare(len(as), len(bs))
 }
 
+// compareTokens compares pointer tokens: array indices as numbers, before
+// other tokens, and other tokens as strings. Only an index as a pointer writes
+// one is a number, so tokens such as 1 and 01, which name distinct members,
+// never compare equal.
 func compareTokens(a, b string) int {
-	if m, err := strconv.Atoi(a); err == nil {
-		if n, err := strconv.Atoi(b); err == nil {
-			return cmp.Compare(m, n)
+	_, ai := arrayIndex(a)
+	_, bi := arrayIndex(b)
+	switch {
+	case ai && bi:
+		return cmp.Or(cmp.Compare(len(a), len(b)), strings.Compare(a, b))
+	case ai != bi:
+		if ai {
+			return -1
 		}
+		return 1
 	}
 	return strings.Compare(a, b)
 }

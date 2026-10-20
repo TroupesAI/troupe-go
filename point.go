@@ -1,6 +1,7 @@
 package troupe
 
 import (
+	"errors"
 	"maps"
 	"math/rand/v2"
 	"slices"
@@ -75,6 +76,10 @@ func (p *Point) State() State {
 	return State{p.story.scope, p.state}
 }
 
+// errCondition is Eval's error. It holds no text of the condition, which
+// apps log.
+var errCondition = errors.New("troupe: the condition is a CEL_ERROR")
+
 // Eval evaluates the condition expr of an entry owned by self, a character,
 // world or scenario ID, or "session" for a session entry, which scans
 // scanDepth messages: the entry's, 4 when it has none (Format 7.2, 10). It
@@ -83,7 +88,7 @@ func (p *Point) State() State {
 func (p *Point) Eval(expr, self string, scanDepth int) (bool, error) {
 	prg, err := p.story.program(expr, self)
 	if err != nil {
-		return false, err
+		return false, errCondition
 	}
 	hits := map[string]bool{}
 	for _, key := range prg.Keys() {
@@ -291,7 +296,12 @@ func elapsed(parent, at string) int64 {
 	if err1 != nil || err2 != nil || to.Before(from) {
 		return 0
 	}
-	return int64(to.Sub(from) / time.Second)
+	// From the seconds, since a time.Duration holds only about 292 years.
+	s := to.Unix() - from.Unix()
+	if to.Nanosecond() < from.Nanosecond() {
+		s--
+	}
+	return s
 }
 
 // within returns a location and its ancestors, innermost first; none for no
