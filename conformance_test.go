@@ -192,7 +192,10 @@ func runParse(tc test, expect *codesExpect) error {
 	case "session":
 		_, diags, err = troupe.ReadSession(bytes.NewReader(input))
 	case "package":
-		_, diags, err = troupe.ReadPackage(bytes.NewReader(input), int64(len(input)))
+		var p *troupe.Package
+		if p, diags, err = troupe.ReadPackage(bytes.NewReader(input), int64(len(input))); p != nil {
+			_, diags, err = p.ReadSessions()
+		}
 	default:
 		return fmt.Errorf("unknown kind %q", tc.Kind)
 	}
@@ -518,11 +521,18 @@ func (c *testCase) readPackage() (*troupe.Bundle, *troupe.Session, []troupe.Diag
 	if p == nil {
 		return nil, nil, nil, fmt.Errorf("the package doesn't read: %v", diags)
 	}
+	sessions, diags, err := p.ReadSessions()
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if sessions == nil {
+		return nil, nil, nil, fmt.Errorf("the package's sessions don't read: %v", diags)
+	}
 	if c.SessionFile == "" {
 		return p.Bundle, nil, diags, nil
 	}
 	name := strings.TrimPrefix(c.file(c.SessionFile), dir+"/")
-	s := p.Sessions[name]
+	s := sessions[name]
 	if s == nil {
 		return nil, nil, nil, fmt.Errorf("no session %s in the package", name)
 	}

@@ -42,7 +42,7 @@ The cost is that a change touching both the engine and the platform can't land i
 | Limits and package paths are checked on the parsed tree, before the schema | On the typed model, after it | Format 14's limits come before the work they bound, and the schema walks what they count |
 | A limit on a list counts every item, objects or not | Only objects | Every check runs on the document as written (Format 15.3), so a list of 257 is `PARSE` whatever its items are |
 | The unpacked size is the sum of the entries' declared sizes, checked before decompressing | Counting while decompressing | `archive/zip` fails an entry whose data doesn't match its declared size, so the sum bounds the work and is known before any is done |
-| An input that fails `PARSE` or `UNSUPPORTED_VERSION`, a whole bundle, session file or package, is `nil` and reported with those codes only. A package with an entry that can't be read, a session's included, is `nil` | Each session line or package entry on its own, leaving out a session that fails | Format 15.3 makes the input the unit. A package returned without the session would hide its bundle's other diagnostics while looking readable |
+| An input that fails `PARSE` or `UNSUPPORTED_VERSION`, a whole bundle, session file or package, is `nil` and reported with those codes only. `ReadPackage` gives no package when the archive, any entry's data or `bundle.json` fails, and `ReadSessions` no sessions when any session fails | Each session line or package entry on its own, leaving out a session that fails | Format 15.3 makes the input the unit. Sessions returned without the one that failed would hide the package's other diagnostics while looking readable |
 | A ZIP name starting with a drive letter, such as `C:x`, is absolute | Only a leading `/` | Extracted on Windows, it escapes the target directory |
 | A diagnostic about a ZIP entry names its file only when the name is a package path | Always naming it | Other names may hold anything, and diagnostics hold no document text |
 | A message line that is I-JSON but not an object is `SCHEMA` | `PARSE` | Messages have no `kind`, and their schema requires an object |
@@ -58,7 +58,6 @@ The cost is that a change touching both the engine and the platform can't land i
 | Initial values are checked once, for every variable | Checking each variable in each scenario that uses it | A character's or world's variable may be in no scenario, and a `"cast"` initial member is checked whenever it names a character (Format 8.3) |
 | A session's character or world that takes a scenario variable's ID is reported at the session's ID | At the variable's ID | The bundle is valid without the session (conformance README section 3.4) |
 | `NewStory(b, s)` with `Initial`, `Apply` and `StateAt` | Only `StateAt` | The platform keeps each message's state and applies the next message's changes to it, so it never replays a path of up to 100,000 messages. A session given without messages serves `Apply` alone |
-| The package only reads the documents it's given, and copies any of their lists it extends | Callers reading a bundle again for each use | The platform keeps one read bundle for every chat of a version, since reading one holds about six times its JSON in memory |
 | The package only reads the documents it's given, and copies any of their lists it extends | Callers reading a bundle again for each use | One read bundle can then serve every story, check and call at once, and reading one holds about six times its JSON in memory |
 | `State` is immutable, and `Apply` returns a new one | Changing a state in place | A caller can keep any state, and states share what a change doesn't touch |
 | `State.Get` takes the keys changes write (Format 8.5), and `All` yields them | Accessors per kind of value, or exported fields | One set of keys for writing and reading, and the suite's flattened form is exactly what `All` yields |
@@ -97,6 +96,7 @@ The cost is that a change touching both the engine and the platform can't land i
 | A message's own session entries apply to its `activated` | Applying from the next message | Format 11.3: they apply "from that message onward" |
 | A change key that doesn't follow the key grammar is `UNKNOWN_VARIABLE` as well as `SCHEMA` | Leaving it to the schema | Every check runs on the document as written (Format 15.3) |
 | With an unknown scenario, the session is checked against an empty one | Skipping the checks that need it | The rest still holds; only what the scenario would make valid fails |
+| `ReadPackage` reads a package as a bundle reader, listing its sessions' paths in `Package.Sessions`, and `Package.ReadSessions` reads them all as a session reader, returning the package's diagnostics at that level | `ReadPackage` reading every session, or a method reading one session | Format 15.2 lets a bundle reader leave sessions unread, so a broken session needn't stop a bundle being imported, and sessions can reach 256 MiB each. A package is one input, so a session that fails it fails the whole package (Format 15.3), which reading them together keeps in the library |
 | `Package.Files` lists the paths of a package's files other than `bundle.json` and its sessions, and `Package.Open(path)` streams any file of the package from the caller's `io.ReaderAt` | Reading them into memory, or a callback during `ReadPackage` | A package's files can reach 512 MiB unpacked, and the caller copies them only once it knows the package has no diagnostics. `ReadPackage` already checked every entry's size and data, so `Open` needs no limits of its own |
 | `Package.BundleJSON` holds `bundle.json` as written | Re-reading it with `Open` | `ReadPackage` has the bytes in hand, and a writer needs them to keep every `ext` (Format 13) |
 | A package's reader records its first error under a `sync.Once` | A plain field | `Open` reads through it, and is safe for concurrent use |
@@ -173,20 +173,20 @@ conformance_test.go package troupe_test: the runner
 
 ## The public API
 
-The API has to do two things: everything the conformance runner asks for, through exported names only, and everything the platform needs (see [What the platform needs](#what-the-platform-needs)). Everything the suite tests is built: `ReadBundle`, `ReadSession`, `ReadPackage`, the typed model, `Diagnostic`, `Check`, `NewStory`, `Story`, `State`, `Story.KnownBy`, `Story.Render`, `Story.RenderParts`, `Story.PointAt` and `Point.Eval`. Beyond the suite, importing bundles uses `Package.Files`, `Package.Open`, `Package.BundleJSON`, `Bundle.FileFields`, `ReplaceFileFields` and `ReadPackageBundle`, playing uses `NewScenarioStory`, `Story.Cast`, `Member`, `Story.Worlds`, `Story.Mode`, `Story.Narrator`, `Story.Root`, `Point.Active`, `ActiveEntry`, `Escape`, `State.MarshalJSON`, `Story.UnmarshalState`, `ErrStateFormat` and `State.Spoilers`, editing uses `Bundle.CheckID`, `ErrIDTaken` and `Bundle.RenameID`, and both use `Story.StateKeys` and `StateKey`.
+The API has to do two things: everything the conformance runner asks for, through exported names only, and everything the platform needs (see [What the platform needs](#what-the-platform-needs)). Everything the suite tests is built: `ReadBundle`, `ReadSession`, `ReadPackage`, `Package.ReadSessions`, the typed model, `Diagnostic`, `Check`, `NewStory`, `Story`, `State`, `Story.KnownBy`, `Story.Render`, `Story.RenderParts`, `Story.PointAt` and `Point.Eval`. Beyond the suite, importing bundles uses `Package.Files`, `Package.Open`, `Package.BundleJSON`, `Bundle.FileFields`, `ReplaceFileFields` and `ReadPackageBundle`, playing uses `NewScenarioStory`, `Story.Cast`, `Member`, `Story.Worlds`, `Story.Mode`, `Story.Narrator`, `Story.Root`, `Point.Active`, `ActiveEntry`, `Escape`, `State.MarshalJSON`, `Story.UnmarshalState`, `ErrStateFormat` and `State.Spoilers`, editing uses `Bundle.CheckID`, `ErrIDTaken` and `Bundle.RenameID`, and both use `Story.StateKeys` and `StateKey`.
 
 The suite's operations map onto it like this (conformance README section 3):
 
 | Test | Uses |
 | --- | --- |
-| `parse` | `ReadBundle`, `ReadSession`, `ReadPackage`, at the session-reader level |
+| `parse` | `ReadBundle`, `ReadSession`, and `ReadPackage` with `Package.ReadSessions`, at the session-reader level |
 | `check` | `Check`, once per scenario when there's no session |
 | `state` | `StateAt`, flattened by `State.All` |
 | `knows` | `KnownBy`, from the parent's `StateAt` |
 | `macro` | `Render`, with `char`, `owner` and `narrator` in its `RenderContext`, and the state at `at`; `RenderParts` for a `part` |
 | `cel` | `Point.Eval`, at the point `PointAt` builds from the path to `at`, with `char`, `self` and `scanDepth`; an error is a `CEL_ERROR` |
 
-A case whose `bundleFile` is a package's `bundle.json` is read by zipping its directory in memory and calling `ReadPackage`, since package paths are `PARSE` anywhere else.
+A case whose `bundleFile` is a package's `bundle.json` is read by zipping its directory in memory and calling `ReadPackage` and `Package.ReadSessions`, since package paths are `PARSE` anywhere else.
 
 ## Phases
 

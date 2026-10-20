@@ -31,8 +31,8 @@ func ReadBundle(r io.Reader) (*Bundle, []Diagnostic, error) {
 
 // ReadPackageBundle reads bundle.json as a package holds it, without the
 // package. Files are the paths of the package's files, such as Package.Files
-// and the keys of Package.Sessions, and its package paths must name one of
-// them or bundle.json (Format 12.2, 12.3). Its results are those ReadPackage
+// and Package.Sessions, and its package paths must name one of them or
+// bundle.json (Format 12.2, 12.3). Its results are those ReadPackage
 // gives for that bundle.json, so every diagnostic's File is "bundle.json".
 func ReadPackageBundle(r io.Reader, files []string) (*Bundle, []Diagnostic, error) {
 	rd := reader{file: "bundle.json", files: map[string]bool{"bundle.json": true}}

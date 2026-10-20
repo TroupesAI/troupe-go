@@ -1,11 +1,12 @@
 // Package troupe reads files in the Troupe format, checks them, and computes
 // what they mean, as the Troupe specification defines.
 //
-// ReadBundle, ReadSession and ReadPackage read the three forms of a file, and
-// Check runs the checks reading leaves. A document with any diagnostic
-// doesn't conform, and serves only to report them. Package.Open streams a
-// package's other files, such as its images, and ReadPackageBundle reads its
-// bundle.json stored apart from it. Bundle.FileFields yields the fields that
+// ReadBundle, ReadSession and ReadPackage read the three forms of a file,
+// Package.ReadSessions reads a package's sessions, and Check runs the checks
+// reading leaves. A document with any diagnostic doesn't conform, and serves
+// only to report them. Package.Open streams a package's other files, such as
+// its images, and ReadPackageBundle reads its bundle.json stored apart from
+// it. Bundle.FileFields yields the fields that
 // hold a file, and ReplaceFileFields sets them in a document's JSON, keeping
 // every other byte.
 //

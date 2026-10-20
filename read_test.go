@@ -55,11 +55,12 @@ func TestReadBundleModel(t *testing.T) {
 	}
 }
 
-// A package's sessions are its files anywhere under sessions/, by path, and
-// every diagnostic names the file it is in. Its other files, which aren't
-// documents, are listed and open by path, and bundle.json is kept as written.
-// A session that fails PARSE fails the whole package, which is then reported
-// with that code only (Format 15.3).
+// A package's sessions are its files anywhere under sessions/, by path, read
+// only by ReadSessions, and every diagnostic names the file it is in. Its
+// other files, which aren't documents, are listed and open by path, and
+// bundle.json is kept as written. A session that fails PARSE fails the whole
+// package as ReadSessions reads it, which is then reported with that code
+// only (Format 15.2, 15.3).
 func TestReadPackage(t *testing.T) {
 	header := `{"troupe":"0.14","kind":"session","scenario":"s"}` + "\n"
 	message := `{"id":"1","from":"player","content":[{"text":"Hi."}]}`
@@ -96,14 +97,26 @@ func TestReadPackage(t *testing.T) {
 	if p == nil {
 		t.Fatalf("the package doesn't read: %v", diags)
 	}
-	if got := slices.Sorted(maps.Keys(p.Sessions)); !slices.Equal(got, []string{"sessions/a.troupe-session.jsonl", "sessions/old/b.troupe-session.jsonl"}) {
-		t.Errorf("sessions %q", got)
+	sessionPaths := []string{"sessions/a.troupe-session.jsonl", "sessions/old/b.troupe-session.jsonl"}
+	if !slices.Equal(p.Sessions, sessionPaths) {
+		t.Errorf("sessions %q", p.Sessions)
+	}
+	bundleDiag := troupe.Diagnostic{Code: troupe.CodeUnknownField, File: "bundle.json", Pointer: "/mystery"}
+	if want := []troupe.Diagnostic{bundleDiag}; !reflect.DeepEqual(diags, want) {
+		t.Errorf("diagnostics %+v, want %+v", diags, want)
+	}
+	sessions, diags, err := p.ReadSessions()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := slices.Sorted(maps.Keys(sessions)); !slices.Equal(got, sessionPaths) {
+		t.Errorf("read sessions %q", got)
 	}
 	if want := []troupe.Diagnostic{
-		{Code: troupe.CodeUnknownField, File: "bundle.json", Pointer: "/mystery"},
+		bundleDiag,
 		{Code: troupe.CodeUnknownField, File: "sessions/old/b.troupe-session.jsonl", Line: 2, Message: "1", Pointer: "/mystery"},
 	}; !reflect.DeepEqual(diags, want) {
-		t.Errorf("diagnostics %+v, want %+v", diags, want)
+		t.Errorf("diagnostics with sessions %+v, want %+v", diags, want)
 	}
 	if string(p.BundleJSON) != bundle {
 		t.Errorf("bundle.json %q", p.BundleJSON)
@@ -126,10 +139,13 @@ func TestReadPackage(t *testing.T) {
 	}
 
 	files["sessions/broken.troupe-session.jsonl"] = header + `{"id":`
-	if p, diags := read(); p != nil || !reflect.DeepEqual(diags, []troupe.Diagnostic{
+	if p, diags = read(); p == nil || !reflect.DeepEqual(diags, []troupe.Diagnostic{bundleDiag}) {
+		t.Fatalf("with a broken session, the bundle doesn't read: %+v", diags)
+	}
+	if sessions, diags, err := p.ReadSessions(); err != nil || sessions != nil || !reflect.DeepEqual(diags, []troupe.Diagnostic{
 		{Code: troupe.CodeParse, File: "sessions/broken.troupe-session.jsonl", Line: 2, Pointer: "/id"},
 	}) {
-		t.Errorf("with a broken session: %v, diagnostics %+v", p != nil, diags)
+		t.Errorf("with a broken session: %v, %v, diagnostics %+v", sessions != nil, err, diags)
 	}
 }
 
@@ -193,7 +209,9 @@ func TestReadPackageBundle(t *testing.T) {
 }
 
 // Reading stops at each limit of Format 14 that the conformance suite has no
-// case for, so hostile input can't make it do unbounded work.
+// case for, so hostile input can't make it do unbounded work, and at a
+// package entry whose data doesn't match its checksum, which Package.Open
+// and Package.ReadSessions then rely on.
 func TestReadLimits(t *testing.T) {
 	entries := func(n int) string {
 		es := make([]string, n)
@@ -286,6 +304,17 @@ func TestReadLimits(t *testing.T) {
 				panic(err)
 			}
 		}), true},
+		{"a session whose data doesn't match its checksum", pkg(func(w *zip.Writer) {
+			data := `{"troupe":"0.14","kind":"session","scenario":"s"}`
+			h := &zip.FileHeader{Name: "sessions/a.troupe-session.jsonl", Method: zip.Store, CRC32: 1, CompressedSize64: uint64(len(data)), UncompressedSize64: uint64(len(data))}
+			f, err := w.CreateRaw(h)
+			if err != nil {
+				panic(err)
+			}
+			if _, err := f.Write([]byte(data)); err != nil {
+				panic(err)
+			}
+		}), true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -311,6 +340,32 @@ func TestReadErrors(t *testing.T) {
 	}
 	if _, _, err := troupe.ReadPackage(failing{fail}, 100); !errors.Is(err, fail) {
 		t.Errorf("ReadPackage: %v", err)
+	}
+	var buf bytes.Buffer
+	w := zip.NewWriter(&buf)
+	for name, data := range map[string]string{
+		"bundle.json":                     `{"troupe":"0.14","kind":"bundle"}`,
+		"sessions/a.troupe-session.jsonl": `{"troupe":"0.14","kind":"session","scenario":"s"}`,
+	} {
+		f, err := w.Create(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := f.Write([]byte(data)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := w.Close(); err != nil {
+		t.Fatal(err)
+	}
+	r := &breaking{r: bytes.NewReader(buf.Bytes())}
+	p, diags, err := troupe.ReadPackage(r, int64(buf.Len()))
+	if p == nil || err != nil {
+		t.Fatal(err, diags)
+	}
+	r.err = fail
+	if _, _, err := p.ReadSessions(); !errors.Is(err, fail) {
+		t.Errorf("ReadSessions: %v", err)
 	}
 }
 
@@ -354,6 +409,19 @@ func (spaces) Read(p []byte) (int, error) {
 }
 
 type failing struct{ err error }
+
+// breaking reads r until err is set, and then fails with it.
+type breaking struct {
+	r   io.ReaderAt
+	err error
+}
+
+func (b *breaking) ReadAt(p []byte, off int64) (int, error) {
+	if b.err != nil {
+		return 0, b.err
+	}
+	return b.r.ReadAt(p, off)
+}
 
 func (f failing) Read([]byte) (int, error)          { return 0, f.err }
 func (f failing) ReadAt([]byte, int64) (int, error) { return 0, f.err }
