@@ -1,7 +1,6 @@
 package condition
 
 import (
-	"slices"
 	"strings"
 	"sync"
 
@@ -24,21 +23,44 @@ type Selection struct {
 
 // Literal is a string literal. At is where its value is written, or -1 when
 // the literal isn't written as its value between quotes, so the value can't
-// be replaced in place. With is the name it is compared with when that name's
-// values are IDs, as char is in char == 'kai' and scene.present in 'kai' in
-// scene.present, and "" otherwise.
+// be replaced in place. Of is what it is an ID of when it is compared with a
+// name whose values are IDs, as it is with char in char == 'kai' and with
+// scene.present in 'kai' in scene.present, and "" otherwise.
 type Literal struct {
 	Value string
 	At    int
-	With  string
+	Of    IDKind
 }
 
-// The names whose values are an ID, and those whose values are lists of IDs
-// (Format 10.1).
-var (
-	idNames     = []string{"char", "user", "self", "scenario", "opening", "scene.location"}
-	idListNames = []string{"players", "scene.present", "scene.within"}
+// IDKind is what an ID names.
+type IDKind string
+
+// The kinds of ID a name's values are. Owner is self's: a character's,
+// world's or scenario's.
+const (
+	CharacterID IDKind = "character"
+	LocationID  IDKind = "location"
+	ScenarioID  IDKind = "scenario"
+	OpeningID   IDKind = "opening"
+	OwnerID     IDKind = "owner"
 )
+
+// idNames are the names whose values are an ID or a list of IDs (Format
+// 10.1).
+var idNames = map[string]struct {
+	of   IDKind
+	list bool
+}{
+	"char":           {CharacterID, false},
+	"user":           {CharacterID, false},
+	"self":           {OwnerID, false},
+	"scenario":       {ScenarioID, false},
+	"opening":        {OpeningID, false},
+	"scene.location": {LocationID, false},
+	"players":        {CharacterID, true},
+	"scene.present":  {CharacterID, true},
+	"scene.within":   {LocationID, true},
+}
 
 // parseEnv parses expressions with the macros conditions compile with.
 var parseEnv = sync.OnceValue(func() *cel.Env {
@@ -57,7 +79,7 @@ func Uses(expr string) ([]Selection, []Literal, error) {
 	if iss.Err() != nil {
 		return nil, nil, iss.Err()
 	}
-	u := &uses{expr: expr, info: a.NativeRep().SourceInfo(), with: map[int64]string{}}
+	u := &uses{expr: expr, info: a.NativeRep().SourceInfo(), of: map[int64]IDKind{}}
 	// cel-go counts offsets in code points.
 	for i := range expr {
 		u.offsets = append(u.offsets, i)
@@ -71,7 +93,7 @@ type uses struct {
 	expr       string
 	offsets    []int // the byte offset of each code point, then of the end
 	info       *ast.SourceInfo
-	with       map[int64]string // the names literals are compared with, by expression ID
+	of         map[int64]IDKind // what literals compared with names are IDs of, by expression ID
 	selections []Selection
 	literals   []Literal
 }
@@ -122,11 +144,11 @@ func (u *uses) call(c ast.CallExpr) {
 			u.selections = append(u.selections, s)
 			return
 		}
-		u.compare(args[0], args[1], idListNames, nil)
-		u.compare(args[1], args[0], nil, idNames)
+		u.compare(args[0], args[1], true)
+		u.compare(args[1], args[0], true)
 	case operators.Equals, operators.NotEquals:
-		u.compare(args[0], args[1], idNames, idListNames)
-		u.compare(args[1], args[0], idNames, idListNames)
+		u.compare(args[0], args[1], false)
+		u.compare(args[1], args[0], false)
 	}
 	if c.IsMemberFunction() {
 		u.visit(c.Target())
@@ -136,35 +158,33 @@ func (u *uses) call(c ast.CallExpr) {
 	}
 }
 
-// compare records the names literals are compared with, for a compared with
-// b or in b, or b in a: a string literal a against b, one of names, and each
-// item of a list literal a against b, one of listed.
-func (u *uses) compare(a, b ast.Expr, names, listed []string) {
-	name := u.name(b)
+// compare records what literals compared with names are IDs of, for a
+// compared with b, or with in, for a in b or b in a: a string literal a
+// against b when b's values are lists exactly with in, as in 'kai' in players
+// and char == 'kai', and each item of a list literal a when they are lists
+// exactly without, as in char in ['kai'] and players == ['kai'].
+func (u *uses) compare(a, b ast.Expr, in bool) {
+	n, ok := idNames[name(b)]
 	switch {
-	case name == "":
-	case isString(a) && slices.Contains(names, name):
-		u.with[a.ID()] = name
-	case a.Kind() == ast.ListKind && slices.Contains(listed, name):
+	case !ok:
+	case isString(a) && n.list == in:
+		u.of[a.ID()] = n.of
+	case a.Kind() == ast.ListKind && n.list != in:
 		for _, e := range a.AsList().Elements() {
-			u.with[e.ID()] = name
+			u.of[e.ID()] = n.of
 		}
 	}
 }
 
-// name returns the name x is, when its values are IDs or lists of them.
-func (u *uses) name(x ast.Expr) string {
-	var name string
+// name returns the name x is, when it is a name or a selection from scene.
+func name(x ast.Expr) string {
 	switch x.Kind() {
 	case ast.IdentKind:
-		name = x.AsIdent()
+		return x.AsIdent()
 	case ast.SelectKind:
 		if op := x.AsSelect().Operand(); op.Kind() == ast.IdentKind && op.AsIdent() == "scene" {
-			name = "scene." + x.AsSelect().FieldName()
+			return "scene." + x.AsSelect().FieldName()
 		}
-	}
-	if slices.Contains(idNames, name) || slices.Contains(idListNames, name) {
-		return name
 	}
 	return ""
 }
@@ -210,7 +230,7 @@ func (u *uses) field(i int) int {
 }
 
 func (u *uses) literal(x ast.Expr) Literal {
-	l := Literal{Value: string(x.AsLiteral().(types.String)), At: -1, With: u.with[x.ID()]}
+	l := Literal{Value: string(x.AsLiteral().(types.String)), At: -1, Of: u.of[x.ID()]}
 	i := u.offset(x.ID())
 	if q := u.expr[i]; (q == '\'' || q == '"') && strings.HasPrefix(u.expr[i+1:], l.Value+string(q)) {
 		l.At = i + 1

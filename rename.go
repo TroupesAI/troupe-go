@@ -386,22 +386,22 @@ func (r *renamer) condition(p jsontext.Pointer, expr string, in []*Scenario, own
 }
 
 // literal reports whether a condition's string literal refers to the object,
-// by the name it is compared with (Format 10.1), in the scenarios in, and
-// whether rewriting it, or leaving it, is safe.
+// by what the name it is compared with holds IDs of (Format 10.1), in the
+// scenarios in, and whether rewriting it, or leaving it, is safe.
 func (r *renamer) literal(in []*Scenario, l condition.Literal) (refers, safe bool) {
 	if l.Value != r.old {
 		return false, true
 	}
-	switch l.With {
-	case "char", "user", "players", "scene.present":
+	switch l.Of {
+	case condition.CharacterID:
 		return targets[Character](r), true
-	case "self":
+	case condition.OwnerID:
 		return targets[Character](r) || targets[World](r) || targets[Scenario](r), true
-	case "scenario":
+	case condition.ScenarioID:
 		return targets[Scenario](r), true
-	case "scene.location", "scene.within":
+	case condition.LocationID:
 		return targets[Location](r), true
-	case "opening":
+	case condition.OpeningID:
 		// Each scenario that uses the condition has openings of its own.
 		safe = true
 		for _, s := range in {

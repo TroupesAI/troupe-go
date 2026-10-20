@@ -197,15 +197,7 @@ func declarations(scenario *Scenario, n *names) []condition.Var {
 // ownDeclarations returns the variables own means for an owner: its own, as
 // own.<id>. A session entry has none (Format 8.2).
 func ownDeclarations(scenario *Scenario, n *names, self string) []condition.Var {
-	var vs []Variable
-	switch {
-	case scenario != nil && self == scenario.ID:
-		vs = scenario.Variables
-	case n.characters[self] != nil:
-		vs = n.characters[self].Variables
-	case n.worlds[self] != nil:
-		vs = n.worlds[self].Variables
-	}
+	vs, _ := n.own(scenario, self)
 	var vars []condition.Var
 	for _, v := range vs {
 		vars = append(vars, conditionVar("own."+v.ID, v))

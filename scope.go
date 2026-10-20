@@ -327,38 +327,39 @@ func isKey(k string) bool {
 // character, world or scenario ID.
 func (n *names) declared(scenario *Scenario, owner string, own bool, path []string) (string, *Variable, []string, bool) {
 	var vars []Variable
-	prefix := "state."
+	var prefix string
 	switch {
-	case own && scenario != nil && owner == scenario.ID:
-		vars = scenario.Variables
-	case own && n.characters[owner] != nil:
-		vars, prefix = n.characters[owner].Variables, "state."+owner+"."
-	case own && n.worlds[owner] != nil:
-		vars, prefix = n.worlds[owner].Variables, "state."+owner+"."
 	case own:
+		vars, prefix = n.own(scenario, owner)
+	case scenario != nil && variableOf(scenario.Variables, path[0]) != nil:
+		vars, prefix = scenario.Variables, "state."
+	case len(path) < 2:
 		return "", nil, nil, false
 	default:
-		if scenario != nil {
-			if v := variableOf(scenario.Variables, path[0]); v != nil {
-				return prefix + path[0], v, path[1:], true
-			}
-		}
-		if len(path) < 2 {
-			return "", nil, nil, false
-		}
-		switch {
-		case n.characters[path[0]] != nil:
-			vars = n.characters[path[0]].Variables
-		case n.worlds[path[0]] != nil:
-			vars = n.worlds[path[0]].Variables
-		}
-		prefix, path = "state."+path[0]+".", path[1:]
+		// A character's or world's variable: what own means in its own text.
+		vars, prefix = n.own(nil, path[0])
+		path = path[1:]
 	}
 	v := variableOf(vars, path[0])
 	if v == nil {
 		return "", nil, nil, false
 	}
 	return prefix + path[0], v, path[1:], true
+}
+
+// own returns the variables own means for owner, a character, world or
+// scenario ID, and what their full names start with; none for any other
+// owner, such as a session entry's (Format 8.2).
+func (n *names) own(scenario *Scenario, owner string) ([]Variable, string) {
+	switch {
+	case scenario != nil && owner == scenario.ID:
+		return scenario.Variables, "state."
+	case n.characters[owner] != nil:
+		return n.characters[owner].Variables, "state." + owner + "."
+	case n.worlds[owner] != nil:
+		return n.worlds[owner].Variables, "state." + owner + "."
+	}
+	return nil, ""
 }
 
 // variableOf returns the variable of vars with the ID id, or nil.
