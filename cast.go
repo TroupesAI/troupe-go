@@ -17,9 +17,29 @@ type Member struct {
 	Player bool
 	// Notes and Spoiler are the scenario's for the member; a new seat and a
 	// joiner have none. Notes render with the member's character as
-	// {{char}}, and the scenario as owner (Format 9).
+	// {{char}}, and the scenario as owner (Format 9). State.Spoilers tells
+	// whether a spoiler still is one.
 	Notes   string
 	Spoiler bool
+}
+
+// Spoilers returns the characters of the cast members marked spoiler that are
+// still spoilers for players at s, in cast order: those that no state at a
+// message on its path, the root's included, has present (Format 6.1). The
+// initial state has the whole cast present, but it counts for nothing, so a
+// member stays a spoiler only when the root leaves it out of scene.present,
+// such as through an opening's set.
+func (s State) Spoilers() []string {
+	if s.s == nil {
+		return nil
+	}
+	var out []string
+	for _, m := range s.scope.members {
+		if m.of != nil && m.of.Spoiler && slices.Contains(s.scope.cast, m.id) && !slices.Contains(s.s.appeared, m.id) {
+			out = append(out, m.id)
+		}
+	}
+	return out
 }
 
 // Cast returns the story's cast, in cast order (Format 6.1, 11.2). In a

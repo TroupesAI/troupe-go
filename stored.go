@@ -5,6 +5,7 @@ import (
 	"encoding/json/jsontext"
 	"encoding/json/v2"
 	"errors"
+	"fmt"
 	"io"
 	"strings"
 )
@@ -22,15 +23,25 @@ type stored struct {
 	ParentAt  string                    `json:"parentAt,omitempty"`
 	Entries   []Entry                   `json:"entries,omitempty"`
 	Activated map[string]int            `json:"activated,omitempty"`
+	// Appeared is always written, so a state stored before it is told
+	// apart.
+	Appeared *[]string `json:"appeared"`
 }
+
+// ErrStateFormat is what UnmarshalState's error wraps when the state was
+// stored in a format this release doesn't read: by a release of another
+// Troupe version, or of this one before states kept who has been present.
+// The state can't be restored, only computed again with Apply.
+var ErrStateFormat = errors.New("the stored state is in a format this release doesn't read")
 
 // MarshalJSON returns s as JSON that UnmarshalState reads back: every key and
 // value s holds, and what else it keeps that depends on the path, such as
-// the rounds, the session entries in use and when entries were recorded as
-// activated. The JSON names this module's Troupe version, which reads it
-// back, later releases of the module included. No string in it holds U+0000,
-// so a database's JSON type that refuses it, such as PostgreSQL's jsonb, can
-// hold it.
+// the rounds, the session entries in use, when entries were recorded as
+// activated and who has been present. The JSON names this module's Troupe
+// version, which reads it back, later releases of the module included,
+// unless their UnmarshalState wraps ErrStateFormat. No string in it holds
+// U+0000, so a database's JSON type that refuses it, such as PostgreSQL's
+// jsonb, can hold it.
 //
 // It fails for the zero State.
 func (s State) MarshalJSON() ([]byte, error) {
@@ -47,6 +58,7 @@ func (s State) MarshalJSON() ([]byte, error) {
 		ParentAt:  s.s.parentAt,
 		Entries:   s.s.entries,
 		Activated: s.s.activated,
+		Appeared:  &s.s.appeared,
 	}
 	for key, x := range s.All() {
 		raw, err := json.Marshal(x)
@@ -71,8 +83,9 @@ func (s State) MarshalJSON() ([]byte, error) {
 // since: a key the stored state doesn't hold, such as one of a joiner the
 // session's header has added, holds its initial value (Format 8.3).
 //
-// It fails when data isn't a stored state of this module's Troupe version,
-// or holds a key or value that isn't valid in this story (Format 8.5).
+// It fails when data isn't a stored state, or holds a key or value that isn't
+// valid in this story (Format 8.5), and wraps ErrStateFormat when the state is
+// stored in a format this release doesn't read.
 func (st *Story) UnmarshalState(data []byte) (State, error) {
 	if bytes.Contains(data, []byte(`\u0001`)) {
 		var err error
@@ -85,7 +98,10 @@ func (st *Story) UnmarshalState(data []byte) (State, error) {
 		return State{}, errors.New("troupe: the stored state isn't one State.MarshalJSON writes")
 	}
 	if v.Troupe != Version {
-		return State{}, errors.New("troupe: the stored state is of another Troupe version")
+		return State{}, fmt.Errorf("troupe: %w: it is of another Troupe version", ErrStateFormat)
+	}
+	if v.Appeared == nil {
+		return State{}, fmt.Errorf("troupe: %w: it doesn't say who has been present", ErrStateFormat)
 	}
 	sc := st.scope
 	for key, raw := range v.Values {
@@ -96,7 +112,7 @@ func (st *Story) UnmarshalState(data []byte) (State, error) {
 	s := st.initial.clone()
 	sc.apply(s, v.Values, nil)
 	s.user, s.turn, s.opening, s.at, s.parentAt = v.User, v.Turn, v.Opening, v.At, v.ParentAt
-	s.entries, s.activated = v.Entries, v.Activated
+	s.entries, s.activated, s.appeared = v.Entries, v.Activated, *v.Appeared
 	return State{sc, s}, nil
 }
 

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json/jsontext"
 	"encoding/json/v2"
+	"errors"
 	"maps"
 	"math/rand/v2"
 	"reflect"
@@ -80,27 +81,29 @@ func TestStoreState(t *testing.T) {
 		t.Errorf("the joiner's trust is %v", trust)
 	}
 
-	for name, edit := range map[string]func(map[string]jsontext.Value){
-		"another version": func(v map[string]jsontext.Value) { v["troupe"] = jsontext.Value(`"0.13"`) },
-		"an unknown key":  func(v map[string]jsontext.Value) { v["values"] = jsontext.Value(`{"state.missing":1}`) },
-		"an invalid value": func(v map[string]jsontext.Value) {
-			v["values"] = jsontext.Value(`{"state.n":"two"}`)
-		},
+	for name, c := range map[string]struct {
+		edit   func(map[string]jsontext.Value)
+		format bool // whether the error wraps ErrStateFormat
+	}{
+		"another version":    {func(v map[string]jsontext.Value) { v["troupe"] = jsontext.Value(`"0.13"`) }, true},
+		"no one present yet": {func(v map[string]jsontext.Value) { delete(v, "appeared") }, true},
+		"an unknown key":     {func(v map[string]jsontext.Value) { v["values"] = jsontext.Value(`{"state.missing":1}`) }, false},
+		"an invalid value":   {func(v map[string]jsontext.Value) { v["values"] = jsontext.Value(`{"state.n":"two"}`) }, false},
 	} {
 		var v map[string]jsontext.Value
 		if err := json.Unmarshal(data, &v); err != nil {
 			t.Fatal(err)
 		}
-		edit(v)
+		c.edit(v)
 		edited, err := json.Marshal(v)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := story.UnmarshalState(edited); err == nil {
-			t.Errorf("a stored state with %s restores", name)
+		if _, err := story.UnmarshalState(edited); err == nil || errors.Is(err, troupe.ErrStateFormat) != c.format {
+			t.Errorf("a stored state with %s restores with %v", name, err)
 		}
 	}
-	if _, err := story.UnmarshalState([]byte(`{"troupe":`)); err == nil {
-		t.Error("a stored state that isn't JSON restores")
+	if _, err := story.UnmarshalState([]byte(`{"troupe":`)); err == nil || errors.Is(err, troupe.ErrStateFormat) {
+		t.Errorf("a stored state that isn't JSON restores with %v", err)
 	}
 }

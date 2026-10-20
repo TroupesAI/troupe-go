@@ -38,7 +38,8 @@ type ActiveEntry struct {
 // Which active entries reach the model is the caller's to choose, by their
 // priority, and where each goes by its position or depth (Format 7.3). The
 // message being written records those that reach it in activated, apart from
-// those Kept.
+// those Kept; one whose text renders as nothing or only whitespace reaches
+// nothing (Format 11.4).
 func (p *Point) Active(r *rand.Rand) []ActiveEntry {
 	var active []ActiveEntry
 	for _, a := range p.inUse() {

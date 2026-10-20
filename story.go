@@ -73,25 +73,32 @@ func (st *Story) Initial() State {
 
 // Apply returns the state after a message, given the state of this story
 // before it: its parent's, or the initial state for a root. That is the state
-// after the message's changes (Format 8.6), with what else conditions,
-// macros and activation read that depends on the path, such as the rounds so
-// far, the player's character {{user}} means, the session entries in use and
-// the rounds entries were recorded as activated in (Format 7.2, 9, 10.1,
-// 11.3). Applying the messages of a path in turn gives the state at its last,
-// so a caller that keeps each message's state never replays a path.
+// after the message's changes (Format 8.6), with what else depends on the
+// path, such as the rounds so far, the player's character {{user}} means, the
+// session entries in use, the rounds entries were recorded as activated in
+// and who has been present (Format 6.1, 7.2, 9, 10.1, 11.3). Applying the
+// messages of a path in turn gives the state at its last, so a caller that
+// keeps each message's state never replays a path.
 func (st *Story) Apply(before State, m *Message) State {
 	s := before.s.clone()
 	st.apply(s, m)
 	return State{st.scope, s}
 }
 
-// apply applies m to s: its changes, in order; for a player message, a
-// round, and with a speaking part, the first such part's speaker as {{user}}
-// (Format 9, 11.1); for a root, its opening; m's at; its entries, then its
-// activated, which its own entries may be in (Format 11.3).
+// apply applies m to s: its changes, in order, and who they leave present;
+// for a player message, a round, and with a speaking part, the first such
+// part's speaker as {{user}} (Format 9, 11.1); for a root, its opening; m's
+// at; its entries, then its activated, which its own entries may be in
+// (Format 11.3).
 func (st *Story) apply(s *state, m *Message) {
 	for _, c := range m.Changes {
 		st.scope.apply(s, c.Set, nil)
+	}
+	for _, id := range s.present {
+		if !slices.Contains(s.appeared, id) {
+			// Clipped, so the append can't write into another state's.
+			s.appeared = append(slices.Clip(s.appeared), id)
+		}
 	}
 	if m.Parent == "" {
 		s.opening = m.Opening
