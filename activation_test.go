@@ -104,6 +104,26 @@ func TestActiveChanceAndWeight(t *testing.T) {
 	}
 }
 
+// An entry sticky keeps wins its group against equal priorities, with no
+// draw, and gives way to a higher priority (Format 7.2).
+func TestActiveStickyInGroup(t *testing.T) {
+	story, s := readStory(t, `{"troupe":"0.14","kind":"bundle","scenarios":[{"id":"s","entries":[
+		{"id":"kept","text":"t","group":"g","sticky":2},
+		{"id":"heavy","text":"t","group":"g","weight":1000},
+		{"id":"low","text":"t","group":"h","sticky":2},
+		{"id":"high","text":"t","group":"h","priority":90}]}]}`,
+		`{"troupe":"0.14","kind":"session","scenario":"s","characters":[{"id":"p","name":"Pat","description":"Pat."}],"players":["p"]}`,
+		`{"id":"1","from":"player","content":[{"speaker":"p","text":"Hi."}]}`,
+		`{"id":"2","parent":"1","from":"model","content":[{"text":"Hi."}],"activated":["s/kept","s/low"]}`)
+	r := rand.New(rand.NewPCG(1, 2)) //nolint:gosec // G404: a seeded source makes the test reproducible
+	p := story.PointAt(story.Initial(), s.Messages, "")
+	for range 100 {
+		if got := refs(p.Active(r)); !slices.Equal(got, []string{"s/kept kept", "s/high"}) {
+			t.Fatalf("%v, want s/kept kept and s/high", got)
+		}
+	}
+}
+
 // readStory reads a bundle and a session, given as its lines, or none, which
 // conform, and returns their story.
 func readStory(t *testing.T, bundle string, session ...string) (*troupe.Story, *troupe.Session) {

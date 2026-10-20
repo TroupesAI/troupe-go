@@ -31,7 +31,8 @@ type ActiveEntry struct {
 // of the messages that record an entry in activated time it: sticky keeps it
 // active, and once and cooldown keep it from activating again. Of the entries
 // that would activate, chance lets each through, and then group keeps one of
-// each owner's group, of the highest priority, chosen by weight among equals.
+// each owner's group, of the highest priority, chosen by weight among equals,
+// where an entry sticky keeps wins against equals that aren't kept.
 // r draws for chance and weight, so activation is reproducible from the
 // caller's source.
 //
@@ -122,8 +123,8 @@ func (p *Point) activates(a *ActiveEntry, r *rand.Rand) bool {
 }
 
 // compete keeps, of the active entries of each owner's group, one of the
-// highest priority, chosen by weight among equals (Format 7.2). An entry
-// sticky keeps competes as any other, since the spec doesn't set it apart.
+// highest priority, chosen by weight among equals, where an entry sticky keeps
+// wins against equals that aren't kept (Format 7.2).
 func compete(active []ActiveEntry, r *rand.Rand) []ActiveEntry {
 	groups := map[string][]int{} // each group's entries, by owner and group
 	var order []string           // the groups, in the order of their first entries
@@ -145,12 +146,17 @@ func compete(active []ActiveEntry, r *rand.Rand) []ActiveEntry {
 			top = max(top, priority(&active[i].Entry))
 		}
 		var best []int
-		var total int64
 		for _, i := range members {
 			if priority(&active[i].Entry) == top {
 				best = append(best, i)
-				total += weight(&active[i].Entry)
 			}
+		}
+		if kept := slices.DeleteFunc(slices.Clone(best), func(i int) bool { return !active[i].Kept }); len(kept) > 0 {
+			best = kept
+		}
+		var total int64
+		for _, i := range best {
+			total += weight(&active[i].Entry)
 		}
 		winner := best[0]
 		if len(best) > 1 {
