@@ -54,7 +54,7 @@ func value(v *Variable, raw jsontext.Value) (any, bool) {
 		var members []string
 		for _, item := range items {
 			s, ok := item.(string)
-			if !ok || v.Values != nil && !slices.Contains(v.Values, s) {
+			if !ok || len(s) > maxStringValue || v.Values != nil && !slices.Contains(v.Values, s) {
 				return nil, false
 			}
 			if !slices.Contains(members, s) {

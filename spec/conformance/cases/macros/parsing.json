@@ -148,7 +148,7 @@
     },
     {
       "type": "macro",
-      "name": "own in a scenario's text means state; labels render",
+      "name": "own in a scenario's text names its variables; labels render",
       "owner": "s",
       "text": "The alarm is {{own.alarm}}.",
       "expect": "The alarm is quiet."

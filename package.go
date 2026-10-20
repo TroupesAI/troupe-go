@@ -18,8 +18,8 @@ type Package struct {
 	// BundleJSON is bundle.json as written, which a writer rewrites to keep
 	// every ext unchanged (Format 13).
 	BundleJSON []byte
-	// Sessions are the package's sessions that read without PARSE or
-	// UNSUPPORTED_VERSION, by path, such as "sessions/a.troupe-session.jsonl".
+	// Sessions are the package's sessions, by path, such as
+	// "sessions/a.troupe-session.jsonl".
 	Sessions map[string]*Session
 	// Files are the paths of the package's files other than bundle.json and
 	// its sessions, sorted. They include files nothing references, which a
@@ -42,10 +42,10 @@ func (p *Package) Open(path string) (io.ReadCloser, error) {
 
 // ReadPackage reads a package, the ZIP archive of size bytes in r, and its
 // bundle and sessions (Format 12.3). It reads every entry, so data that can't
-// be read is PARSE wherever it is. Its results are those of ReadBundle: the
-// package is nil when the archive fails PARSE, or its bundle.json fails PARSE
-// or UNSUPPORTED_VERSION, and leaves out any session that does. Package.Open
-// reads r again.
+// be read is PARSE wherever it is. Its results are those of ReadBundle, for
+// the whole package: the package is nil when the archive fails PARSE, or its
+// bundle.json or any of its sessions fails PARSE or UNSUPPORTED_VERSION, and
+// its diagnostics are then only those. Package.Open reads r again.
 func ReadPackage(r io.ReaderAt, size int64) (*Package, []Diagnostic, error) {
 	src := &source{r: r}
 	var rd reader
@@ -53,7 +53,7 @@ func ReadPackage(r io.ReaderAt, size int64) (*Package, []Diagnostic, error) {
 	if src.err != nil {
 		return nil, nil, src.err
 	}
-	return p, sortDiagnostics(rd.diags), nil
+	return p, rd.diagnostics(), nil
 }
 
 // pkg reads the package in src, stopping when src fails.
@@ -110,13 +110,10 @@ func (rd *reader) pkg(src *source, size int64) *Package {
 		}
 		if err := rd.entry(f, isSession, p); err != nil {
 			rd.reportEntry(f.Name)
-			// Only a session can fail and leave the package readable.
-			if src.err != nil || !isSession {
-				return nil
-			}
+			return nil
 		}
 	}
-	if p.Bundle == nil {
+	if rd.unread() {
 		return nil
 	}
 	slices.Sort(p.Files)

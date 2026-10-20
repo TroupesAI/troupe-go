@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 	"regexp"
+	"slices"
 	"strconv"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
@@ -25,7 +26,7 @@ func ReadBundle(r io.Reader) (*Bundle, []Diagnostic, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	return b, sortDiagnostics(rd.diags), nil
+	return b, rd.diagnostics(), nil
 }
 
 // ReadPackageBundle reads bundle.json as a package holds it, without the
@@ -42,19 +43,20 @@ func ReadPackageBundle(r io.Reader, files []string) (*Bundle, []Diagnostic, erro
 	if err != nil {
 		return nil, nil, err
 	}
-	return b, sortDiagnostics(rd.diags), nil
+	return b, rd.diagnostics(), nil
 }
 
 // ReadSession reads a session file, line by line (Format 11). Its results are
-// those of ReadBundle, for every line: the session is nil when any line fails
-// PARSE, or its header UNSUPPORTED_VERSION.
+// those of ReadBundle, for the whole file: the session is nil when any line
+// fails PARSE, or its header UNSUPPORTED_VERSION, and its diagnostics are then
+// only those.
 func ReadSession(r io.Reader) (*Session, []Diagnostic, error) {
 	var rd reader
 	s, err := rd.session(r)
 	if err != nil {
 		return nil, nil, err
 	}
-	return s, sortDiagnostics(rd.diags), nil
+	return s, rd.diagnostics(), nil
 }
 
 // reader reads the documents of one input and collects their diagnostics.
@@ -235,4 +237,23 @@ func (rd *reader) document(data []byte, line int, k docKind, v any) bool {
 func (rd *reader) report(d Diagnostic) {
 	d.File = rd.file
 	rd.diags = append(rd.diags, d)
+}
+
+// diagnostics returns the input's diagnostics, sorted. An input, a whole file
+// or package, that fails PARSE or UNSUPPORTED_VERSION is reported with those
+// codes only (Format 15.3).
+func (rd *reader) diagnostics() []Diagnostic {
+	if rd.unread() {
+		rd.diags = slices.DeleteFunc(rd.diags, func(d Diagnostic) bool { return !unread(d) })
+	}
+	return sortDiagnostics(rd.diags)
+}
+
+// unread reports whether the input fails PARSE or UNSUPPORTED_VERSION.
+func (rd *reader) unread() bool {
+	return slices.ContainsFunc(rd.diags, unread)
+}
+
+func unread(d Diagnostic) bool {
+	return d.Code == CodeParse || d.Code == CodeUnsupportedVersion
 }

@@ -1,5 +1,5 @@
 {
-  "description": "Sessions (Format 11, 15.3): session lines end with LF or CRLF and the last newline is optional; an unreadable line is PARSE",
+  "description": "Sessions (Format 11, 15.3): session lines end with LF or CRLF and the last newline is optional; an unreadable line is PARSE, and the session is then reported with that code only",
   "tests": [
     {
       "type": "parse",
@@ -24,6 +24,17 @@
       "name": "an unreadable line is PARSE",
       "kind": "session",
       "text": "{\"troupe\":\"0.14\",\"kind\":\"session\",\"scenario\":\"s\"}\n{\"id\":\"1\",\"from\":\"player\",\"content\":[{\"text\":\"Hi.\"}]}\n{\"id\":\n{\"id\":\"2\",\"parent\":\"1\",\"from\":\"model\",\"content\":[{\"text\":\"Hello.\"}]}\n",
+      "expect": {
+        "codes": [
+          "PARSE"
+        ]
+      }
+    },
+    {
+      "type": "parse",
+      "name": "an unreadable line hides the other lines' codes",
+      "kind": "session",
+      "text": "{\"troupe\":\"0.14\",\"kind\":\"session\",\"scenario\":\"s\",\"mystery\":1}\n{\"id\":\"1\",\"from\":\"player\",\"at\":\"yesterday\",\"content\":[{\"text\":\"Hi.\"}]}\n{\"id\":\n",
       "expect": {
         "codes": [
           "PARSE"

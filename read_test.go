@@ -55,39 +55,44 @@ func TestReadBundleModel(t *testing.T) {
 	}
 }
 
-// A package's sessions are its files anywhere under sessions/, by path. A
-// session that fails PARSE is left out while the package still reads, and
+// A package's sessions are its files anywhere under sessions/, by path, and
 // every diagnostic names the file it is in. Its other files, which aren't
 // documents, are listed and open by path, and bundle.json is kept as written.
+// A session that fails PARSE fails the whole package, which is then reported
+// with that code only (Format 15.3).
 func TestReadPackage(t *testing.T) {
 	header := `{"troupe":"0.14","kind":"session","scenario":"s"}` + "\n"
 	message := `{"id":"1","from":"player","content":[{"text":"Hi."}]}`
 	bundle := `{"troupe":"0.14","kind":"bundle","mystery":1,"scenarios":[{"id":"s"}]}`
-	var buf bytes.Buffer
-	w := zip.NewWriter(&buf)
-	for name, data := range map[string]string{
+	files := map[string]string{
 		"bundle.json":                          bundle,
 		"sessions/a.troupe-session.jsonl":      header + message,
-		"sessions/old/b.troupe-session.jsonl":  header + message,
-		"sessions/broken.troupe-session.jsonl": header + `{"id":`,
+		"sessions/old/b.troupe-session.jsonl":  header + `{"id":"1","from":"player","content":[{"text":"Hi."}],"mystery":1}`,
 		"sessions/notes.txt":                   "not a session",
 		"elsewhere/stray.troupe-session.jsonl": "not a session either",
-	} {
-		f, err := w.Create(name)
+	}
+	read := func() (*troupe.Package, []troupe.Diagnostic) {
+		var buf bytes.Buffer
+		w := zip.NewWriter(&buf)
+		for name, data := range files {
+			f, err := w.Create(name)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := f.Write([]byte(data)); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err := w.Close(); err != nil {
+			t.Fatal(err)
+		}
+		p, diags, err := troupe.ReadPackage(bytes.NewReader(buf.Bytes()), int64(buf.Len()))
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := f.Write([]byte(data)); err != nil {
-			t.Fatal(err)
-		}
+		return p, diags
 	}
-	if err := w.Close(); err != nil {
-		t.Fatal(err)
-	}
-	p, diags, err := troupe.ReadPackage(bytes.NewReader(buf.Bytes()), int64(buf.Len()))
-	if err != nil {
-		t.Fatal(err)
-	}
+	p, diags := read()
 	if p == nil {
 		t.Fatalf("the package doesn't read: %v", diags)
 	}
@@ -96,7 +101,7 @@ func TestReadPackage(t *testing.T) {
 	}
 	if want := []troupe.Diagnostic{
 		{Code: troupe.CodeUnknownField, File: "bundle.json", Pointer: "/mystery"},
-		{Code: troupe.CodeParse, File: "sessions/broken.troupe-session.jsonl", Line: 2, Pointer: "/id"},
+		{Code: troupe.CodeUnknownField, File: "sessions/old/b.troupe-session.jsonl", Line: 2, Message: "1", Pointer: "/mystery"},
 	}; !reflect.DeepEqual(diags, want) {
 		t.Errorf("diagnostics %+v, want %+v", diags, want)
 	}
@@ -118,6 +123,13 @@ func TestReadPackage(t *testing.T) {
 	}
 	if _, err := p.Open("missing.png"); !errors.Is(err, fs.ErrNotExist) {
 		t.Errorf("opening a missing file: %v", err)
+	}
+
+	files["sessions/broken.troupe-session.jsonl"] = header + `{"id":`
+	if p, diags := read(); p != nil || !reflect.DeepEqual(diags, []troupe.Diagnostic{
+		{Code: troupe.CodeParse, File: "sessions/broken.troupe-session.jsonl", Line: 2, Pointer: "/id"},
+	}) {
+		t.Errorf("with a broken session: %v, diagnostics %+v", p != nil, diags)
 	}
 }
 
@@ -233,6 +245,13 @@ func TestReadLimits(t *testing.T) {
 		{"257 members of a scenario's cast", bundle(`"cast":[` + strings.Repeat(`{},`, 256) + `{}]`), true},
 		{"257 characters a session adds", func() ([]troupe.Diagnostic, error) {
 			header := `{"troupe":"0.14","kind":"session","scenario":"s","characters":[` + strings.Join(characters, ",") + `]}`
+			_, d, err := troupe.ReadSession(strings.NewReader(header))
+			return d, err
+		}, true},
+		// A limit counts the document as written, items of the wrong type
+		// included (Format 15.3).
+		{"257 characters a session adds, one not an object", func() ([]troupe.Diagnostic, error) {
+			header := `{"troupe":"0.14","kind":"session","scenario":"s","characters":[` + strings.Join(characters[1:], ",") + `,5]}`
 			_, d, err := troupe.ReadSession(strings.NewReader(header))
 			return d, err
 		}, true},

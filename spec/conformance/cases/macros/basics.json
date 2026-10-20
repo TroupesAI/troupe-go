@@ -1,5 +1,5 @@
 {
-  "description": "Macro parsing (Format 9): {{char}}, {{user}}, no spaces outside comments and options, comments, escapes, picks; unknown forms, such as {{foo}}, are left as written and rescanned from the next character",
+  "description": "Macro parsing (Format 9): {{char}}, {{user}}, no spaces outside comments and options, comments, escapes, picks, which end at the first }}; unknown forms, such as {{foo}}, are left as written and rescanned from the next character",
   "bundle": {
     "kind": "bundle",
     "characters": [
@@ -96,6 +96,12 @@
       "name": "a pick needs at least two options, none empty; otherwise it is left as written",
       "text": "{{pick::a}} {{pick::a::}} {{pick::::a}}",
       "expect": "{{pick::a}} {{pick::a::}} {{pick::::a}}"
+    },
+    {
+      "type": "macro",
+      "name": "a pick ends at the first }}, so here its last option is empty and it is left as written",
+      "text": "{{pick::x::}}}",
+      "expect": "{{pick::x::}}}"
     },
     {
       "type": "check",

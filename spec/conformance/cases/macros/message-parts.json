@@ -147,7 +147,7 @@
     },
     {
       "type": "macro",
-      "name": "a root's narration: no speaker and no char, so {{char}} is left as written; own means state, at the root",
+      "name": "a root's narration: no speaker and no char, so {{char}} is left as written; own names the scenario's variables, at the root",
       "part": {
         "message": "1",
         "index": 0

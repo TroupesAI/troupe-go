@@ -161,12 +161,15 @@ func (s *scan) fail(p jsontext.Pointer) {
 	s.report(p)
 }
 
-// each yields the objects in the array o[key], with their pointers.
+// each yields the items of the array o[key], with their pointers: an object
+// as it is, and any other value as nil, so a limit counts every item of the
+// document as written (Format 15.3) and only objects are read.
 func each(o map[string]any, p jsontext.Pointer, key string) iter.Seq2[jsontext.Pointer, map[string]any] {
 	return func(yield func(jsontext.Pointer, map[string]any) bool) {
 		items, _ := o[key].([]any)
 		for i, item := range items {
-			if obj, ok := item.(map[string]any); ok && !yield(p.AppendToken(key).AppendToken(strconv.Itoa(i)), obj) {
+			obj, _ := item.(map[string]any)
+			if !yield(p.AppendToken(key).AppendToken(strconv.Itoa(i)), obj) {
 				return
 			}
 		}
