@@ -45,7 +45,10 @@ import (
 //   - a string literal that refers to the object but is written with escapes
 //     or as a raw string, a name that does but is written between backticks,
 //     a condition that doesn't parse and has the ID as a word, and a key
-//     whose renamed form its object already has.
+//     whose renamed form its object already has;
+//   - a renamed character's key of a list or "*" variable, wherever it is
+//     written, when the bundle already has the new ID as a word, since it may
+//     be a key of the same variable, which the two would merge into.
 //
 // The error is for a pointer that names no such object, an ID the object can't
 // take (Format 2.3), wrapping ErrIDTaken as CheckID's does, or an object whose
@@ -71,12 +74,17 @@ func (b *Bundle) RenameID(object, id string) (jsontext.Value, []string, error) {
 	if err := sc.check(id); err != nil {
 		return nil, nil, err
 	}
+	doc, err := json.Marshal(b)
+	if err != nil {
+		panic(err) // a model that read
+	}
 	r := &renamer{
 		names:  newNames(b, nil),
 		target: sc.objects[i],
 		old:    old,
 		id:     id,
 		word:   regexp.MustCompile(`\b` + regexp.QuoteMeta(old) + `\b`),
+		used:   regexp.MustCompile(`\b` + regexp.QuoteMeta(id) + `\b`).Match(doc),
 		inUse:  map[any][]*Scenario{},
 	}
 	// The ID may be absent, in a bundle that fails the schema.
@@ -105,6 +113,10 @@ type renamer struct {
 	target  any // the object
 	old, id string
 	word    *regexp.Regexp // the old ID as a word
+	// used reports whether the bundle already has the new ID as a word, as
+	// it may as a key of a list or "*" variable, where renaming the old ID's
+	// key would merge the two.
+	used bool
 	// inUse are the scenarios each character and world is in use in.
 	inUse map[any][]*Scenario
 	ops   []operation
@@ -229,7 +241,11 @@ func (r *renamer) variable(p jsontext.Pointer, v *Variable, in []*Scenario, owne
 	}
 	for _, k := range slices.Sorted(maps.Keys(members)) {
 		r.values(ptr(p, "initial", k), members[k])
-		if targets[Character](r) && k == r.old {
+		switch {
+		case !targets[Character](r) || k != r.old:
+		case r.used && !v.Of.Cast:
+			r.leave(ptr(p, "initial", k))
+		default:
 			r.move(ptr(p, "initial"), members, k, r.id)
 		}
 	}
@@ -327,6 +343,11 @@ func (r *renamer) condition(p jsontext.Pointer, expr string, in []*Scenario, own
 			path, at = append(slices.Clone(path), s.Key.Value), append(slices.Clone(at), s.Key.At)
 		}
 		renamed, safe := r.path(in, owner, s.Names[0] == "own", path)
+		if s.Key != nil && (renamed == nil || renamed[len(path)-1] == s.Key.Value) {
+			// A key that isn't a keyed variable's, as in 'kai' in
+			// state.crew, is a literal like any other.
+			literals = append(literals, condition.Literal{Value: s.Key.Value, At: s.Key.At})
+		}
 		for k := range renamed {
 			switch {
 			case renamed[k] == path[k]:
@@ -436,6 +457,10 @@ func (r *renamer) path(in []*Scenario, owner string, own bool, path []string) ([
 			if before[k] != r.target && (before[k] != nil || after[k] != nil) {
 				return renamed, false
 			}
+		}
+		if _, v, below, ok := r.names.declared(s, owner, own, path); ok && r.used && v.Of.keyed() && !v.Of.Cast &&
+			len(below) > 0 && slices.Contains(at, len(path)-len(below)) {
+			return renamed, false
 		}
 	}
 	return renamed, true

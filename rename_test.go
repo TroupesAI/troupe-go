@@ -81,9 +81,10 @@ func TestRenameID(t *testing.T) {
 
 // RenameID leaves whole, and returns, what it can't rewrite without changing
 // what it means: string values that are the ID, literals compared with them,
-// literals written with escapes, names written between backticks, conditions
-// that don't parse, keys that would clash, and names that refer to something
-// else in another scenario using them, as written or as renamed.
+// literals written with escapes, names written between backticks, keys of
+// variables that aren't keyed, conditions that don't parse, keys that would
+// clash or merge, and names that refer to something else in another scenario
+// using them, as written or as renamed.
 func TestRenameIDLeaves(t *testing.T) {
 	b, _, err := troupe.ReadBundle(strings.NewReader(`{"troupe": "0.14", "kind": "bundle",
 		"characters": [
@@ -97,9 +98,11 @@ func TestRenameIDLeaves(t *testing.T) {
 					{"id": "mood", "type": "enum", "values": ["kai", "calm"], "labels": {"kai": "Kai's"}, "description": "d"}]},
 			{"id": "mara", "name": "Mara", "description": "{{state.bell}}"}],
 		"scenarios": [
-			{"id": "one", "variables": [{"id": "bell", "type": "int", "description": "d"},
+			{"id": "one", "premise": "{{state.pair.kai}}", "variables": [{"id": "bell", "type": "int", "description": "d"},
 				{"id": "lead", "type": "string", "initial": "kai", "description": "d"},
-				{"id": "pair", "type": "int", "of": ["kai", "kai_m"], "description": "d"}],
+				{"id": "pair", "type": "int", "of": ["kai", "kai_m"], "description": "d"},
+				{"id": "crew", "type": "set", "description": "d"}],
+				"entries": [{"id": "e", "text": "t", "when": "'kai' in state.crew"}],
 				"openings": [{"id": "dawn", "set": {"state.lead": "kai"}}]},
 			{"id": "two", "variables": [{"id": "bell", "type": "int", "description": "d"}], "openings": [{"id": "dawn"}]},
 			{"id": "three", "variables": [{"id": "toll", "type": "int", "description": "d"}]}]}`))
@@ -117,7 +120,9 @@ func TestRenameIDLeaves(t *testing.T) {
 			"/characters/0/entries/4/when",
 			"/characters/0/variables/1/labels/kai",
 			"/characters/0/variables/1/values/0",
+			"/scenarios/0/entries/0/when",
 			"/scenarios/0/openings/0/set/state.lead",
+			"/scenarios/0/premise",
 			"/scenarios/0/variables/1/initial",
 			"/scenarios/0/variables/2/of/0",
 		}},
