@@ -9,7 +9,7 @@ Read the [README](README.md) for scope and rules, and [docs/plan.md](docs/plan.m
 The bar is high: every change should be one a demanding senior reviewer approves without asking for cleanup.
 
 - **Write only what the task needs.** No speculative abstractions, unused options, wrappers with one caller, or "for later" code. Delete dead code; don't comment it out.
-- **Every comment earns its place, and so does every word in it.** A comment says what the code can't: why it's written this way, a constraint it upholds, or a consequence that isn't obvious. Don't restate the code or a name, narrate changes, or leave notes to the reader. Most code needs no comment. The exception is Go's convention, which the linter enforces: every exported name has a doc comment that starts with the name and says what a caller needs, as briefly as that allows.
+- **Every comment earns its place, and so does every word in it.** A comment says what the code can't: why it's written this way, a constraint it upholds, or a consequence that isn't obvious. Don't restate the code, a name or a signature, repeat another comment, narrate changes, or leave notes to the reader. When a comment has to change, rewrite it whole rather than add to it. Most code needs no comment. The exception is Go's convention, which the linter enforces: every exported name has a doc comment that starts with the name and says what a caller needs, as briefly as that allows.
 - **No defensive noise.** Validate at the boundary, where bytes come in, and trust what's inside it. Don't check for states that can't happen.
 - **Match the surrounding code** in naming, structure and idiom. Consistency beats personal preference.
 - **Add a dependency only when it removes real complexity.** Prefer the standard library.
@@ -29,7 +29,7 @@ The same applies to docs: short, exact and current.
 - **Propose first when a change would be costly to undo:** a new dependency, a new Go package, or a change to the README's rules.
 - **Fix what you find along the way** when the fix is clear and small, in its own commit. Propose it instead when it's a design choice or would outgrow the task.
 - **A change is done when `task check` passes**, and the docs it affects are updated.
-- **Every change ends with a review round.** Once it works, review the whole diff with fresh eyes, through a separate agent where one is available, for defects, needless code, and docs or comments that disagree with the code. Check each finding against the code, fix the ones that hold, and list what was found and fixed in the commit body.
+- **Every change ends with a review round.** Once it works, review the whole diff with fresh eyes, through a separate agent where one is available, for defects, needless code, and docs or comments that disagree with the code or don't earn their place. Check each finding against the code, fix the ones that hold, and list what was found and fixed in the commit body.
 - **Commit and push to `main`.** A commit message has a short imperative subject and a body that says what changed for a user of the library and why.
 
 ## Working across the three repositories
