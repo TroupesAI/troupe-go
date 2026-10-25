@@ -146,10 +146,9 @@ func TestRenameIDLeaves(t *testing.T) {
 	}
 }
 
-// RenameID refuses an ID the object can't take (Format 2.3), wrapping
-// ErrIDTaken for one another object has, a pointer that names no object with
-// an ID, and an object whose ID another shares. Renaming to the same ID is an
-// empty patch.
+// RenameID refuses a pointer that names no object with an ID, and an ID the
+// object can't take (Format 2.3), with an error that says which. Renaming to
+// the same ID is an empty patch.
 func TestRenameIDErrors(t *testing.T) {
 	b, _, err := troupe.ReadBundle(strings.NewReader(`{"troupe": "0.14", "kind": "bundle",
 		"characters": [{"id": "kai", "name": "Kai", "description": "d"}, {"id": "mara", "name": "Mara", "description": "d"},
@@ -160,27 +159,67 @@ func TestRenameIDErrors(t *testing.T) {
 	}
 	for _, c := range []struct {
 		object, id string
-		taken      bool
+		want       error
 	}{
-		{"/characters/0", "mara", true},
-		{"/characters/0", "heist", true},
-		{"/characters/0", "bell", true},
-		{"/scenarios/0/variables/0", "kai", true},
-		{"/characters/0", "state", false},
-		{"/characters/0", "in", false},
-		{"/characters/0", "Kai", false},
-		{"/characters/1", "elena", false},
-		{"/characters/3", "elena", false},
-		{"/characters", "elena", false},
-		{"/characters/0/id", "elena", false},
-		{"/cast/0", "elena", false},
+		{"/characters/0", "mara", troupe.ErrIDTaken},
+		{"/characters/0", "heist", troupe.ErrIDTaken},
+		{"/characters/0", "bell", troupe.ErrIDTaken},
+		{"/scenarios/0/variables/0", "kai", troupe.ErrIDTaken},
+		{"/characters/1", "heist", troupe.ErrIDTaken},
+		{"/characters/0", "state", troupe.ErrIDInvalid},
+		{"/characters/0", "in", troupe.ErrIDInvalid},
+		{"/characters/0", "Kai", troupe.ErrIDInvalid},
+		{"/characters/1", "Mara", troupe.ErrIDInvalid},
+		{"/characters/3", "elena", troupe.ErrBadPointer},
+		{"/characters", "elena", troupe.ErrBadPointer},
+		{"/characters/0/id", "elena", troupe.ErrBadPointer},
+		{"/cast/0", "elena", troupe.ErrBadPointer},
 	} {
-		if patch, _, err := b.RenameID(c.object, c.id); err == nil || errors.Is(err, troupe.ErrIDTaken) != c.taken {
+		if patch, _, err := b.RenameID(c.object, c.id); !errors.Is(err, c.want) {
 			t.Errorf("%s to %s: %v, and %s", c.object, c.id, err, patch)
 		}
 	}
 	if patch, left, err := b.RenameID("/characters/0", "kai"); string(patch) != "[]" || left != nil || err != nil {
 		t.Errorf("to its own ID: %s, %v, %v", patch, left, err)
+	}
+}
+
+// RenameID gives an object whose ID another shares (DUPLICATE_ID) the new ID
+// alone, leaves every reference that could refer to it, but not one only the
+// other can mean, and doesn't change the bundle.
+func TestRenameIDShared(t *testing.T) {
+	b, _, err := troupe.ReadBundle(strings.NewReader(`{"troupe": "0.14", "kind": "bundle",
+		"characters": [
+			{"id": "mara", "name": "Mara", "description": "{{state.mara.calm}}", "variables": [{"id": "calm", "type": "int", "description": "d"}]},
+			{"id": "mara", "name": "Mara", "description": "{{state.mara.nerve}}", "variables": [{"id": "nerve", "type": "int", "description": "d"}]},
+			{"id": "bell", "name": "Bell", "description": "{{state.bell}}"}],
+		"worlds": [{"id": "harbor", "name": "Harbor",
+			"locations": [{"id": "vault", "name": "Vault"}, {"id": "vault", "name": "Vault"}, {"id": "cellar", "name": "Cellar", "parent": "vault"}]}],
+		"scenarios": [{"id": "heist", "cast": [{}, {"character": "mara"}, {"character": "bell"}],
+			"variables": [{"id": "bell", "type": "int", "description": "d"}],
+			"openings": [{"id": "dawn"}, {"id": "dawn"}],
+			"entries": [{"id": "e", "text": "t", "when": "'mara' in scene.present && opening == 'dawn'"}]}]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	before, _ := json.Marshal(b)
+	for _, c := range []struct {
+		object, id string
+		left       []string
+	}{
+		{"/characters/1", "mara_b", []string{"/characters/1/description", "/scenarios/0/cast/1/character", "/scenarios/0/entries/0/when"}},
+		{"/scenarios/0/openings/1", "dusk", []string{"/scenarios/0/entries/0/when"}},
+		{"/scenarios/0/variables/0", "chime", []string{"/characters/2/description"}},
+		{"/worlds/0/locations/1", "safe", []string{"/worlds/0/locations/2/parent"}},
+	} {
+		patch, left, err := b.RenameID(c.object, c.id)
+		want := `[{"op":"add","path":"` + c.object + `/id","value":"` + c.id + `"}]`
+		if err != nil || string(patch) != want || !slices.Equal(slices.Sorted(slices.Values(left)), c.left) {
+			t.Errorf("%s: %s, left %q, %v; want left %q", c.object, patch, left, err, c.left)
+		}
+	}
+	if after, _ := json.Marshal(b); string(after) != string(before) {
+		t.Errorf("the bundle is now %s", after)
 	}
 }
 

@@ -16,11 +16,11 @@ import (
 
 // RenameID returns the JSON Patch (RFC 6902) that gives the object at the
 // JSON Pointer object the ID id, and rewrites every reference to it in the
-// bundle; for the ID the object has, an empty one. The object is a character,
-// world or scenario, such as "/characters/0", a world's location, or an
-// entry, variable or opening, such as "/worlds/1/locations/2" or
-// "/scenarios/0/variables/3". The patch moves a member it renames to the end
-// of its object.
+// bundle, unless another object shares its ID; for the ID the object has, an
+// empty one. The object is a character, world or scenario, such as
+// "/characters/0", a world's location, or an entry, variable or opening, such
+// as "/worlds/1/locations/2" or "/scenarios/0/variables/3". The patch moves a
+// member it renames to the end of its object.
 //
 // The references are the cast members, scenario worlds, parents, knownBy and
 // speakers that name it, the keys of openings' set and the scene values they
@@ -50,29 +50,44 @@ import (
 //     written, when the bundle already has the new ID as a word, since it may
 //     be a key of the same variable, which the two would merge into.
 //
-// The error is for a pointer that names no such object, an ID the object can't
-// take (Format 2.3), wrapping ErrIDTaken as CheckID's does, or an object whose
-// ID another object shares, so that what references to it refer to is
-// ambiguous. In a bundle that fails the schema, a
-// value that reads as absent is left as written, and not returned. A session
-// played with the bundle isn't changed, so its references to the old ID name
-// nothing.
+// When another object shares the object's ID, which is DUPLICATE_ID (Format
+// 15.3), what a reference to the ID refers to is the author's to say, so the
+// patch only gives the object the ID, and every reference that could refer
+// to the object, were it alone to have the ID, is left as written, and
+// returned.
+//
+// The error wraps ErrBadPointer for a pointer that names no such object, and
+// otherwise ErrIDInvalid or ErrIDTaken as CheckID's does. In a bundle that
+// fails the schema, a value that reads as absent is left as written, and not
+// returned. A session played with the bundle isn't changed, so its references
+// to the old ID name nothing.
 func (b *Bundle) RenameID(object, id string) (jsontext.Value, []string, error) {
 	p := jsontext.Pointer(object)
 	sc, ok := b.idScope(p.Parent())
 	i, isIndex := arrayIndex(p.LastToken())
 	if !p.IsValid() || !ok || !isIndex || i >= len(sc.objects) {
-		return nil, nil, fmt.Errorf("troupe: %q names no character, world, scenario, location, entry, variable or opening", object)
+		return nil, nil, fmt.Errorf("troupe: %w: %q names no character, world, scenario, location, entry, variable or opening", ErrBadPointer, object)
 	}
-	old := sc.ids[i]
-	if old != "" && sc.taken[old] > 1 {
-		return nil, nil, fmt.Errorf("troupe: the ID of %q isn't unique, so what references to it refer to is ambiguous", object)
-	}
+	old := *sc.ids[i]
 	if id == old {
 		return jsontext.Value("[]"), nil, nil
 	}
 	if err := sc.check(id); err != nil {
 		return nil, nil, err
+	}
+	shared := old != "" && len(sc.taken[old]) > 1
+	orig := b
+	if shared {
+		// The others' IDs read as absent in a copy, whose JSON Pointers are
+		// the bundle's, so the references are found as if the object alone
+		// had the ID.
+		b = b.clone()
+		sc, _ = b.idScope(p.Parent())
+		for _, s := range sc.taken[old] {
+			if s != sc.ids[i] {
+				*s = ""
+			}
+		}
 	}
 	doc, err := json.Marshal(b)
 	if err != nil {
@@ -90,13 +105,46 @@ func (b *Bundle) RenameID(object, id string) (jsontext.Value, []string, error) {
 	// The ID may be absent, in a bundle that fails the schema.
 	r.ops = append(r.ops, operation{Op: "add", Path: string(ptr(p, "id")), Value: quote(id)})
 	if old != "" {
+		r.use(b, b)
+		if shared {
+			// Hiding an owner's ID takes it out of the casts and worlds that
+			// name it, but its texts are still read in their scenarios.
+			r.use(orig, b)
+		}
 		r.bundle(b)
+	}
+	if shared {
+		for _, op := range r.ops[1:] {
+			r.leave(jsontext.Pointer(cmp.Or(op.From, op.Path)))
+		}
+		r.ops = r.ops[:1]
 	}
 	patch, err := json.Marshal(r.ops)
 	if err != nil {
 		panic(err) // the operations are JSON
 	}
 	return patch, r.left, nil
+}
+
+// clone returns a copy of b whose objects with IDs are its own.
+func (b *Bundle) clone() *Bundle {
+	c := *b
+	c.Characters = slices.Clone(b.Characters)
+	for i := range c.Characters {
+		ch := &c.Characters[i]
+		ch.Entries, ch.Variables = slices.Clone(ch.Entries), slices.Clone(ch.Variables)
+	}
+	c.Worlds = slices.Clone(b.Worlds)
+	for i := range c.Worlds {
+		w := &c.Worlds[i]
+		w.Locations, w.Entries, w.Variables = slices.Clone(w.Locations), slices.Clone(w.Entries), slices.Clone(w.Variables)
+	}
+	c.Scenarios = slices.Clone(b.Scenarios)
+	for i := range c.Scenarios {
+		s := &c.Scenarios[i]
+		s.Openings, s.Entries, s.Variables = slices.Clone(s.Openings), slices.Clone(s.Entries), slices.Clone(s.Variables)
+	}
+	return &c
 }
 
 // operation is an operation of a JSON Patch (RFC 6902).
@@ -129,16 +177,30 @@ func targets[T any](r *renamer) bool {
 	return ok
 }
 
-func (r *renamer) bundle(b *Bundle) {
-	for i := range b.Scenarios {
-		sc := newScope(b, nil, i)
-		for _, c := range sc.characters {
-			r.inUse[c] = append(r.inUse[c], &b.Scenarios[i])
-		}
-		for _, w := range sc.worlds {
-			r.inUse[w] = append(r.inUse[w], &b.Scenarios[i])
+// use adds the scenarios each character and world of b is in use in to those
+// of c's at the same index.
+func (r *renamer) use(b, c *Bundle) {
+	add := func(o any, s *Scenario) {
+		if !slices.Contains(r.inUse[o], s) {
+			r.inUse[o] = append(r.inUse[o], s)
 		}
 	}
+	for i := range b.Scenarios {
+		sc := newScope(b, nil, i)
+		for j := range b.Characters {
+			if sc.characters[b.Characters[j].ID] == &b.Characters[j] {
+				add(&c.Characters[j], &c.Scenarios[i])
+			}
+		}
+		for j := range b.Worlds {
+			if sc.worlds[b.Worlds[j].ID] == &b.Worlds[j] {
+				add(&c.Worlds[j], &c.Scenarios[i])
+			}
+		}
+	}
+}
+
+func (r *renamer) bundle(b *Bundle) {
 	for i := range b.Characters {
 		c, p := &b.Characters[i], ptr("", "characters", i)
 		in := r.scenarios(c)

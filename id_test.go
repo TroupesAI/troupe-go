@@ -9,8 +9,8 @@ import (
 )
 
 // CheckID accepts an ID that fits the grammar, is no reserved word or ID, and
-// is unique where its list's objects must be (Format 2.3), and tells a taken
-// ID apart.
+// is unique where its list's objects must be (Format 2.3), and tells a bad
+// pointer, an invalid ID and a taken one apart.
 func TestCheckID(t *testing.T) {
 	b, _, err := troupe.ReadBundle(strings.NewReader(`{"troupe":"0.14","kind":"bundle",
 		"characters":[{"id":"kai","name":"Kai","description":"d"}],
@@ -21,45 +21,33 @@ func TestCheckID(t *testing.T) {
 	}
 	for _, c := range []struct {
 		list, id string
-		taken    bool
+		want     error
 	}{
-		{"/characters", "kai", true},
-		{"/characters", "city", true},
-		{"/characters", "heist", true},
-		{"/characters", "bell", true},
-		{"/scenarios/0/variables", "sea", true},
-		{"/worlds/1/locations", "vault", true},
-		{"/scenarios/0/openings", "o", true},
+		{"/characters", "kai_moreau", nil},
+		{"/scenarios", "bell", nil},
+		{"/characters/0/variables", "kai", nil},
+		{"/scenarios/0/entries", "o", nil},
+		{"/characters", strings.Repeat("x", 64), nil},
+		{"/characters", "kai", troupe.ErrIDTaken},
+		{"/characters", "city", troupe.ErrIDTaken},
+		{"/characters", "heist", troupe.ErrIDTaken},
+		{"/characters", "bell", troupe.ErrIDTaken},
+		{"/scenarios/0/variables", "sea", troupe.ErrIDTaken},
+		{"/worlds/1/locations", "vault", troupe.ErrIDTaken},
+		{"/scenarios/0/openings", "o", troupe.ErrIDTaken},
+		{"/characters", "narrator", troupe.ErrIDInvalid},
+		{"/worlds", "true", troupe.ErrIDInvalid},
+		{"/characters/0/variables", "scene", troupe.ErrIDInvalid},
+		{"/characters", "Kai", troupe.ErrIDInvalid},
+		{"/characters", "7th", troupe.ErrIDInvalid},
+		{"/characters", strings.Repeat("x", 65), troupe.ErrIDInvalid},
+		{"/characters/0", "elena", troupe.ErrBadPointer},
+		{"/characters/3/entries", "elena", troupe.ErrBadPointer},
+		{"/worlds/0/openings", "elena", troupe.ErrBadPointer},
+		{"/cast", "elena", troupe.ErrBadPointer},
 	} {
-		if err := b.CheckID(c.list, c.id); !errors.Is(err, troupe.ErrIDTaken) {
+		if err := b.CheckID(c.list, c.id); !errors.Is(err, c.want) {
 			t.Errorf("%s, %s: %v", c.list, c.id, err)
-		}
-	}
-	for _, c := range [][2]string{
-		{"/characters", "kai_moreau"},
-		{"/scenarios", "bell"},
-		{"/characters/0/variables", "kai"},
-		{"/scenarios/0/entries", "o"},
-		{"/characters", strings.Repeat("x", 64)},
-	} {
-		if err := b.CheckID(c[0], c[1]); err != nil {
-			t.Errorf("%s, %s: %v", c[0], c[1], err)
-		}
-	}
-	for _, c := range [][2]string{
-		{"/characters", "narrator"},
-		{"/worlds", "true"},
-		{"/characters/0/variables", "scene"},
-		{"/characters", "Kai"},
-		{"/characters", "7th"},
-		{"/characters", strings.Repeat("x", 65)},
-		{"/characters/0", "elena"},
-		{"/characters/3/entries", "elena"},
-		{"/worlds/0/openings", "elena"},
-		{"/cast", "elena"},
-	} {
-		if err := b.CheckID(c[0], c[1]); err == nil || errors.Is(err, troupe.ErrIDTaken) {
-			t.Errorf("%s, %s: %v", c[0], c[1], err)
 		}
 	}
 }

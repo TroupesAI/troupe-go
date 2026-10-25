@@ -9,22 +9,30 @@ import (
 	"strings"
 )
 
-// ErrIDTaken is what CheckID's and RenameID's errors wrap when another object
-// has the ID where it must be unique.
-var ErrIDTaken = errors.New("the ID is taken")
+// The errors CheckID's and RenameID's errors wrap, one for each way they
+// refuse.
+var (
+	// ErrBadPointer is for a pointer that names no list or object they take.
+	ErrBadPointer = errors.New("bad pointer")
+	// ErrIDInvalid is for an ID that doesn't fit the grammar or is reserved
+	// (Format 2.3).
+	ErrIDInvalid = errors.New("not a valid ID")
+	// ErrIDTaken is for an ID another object has where it must be unique
+	// (Format 2.3).
+	ErrIDTaken = errors.New("the ID is taken")
+)
 
 // CheckID reports whether an object added to the list at the JSON Pointer
 // list can take the ID id (Format 2.3). The list is "/characters", "/worlds",
 // "/scenarios", a world's "/worlds/0/locations", or the entries, variables or
 // openings of a character, world or scenario, such as
-// "/scenarios/0/openings". The error wraps ErrIDTaken when an object the
-// list's objects must be unique among has id. Otherwise it is for an id that
-// doesn't fit the grammar or is reserved, or a pointer that names no such
-// list.
+// "/scenarios/0/openings". The error wraps ErrBadPointer for a pointer that
+// names no such list, ErrIDInvalid, or ErrIDTaken when an object the list's
+// objects must be unique among has id.
 func (b *Bundle) CheckID(list, id string) error {
 	sc, ok := b.idScope(jsontext.Pointer(list))
 	if !ok {
-		return fmt.Errorf("troupe: %q names no list of objects with IDs", list)
+		return fmt.Errorf("troupe: %w: %q names no list of objects with IDs", ErrBadPointer, list)
 	}
 	return sc.check(id)
 }
@@ -41,13 +49,13 @@ var (
 type idScope struct {
 	kind string // the kind of object, such as "character"
 	// objects are the list's objects, as *Character, *World, *Scenario,
-	// *Location, *Entry, *Variable or *Opening, and ids their IDs.
+	// *Location, *Entry, *Variable or *Opening, and ids their ID fields.
 	objects  []any
-	ids      []string
+	ids      []*string
 	reserved []string // the IDs they can't have, besides CEL's reserved words
-	// taken counts the objects with each ID among those the list's objects
-	// must be unique among, theirs included.
-	taken map[string]int
+	// taken holds the ID fields of the objects with each ID among those the
+	// list's objects must be unique among, theirs included.
+	taken map[string][]*string
 }
 
 // idScope returns the scope of the list at p, as CheckID names lists, and
@@ -56,13 +64,13 @@ func (b *Bundle) idScope(p jsontext.Pointer) (*idScope, bool) {
 	if !p.IsValid() {
 		return nil, false
 	}
-	sc := &idScope{taken: map[string]int{}}
+	sc := &idScope{taken: map[string][]*string{}}
 	var (
-		characterID = func(c *Character) string { return c.ID }
-		worldID     = func(w *World) string { return w.ID }
-		scenarioID  = func(s *Scenario) string { return s.ID }
-		variableID  = func(v *Variable) string { return v.ID }
-		locationID  = func(l *Location) string { return l.ID }
+		characterID = func(c *Character) *string { return &c.ID }
+		worldID     = func(w *World) *string { return &w.ID }
+		scenarioID  = func(s *Scenario) *string { return &s.ID }
+		variableID  = func(v *Variable) *string { return &v.ID }
+		locationID  = func(l *Location) *string { return &l.ID }
 	)
 	path := slices.Collect(p.Tokens())
 	if len(path) == 1 {
@@ -116,7 +124,7 @@ func (b *Bundle) idScope(p jsontext.Pointer) (*idScope, bool) {
 	}
 	switch {
 	case path[2] == "entries":
-		entryID := func(e *Entry) string { return e.ID }
+		entryID := func(e *Entry) *string { return &e.ID }
 		collect(sc, "entry", entries, entryID)
 		take(sc, entries, entryID)
 	case path[2] == "variables":
@@ -135,7 +143,7 @@ func (b *Bundle) idScope(p jsontext.Pointer) (*idScope, bool) {
 			take(sc, b.Worlds[i].Locations, locationID)
 		}
 	case path[2] == "openings" && s != nil:
-		openingID := func(o *Opening) string { return o.ID }
+		openingID := func(o *Opening) *string { return &o.ID }
 		collect(sc, "opening", s.Openings, openingID)
 		take(sc, s.Openings, openingID)
 	default:
@@ -145,7 +153,7 @@ func (b *Bundle) idScope(p jsontext.Pointer) (*idScope, bool) {
 }
 
 // collect sets the scope's kind and objects.
-func collect[T any](sc *idScope, kind string, objects []T, id func(*T) string) {
+func collect[T any](sc *idScope, kind string, objects []T, id func(*T) *string) {
 	sc.kind = kind
 	for i := range objects {
 		sc.objects = append(sc.objects, &objects[i])
@@ -153,10 +161,11 @@ func collect[T any](sc *idScope, kind string, objects []T, id func(*T) string) {
 	}
 }
 
-// take counts the IDs of objects as taken.
-func take[T any](sc *idScope, objects []T, id func(*T) string) {
+// take adds the IDs of objects to those taken.
+func take[T any](sc *idScope, objects []T, id func(*T) *string) {
 	for i := range objects {
-		sc.taken[id(&objects[i])]++
+		p := id(&objects[i])
+		sc.taken[*p] = append(sc.taken[*p], p)
 	}
 }
 
@@ -164,8 +173,8 @@ func take[T any](sc *idScope, objects []T, id func(*T) string) {
 func (sc *idScope) check(id string) error {
 	switch {
 	case !authorID.MatchString(id) || slices.Contains(celReserved, id) || slices.Contains(sc.reserved, id):
-		return fmt.Errorf("troupe: %q isn't a valid %s ID", id, sc.kind)
-	case sc.taken[id] > 0:
+		return fmt.Errorf("troupe: %q: %w for a %s", id, ErrIDInvalid, sc.kind)
+	case len(sc.taken[id]) > 0:
 		return fmt.Errorf("troupe: %q: %w", id, ErrIDTaken)
 	}
 	return nil
