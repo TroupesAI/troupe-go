@@ -72,7 +72,7 @@ func TestActive(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		got := refs(story.PointAt(story.Initial(), path, tc.char).Active(r))
+		got := refs(story.PointAt(story.Initial(), path, tc.char).Active(nil, r))
 		if !slices.Equal(got, tc.want) {
 			t.Errorf("at %s for %q: %v, want %v", tc.at, tc.char, got, tc.want)
 		}
@@ -91,7 +91,7 @@ func TestActiveChanceAndWeight(t *testing.T) {
 	count := map[string]int{}
 	const n = 4000
 	for range n {
-		for _, ref := range refs(p.Active(r)) {
+		for _, ref := range refs(p.Active(nil, r)) {
 			count[ref]++
 		}
 	}
@@ -106,11 +106,11 @@ func TestActiveChanceAndWeight(t *testing.T) {
 	}
 }
 
-// An entry sticky keeps wins its group against equal priorities, with no
-// draw, and gives way to a higher priority (Format 7.2).
+// An entry sticky keeps wins its group against equal priorities, and passes
+// its chance, with no draw, and gives way to a higher priority (Format 7.2).
 func TestActiveStickyInGroup(t *testing.T) {
 	story, s := readStory(t, `{"troupe":"0.14","kind":"bundle","scenarios":[{"id":"s","entries":[
-		{"id":"kept","text":"t","group":"g","sticky":2},
+		{"id":"kept","text":"t","group":"g","sticky":2,"chance":0},
 		{"id":"heavy","text":"t","group":"g","weight":1000},
 		{"id":"low","text":"t","group":"h","sticky":2},
 		{"id":"high","text":"t","group":"h","priority":90}]}]}`,
@@ -120,9 +120,36 @@ func TestActiveStickyInGroup(t *testing.T) {
 	r := rand.New(rand.NewPCG(1, 2)) //nolint:gosec // G404: a seeded source makes the test reproducible
 	p := story.PointAt(story.Initial(), s.Messages, "")
 	for range 100 {
-		if got := refs(p.Active(r)); !slices.Equal(got, []string{"s/kept kept", "s/high"}) {
+		if got := refs(p.Active(nil, r)); !slices.Equal(got, []string{"s/kept kept", "s/high"}) {
 			t.Fatalf("%v, want s/kept kept and s/high", got)
 		}
+	}
+}
+
+// A retrieved entry activates under every rule of activation, so it can push
+// a keyed entry of lower priority out of its group, and only an entry that
+// retrieving would activate and that can win its group is offered (Format
+// 7.2).
+func TestActiveRetrieved(t *testing.T) {
+	story, s := readStory(t, `{"troupe":"0.14","kind":"bundle","scenarios":[{"id":"s","entries":[
+		{"id":"keyed","text":"t","keys":["rope"],"group":"g","priority":40},
+		{"id":"pulled","text":"t","title":"T","pull":true,"group":"g","priority":60},
+		{"id":"equal","text":"t","title":"T","pull":true,"group":"g","priority":40},
+		{"id":"weak","text":"t","title":"T","pull":true,"group":"g","priority":30},
+		{"id":"unmatched","text":"t","keys":["bell"]},
+		{"id":"both","text":"t","title":"T","keys":["rope"],"pull":true},
+		{"id":"barred","text":"t","title":"T","pull":true,"when":"false"}]}]}`,
+		activationSession[0], `{"id":"1","from":"player","content":[{"speaker":"p","text":"A rope."}]}`)
+	r := rand.New(rand.NewPCG(1, 2)) //nolint:gosec // G404: a seeded source makes the test reproducible
+	p := story.PointAt(story.Initial(), s.Messages, "")
+	if got := refs(p.Retrievable()); !slices.Equal(got, []string{"s/pulled", "s/equal"}) {
+		t.Errorf("retrievable: %v, want s/pulled and s/equal", got)
+	}
+	if got := refs(p.Active(nil, r)); !slices.Equal(got, []string{"s/keyed", "s/both"}) {
+		t.Errorf("without retrieval: %v, want s/keyed and s/both", got)
+	}
+	if got := refs(p.Active([]string{"s/pulled", "s/equal", "s/weak", "s/barred", "s/unmatched"}, r)); !slices.Equal(got, []string{"s/pulled", "s/both"}) {
+		t.Errorf("retrieved: %v, want s/pulled and s/both", got)
 	}
 }
 

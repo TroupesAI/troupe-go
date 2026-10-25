@@ -34,7 +34,7 @@ func TestStoreState(t *testing.T) {
 			seen[got] = true
 			out = append(out, got)
 		}
-		return append(out, refs(p.Active(rand.New(rand.NewPCG(1, 2))))) //nolint:gosec // G404: a seeded source makes the test reproducible
+		return append(out, refs(p.Active(nil, rand.New(rand.NewPCG(1, 2))))) //nolint:gosec // G404: a seeded source makes the test reproducible
 	}
 	before := story.Initial()
 	for _, m := range s.Messages {

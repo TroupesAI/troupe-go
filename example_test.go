@@ -116,7 +116,7 @@ func ExamplePoint_Active() {
 
 	// Message 2 is written for Kai, after the root, which the scan reaches.
 	reply := troupe.Message{ID: "2", Parent: "1", From: "model", Char: "kai", Content: []troupe.Part{{Text: "Kai grips the ledge."}}}
-	for _, a := range story.PointAt(story.Initial(), []troupe.Message{root}, "kai").Active(r) {
+	for _, a := range story.PointAt(story.Initial(), []troupe.Message{root}, "kai").Active(nil, r) {
 		fmt.Println(a.Owner+"/"+a.Entry.ID, a.Kept)
 		if !a.Kept {
 			reply.Activated = append(reply.Activated, a.Owner+"/"+a.Entry.ID)
@@ -129,7 +129,7 @@ func ExamplePoint_Active() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	for _, a := range story.PointAt(before, []troupe.Message{reply}, "kai").Active(r) {
+	for _, a := range story.PointAt(before, []troupe.Message{reply}, "kai").Active(nil, r) {
 		fmt.Println(a.Owner+"/"+a.Entry.ID, a.Kept)
 	}
 	// Output:
