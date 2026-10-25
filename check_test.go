@@ -152,3 +152,35 @@ func TestCheckChanges(t *testing.T) {
 		})
 	}
 }
+
+// Check undoes a message's changes latest first before judging its sibling,
+// so a key the message removes and sets again is put back as it was.
+func TestCheckUndoOrder(t *testing.T) {
+	b, diags, err := troupe.ReadBundle(strings.NewReader(`{"troupe":"0.14","kind":"bundle",
+		"scenarios":[{"id":"s","variables":[{"id":"inv","type":"int","of":"*","description":"d"}]}]}`))
+	if err != nil || diags != nil {
+		t.Fatal(err, diags)
+	}
+	// The root fills the map to the limit. The siblings around y each remove
+	// k0 and set it again, so whichever is judged before y, y takes the map
+	// past the limit only if k0 is put back.
+	keys := make([]string, 256)
+	for i := range keys {
+		keys[i] = fmt.Sprintf(`"state.inv.k%d":1`, i)
+	}
+	again := `"from":"player","content":[{"text":"x"}],"changes":[{"by":"player","set":{"state.inv.k0":0}},{"by":"player","set":{"state.inv.k0":1}}]}`
+	s, diags, err := troupe.ReadSession(strings.NewReader(strings.Join([]string{
+		`{"troupe":"0.14","kind":"session","scenario":"s"}`,
+		`{"id":"r","from":"player","content":[{"text":"x"}],"changes":[{"by":"player","set":{` + strings.Join(keys, ",") + `}}]}`,
+		`{"id":"x1","parent":"r",` + again,
+		`{"id":"y","parent":"r","from":"player","content":[{"text":"x"}],"changes":[{"by":"player","set":{"state.inv.n":1}}]}`,
+		`{"id":"x2","parent":"r",` + again,
+	}, "\n")))
+	if err != nil || diags != nil {
+		t.Fatal(err, diags)
+	}
+	want := []troupe.Diagnostic{{Code: troupe.CodeInvalidValue, Line: 4, Message: "y", Pointer: "/changes/0/set/state.inv.n"}}
+	if got := troupe.Check(b, s); !slices.Equal(got, want) {
+		t.Errorf("Check = %v, want %v", got, want)
+	}
+}
