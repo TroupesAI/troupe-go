@@ -1,6 +1,6 @@
-# Troupe conformance cases
+# Troupe conformance protocol
 
-This folder holds the conformance suite for the Troupe spec. Each case is a language-neutral JSON file in `cases/`. Any implementation can run the suite by reading each case, setting up its inputs, performing each test's operation, and comparing the result with `expect`. Libraries live in their own repositories and run it as part of their tests.
+The conformance suite for the Troupe spec is a set of language-neutral JSON cases in `cases/`. Any implementation can run it by reading each case, setting up its inputs, performing each test's operation, and comparing the result with `expect`. Libraries live in their own repositories and run it as part of their tests.
 
 This document is the contract between the cases and a runner. When a case and this document disagree, report it as a bug in the suite.
 
@@ -17,7 +17,7 @@ Cases live in `cases/<area>/<topic>.json`, one folder per area of the spec:
 | `roots` | Roots made from openings (Format 6.3, 11.1) |
 | `sessions` | Session lines, the head, players and the cast (Format 11) |
 | `checks` | Checks and unknown fields (Format 13, 15.3) |
-| `parsing` | Raw files (Format 2.2, 11, 12, 13, 14) |
+| `parsing` | Raw files (Format 2.2, 11, 12, 13, 14, 15.2, 15.3) |
 | `examples` | The spec's worked examples |
 
 The order of cases doesn't matter. A case file is one JSON object, described by [`case.schema.json`](case.schema.json), which `bun run check` applies:
@@ -32,7 +32,7 @@ The order of cases doesn't matter. A case file is one JSON object, described by 
 | `sessionFile` | string | Instead of `session`: a path to a `.jsonl` session file, relative to the case file. |
 | `tests` | array | The tests (section 3). |
 
-`bundleFile` and `sessionFile` may point into the repository's `examples/` folder, outside `conformance/`, so a library that copies the suite copies `examples/` with it, under its [CC BY 4.0](../spec/LICENSE) license.
+`bundleFile` and `sessionFile` may point into the repository's `examples/` folder, outside `conformance/`, so a library that copies the suite copies `examples/` with it, under its [CC BY 4.0](https://github.com/TroupesAI/troupe/blob/main/spec/LICENSE) license.
 
 Bundles and session headers given as objects leave out `troupe`: before anything else, `check` validation included, the runner sets it to the spec version. If no bundle is given, the bundle is `{"troupe": <the spec version>, "kind": "bundle"}`. Cases that test raw input instead use `parse` tests (section 3.6), which take their input inline.
 
@@ -46,7 +46,7 @@ Every test starts from a fresh copy of the case's inputs. Tests don't affect eac
 
 ## 3. Tests
 
-Each test has `type`, an optional `name` and `note` (informative), the inputs below, and `expect`. When `expect` is an object, its fields must be ones this section defines for the type; a runner should treat any other field as a suite error. Results are compared this way:
+Each test has `type`, an optional `name` and `note` (informative), the inputs below, and `expect`. Results are compared this way:
 
 - **Equality** is deep JSON equality. Object key order is ignored, array order matters, and numbers compare as IEEE 754 doubles.
 - **Subset** comparisons check only the keys `expect` lists; other keys in the actual result are ignored.
@@ -94,7 +94,7 @@ The state is flattened to an object with these keys:
 
 ### 3.4 `check`: checks (Format 15.3)
 
-The runner validates the bundle and the session's lines against the schemas, then runs every other check (Format 15.3). Every check runs on the documents as written, so one value can fail several checks (Format 15.3).
+The runner validates the bundle and the session's lines against the schemas, then runs every other check (Format 15.3).
 
 - `expect.codes` is the sorted list of distinct diagnostic codes reported. It is compared exactly.
 - Each session line after the header is validated against `message.schema.json`. Validators assert `format`, so a malformed timestamp is `SCHEMA`.
@@ -125,7 +125,7 @@ A duplicate ID is at the `id` of each one after the first (`/characters/1/id`), 
 
 `expect` is who knows it: the IDs of the characters who know it, and `narrator` when the narrator knows it, in code point order.
 
-### 3.6 `parse`: raw input (Format 2.2, 11, 12, 13, 14, 15.2)
+### 3.6 `parse`: raw input (Format 2.2, 11, 12, 13, 14, 15.2, 15.3)
 
 | Input | Meaning |
 | --- | --- |

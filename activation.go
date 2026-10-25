@@ -30,11 +30,11 @@ type ActiveEntry struct {
 // and no keys activates only by retrieval, which is the caller's. The rounds
 // of the messages that record an entry in activated time it: sticky keeps it
 // active, and once and cooldown keep it from activating again. Of the entries
-// that would activate, chance lets each through, and then group keeps one of
-// each owner's group, of the highest priority, chosen by weight among equals,
-// where an entry sticky keeps wins against equals that aren't kept.
-// r draws for chance and weight, so activation is reproducible from the
-// caller's source.
+// that would activate, group keeps one of each owner's group, of the highest
+// priority, chosen by weight among equals, where an entry sticky keeps wins
+// against equals that aren't kept, and then chance lets each through, so a
+// chosen entry that fails it leaves its group empty. r draws for weight and
+// chance, so activation is reproducible from the caller's source.
 //
 // Which active entries reach the model is the caller's to choose, by their
 // priority, and where each goes by its position or depth (Format 7.3). The
@@ -44,11 +44,14 @@ type ActiveEntry struct {
 func (p *Point) Active(r *rand.Rand) []ActiveEntry {
 	var active []ActiveEntry
 	for _, a := range p.inUse() {
-		if p.activates(&a, r) {
+		if p.activates(&a) {
 			active = append(active, a)
 		}
 	}
-	return compete(active, r)
+	return slices.DeleteFunc(compete(active, r), func(a ActiveEntry) bool {
+		c := a.Entry.Chance
+		return !a.Kept && c != nil && *c < 100 && r.IntN(100) >= *c
+	})
 }
 
 // inUse returns the entries in use at p that whoever the message being
@@ -86,8 +89,9 @@ func (p *Point) knows(e *Entry) bool {
 }
 
 // activates reports whether a, an entry in use, activates at p, before its
-// group competes, and sets whether it is kept (Format 7.2).
-func (p *Point) activates(a *ActiveEntry, r *rand.Rand) bool {
+// group competes and its chance is drawn, and sets whether it is kept (Format
+// 7.2).
+func (p *Point) activates(a *ActiveEntry) bool {
 	e := &a.Entry
 	// An entry recorded at a message of round t with sticky s stays active
 	// through round t + s, and with cooldown c can't activate again through
@@ -119,7 +123,7 @@ func (p *Point) activates(a *ActiveEntry, r *rand.Rand) bool {
 			return false
 		}
 	}
-	return e.Chance == nil || *e.Chance >= 100 || r.IntN(100) < *e.Chance
+	return true
 }
 
 // compete keeps, of the active entries of each owner's group, one of the

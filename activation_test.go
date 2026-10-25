@@ -32,7 +32,9 @@ const activationBundle = `{"troupe":"0.14","kind":"bundle",
 			{"id":"cool","text":"t","cooldown":1},
 			{"id":"never","text":"t","chance":0},
 			{"id":"low","text":"t","group":"g","priority":10},
-			{"id":"high","text":"t","group":"g","priority":90}]}]}`
+			{"id":"high","text":"t","group":"g","priority":90},
+			{"id":"chosen","text":"t","group":"h","priority":90,"chance":0},
+			{"id":"passed","text":"t","group":"h"}]}]}`
 
 // activationSession's path is the rounds 1 to 3: message 2 records entries
 // as activated, 3 adds a session entry and 4 removes it.
