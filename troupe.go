@@ -19,7 +19,8 @@
 // what it calls the narrator, the keys its changes can write, and its states:
 // Initial, StateAt for a message, and Apply, which gives a message's state
 // from its parent's, so a caller that keeps each message's state never
-// replays a path. A State marshals to JSON, and UnmarshalState restores it.
+// replays a path. CheckChanges judges a message's changes before they are
+// recorded. A State marshals to JSON, and UnmarshalState restores it.
 // From a message's parent's state, KnownBy tells who knows each of its parts
 // and RenderParts shows them. Render resolves the macros in author text, and
 // PointAt builds the point where the next message is written, where

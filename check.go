@@ -47,6 +47,37 @@ func Check(b *Bundle, s *Session) []Diagnostic {
 	return sortDiagnostics(c.diags)
 }
 
+// CheckChanges judges the changes of a message not yet recorded, given
+// before, the state at its parent. Each key is judged as Check judges a
+// recorded change's (Format 8.5), and against its variable's by, maxStep and
+// oneWay, which Format 8.1 leaves to whoever records a change: maxStep
+// bounds only a model's changes, the scene has no by, and an opening's change
+// is held to none of them, since a root records its opening's set as written
+// (Format 11.1). Each change is judged against the state the ones before it
+// leave, and maxStep and oneWay compare the key's value there with the one
+// the change gives it, both normalized, an absent key of a "*" map counting
+// as the default (Format 8.3, 8.6).
+//
+// It returns a Diagnostic for each rule a key breaks, sorted as Check's are,
+// with Line 0 and the key's Pointer within the message, such as
+// "/changes/0/set/state.bell". Changes it accepts get none from Check once
+// recorded as given; a caller that drops a refused change judges the rest
+// again. Each change's by and set are as the schema requires, and only a
+// root's first change is by "opening" (Format 11.1).
+func (st *Story) CheckChanges(before State, changes []Change) []Diagnostic {
+	sc := st.scope
+	c := &checker{names: sc.all}
+	s, owned := before.s.clone(), map[string]bool{}
+	for j := range changes {
+		ch := &changes[j]
+		p := ptr("", "changes", j, "set")
+		c.set(sc, place{}, p, ch.Set, sc.variable)
+		c.rules(sc, s, p, ch)
+		c.mapLimit(sc, place{}, p, ch.Set, sc.apply(s, ch.Set, nil, owned))
+	}
+	return sortDiagnostics(c.diags)
+}
+
 type checker struct {
 	b *Bundle
 	s *Session // nil until the session's checks
@@ -677,4 +708,61 @@ func (c *checker) set(sc *scope, at place, p jsontext.Pointer, set map[string]js
 			}
 		}
 	}
+}
+
+// rules reports the keys of ch that break their variable's by, maxStep or
+// oneWay, judged against s, the state before ch (Format 8.1).
+func (c *checker) rules(sc *scope, s *state, p jsontext.Pointer, ch *Change) {
+	if ch.By == "opening" {
+		return
+	}
+	for key, raw := range ch.Set {
+		b, k, ok := sc.variable(key)
+		if !ok {
+			continue
+		}
+		v := b.v
+		if !slices.Contains(v.By, ch.By) {
+			c.report(CodeBy, place{}, ptr(p, key))
+		}
+		x, ok := value(v, b.values, raw)
+		if !ok {
+			continue
+		}
+		old := s.values[b.name]
+		if k != "" {
+			if old, ok = old.(map[string]any)[k]; !ok {
+				old = zero(v)
+			}
+		}
+		if v.Type == "int" && v.MaxStep > 0 && ch.By == "model" {
+			if d := x.(int64) - old.(int64); max(d, -d) > v.MaxStep {
+				c.report(CodeMaxStep, place{}, ptr(p, key))
+			}
+		}
+		if v.OneWay && backward(b, old, x) {
+			c.report(CodeOneWay, place{}, ptr(p, key))
+		}
+	}
+}
+
+// backward reports whether x, a value of b's variable, moves back from old,
+// as oneWay rules out: a number that falls, a bool that turns false, a set
+// that loses a member, or an enum that moves earlier in values (Format 8.1).
+func backward(b *binding, old, x any) bool {
+	switch b.v.Type {
+	case "int":
+		return x.(int64) < old.(int64)
+	case "bool":
+		return old.(bool) && !x.(bool)
+	case "enum":
+		return b.values[x.(string)] < b.values[old.(string)]
+	case "set":
+		members := index(x.([]string))
+		return slices.ContainsFunc(old.([]string), func(m string) bool {
+			_, ok := members[m]
+			return !ok
+		})
+	}
+	return false
 }

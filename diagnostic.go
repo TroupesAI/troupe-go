@@ -7,7 +7,8 @@ import (
 	"strings"
 )
 
-// Code is the code of a check (Format 15.3).
+// Code is the code of a check (Format 15.3), or of a rule CheckChanges
+// judges.
 type Code string
 
 // The codes of Format 15.3. Reading reports the first four, and Check the
@@ -33,25 +34,38 @@ const (
 	CodeCELError           Code = "CEL_ERROR"
 )
 
-// Diagnostic is a check a document fails, and where. It never holds text from
-// the document other than the names in its location.
+// The codes of a change that breaks its variable's by, maxStep or oneWay,
+// which no check of Format 15.3 compares changes with, and only CheckChanges
+// reports (Format 8.1).
+const (
+	CodeBy      Code = "BY"
+	CodeMaxStep Code = "MAX_STEP"
+	CodeOneWay  Code = "ONE_WAY"
+)
+
+// Diagnostic is a check a document fails, or a rule a change CheckChanges
+// judges breaks, and where. It never holds text from the document other than
+// the names in its location.
 type Diagnostic struct {
 	Code Code
 	// File is the path within a package; "" outside one, or when the
 	// diagnostic is about a ZIP entry whose name isn't a package path.
 	File string
-	// Line is the line of a session, from 1 for its header; 0 in a bundle.
+	// Line is the line of a session, from 1 for its header; 0 in a bundle and
+	// from CheckChanges.
 	Line int
 	// Message is the message's ID, when its line has a valid one.
 	Message string
-	// Pointer is a JSON Pointer within the document.
+	// Pointer is a JSON Pointer within the document, or for CheckChanges
+	// within the message.
 	Pointer string
 }
 
 // Location gives where the diagnostic is in the conformance suite's form,
 // without the file: "/scenarios/0/when" in a bundle, "header/players" in a
 // session's header, and "message:3/changes/0" in a message. A message line
-// without a valid ID is "line:<n>" instead.
+// without a valid ID is "line:<n>" instead, and a diagnostic from
+// CheckChanges is its pointer within the message.
 func (d Diagnostic) Location() string {
 	switch {
 	case d.Line == 0:
