@@ -3,6 +3,7 @@ package troupe
 import (
 	"encoding/json/jsontext"
 	"encoding/json/v2"
+	"math/big"
 	"slices"
 	"strconv"
 	"strings"
@@ -53,11 +54,11 @@ func Check(b *Bundle, s *Session) []Diagnostic {
 // oneWay, which Format 8.1 leaves to whoever records a change: the scene has
 // no by, and an opening's change is held to none of them. Each change is
 // judged against the state the ones before it leave. oneWay compares a key's
-// value there with the one the change gives it, and maxStep how far the
-// message's changes by "model" move it together, from before the first of
-// them to after the last, reported at the last that sets it. Values are
-// compared normalized, an absent key of a "*" map counting as the default
-// (Format 8.3, 8.6).
+// value there with the one the change gives it. maxStep bounds the sum of
+// the moves of the message's changes by "model", either way, each from the
+// key's value before the change to the one it gives it, and is reported at
+// the last that sets the key validly. Values are compared normalized, an
+// absent key of a "*" map counting as the default (Format 8.3, 8.6).
 //
 // It returns a Diagnostic for each rule a key breaks, sorted as Check's are,
 // with Line 0 and the key's Pointer within the message, such as
@@ -68,32 +69,31 @@ func Check(b *Bundle, s *Session) []Diagnostic {
 func (st *Story) CheckChanges(before State, changes []Change) []Diagnostic {
 	sc := st.scope
 	c := &checker{names: sc.all}
-	first, last := -1, -1 // the message's first and last changes by "model"
-	for j := range changes {
-		if changes[j].By == "model" {
-			if first < 0 {
-				first = j
-			}
-			last = j
-		}
-	}
 	s, owned := before.s.clone(), map[string]bool{}
-	var base *state // the state before the first change by "model"
+	steps := map[string]*step{}
 	for j := range changes {
 		ch := &changes[j]
-		if j == first {
-			// The maps base shares with s are copied before s changes them.
-			base, owned = s.clone(), map[string]bool{}
-		}
 		p := ptr("", "changes", j, "set")
 		c.set(sc, place{}, p, ch.Set, sc.variable)
-		c.rules(sc, s, p, ch)
+		c.rules(sc, s, p, ch, steps)
 		c.mapLimit(sc, place{}, p, ch.Set, sc.apply(s, ch.Set, nil, owned))
-		if j == last {
-			c.maxStep(sc, base, s, changes[:last+1])
+	}
+	for key, sp := range steps {
+		if sp.moved.CmpAbs(big.NewInt(sp.max)) > 0 {
+			c.report(CodeMaxStep, place{}, ptr(sp.at, key))
 		}
 	}
 	return sortDiagnostics(c.diags)
+}
+
+// step is how far a message's changes by "model" move a key of a variable
+// with maxStep, and the last of them that sets it. The sum is a big.Int
+// since changes by others between them bound it only by the number of
+// changes.
+type step struct {
+	moved big.Int
+	max   int64
+	at    jsontext.Pointer
 }
 
 type checker struct {
@@ -729,8 +729,9 @@ func (c *checker) set(sc *scope, at place, p jsontext.Pointer, set map[string]js
 }
 
 // rules reports the keys of ch that break their variable's by or oneWay,
-// judged against s, the state before ch (Format 8.1).
-func (c *checker) rules(sc *scope, s *state, p jsontext.Pointer, ch *Change) {
+// judged against s, the state before ch, and adds the moves of a change by
+// "model" to steps (Format 8.1).
+func (c *checker) rules(sc *scope, s *state, p jsontext.Pointer, ch *Change, steps map[string]*step) {
 	if ch.By == "opening" {
 		return
 	}
@@ -747,32 +748,18 @@ func (c *checker) rules(sc *scope, s *state, p jsontext.Pointer, ch *Change) {
 		if !ok {
 			continue
 		}
-		if v.OneWay && backward(b, s.value(b, k), x) {
+		old := s.value(b, k)
+		if v.OneWay && backward(b, old, x) {
 			c.report(CodeOneWay, place{}, ptr(p, key))
 		}
-	}
-}
-
-// maxStep reports the keys that a message's changes by "model", up to the
-// last of changes, move further than their variable's maxStep, from base,
-// the state before the first of them, to s, the state after the last (Format
-// 8.1). Each is reported at the last change by "model" that sets it validly.
-func (c *checker) maxStep(sc *scope, base, s *state, changes []Change) {
-	at := map[string]int{} // each key's last change by "model"
-	for j := range changes {
-		if changes[j].By != "model" {
-			continue
-		}
-		for key, raw := range changes[j].Set {
-			if b, _, ok := sc.variable(key); ok && b.v.Type == "int" && b.v.MaxStep > 0 && validValue(b.v, b.values, raw) {
-				at[key] = j
+		if v.Type == "int" && v.MaxStep > 0 && ch.By == "model" {
+			st := steps[key]
+			if st == nil {
+				st = &step{max: v.MaxStep}
+				steps[key] = st
 			}
-		}
-	}
-	for key, j := range at {
-		b, k, _ := sc.variable(key)
-		if d := s.value(b, k).(int64) - base.value(b, k).(int64); max(d, -d) > b.v.MaxStep {
-			c.report(CodeMaxStep, place{}, ptr("", "changes", j, "set", key))
+			st.moved.Add(&st.moved, big.NewInt(x.(int64)-old.(int64)))
+			st.at = p
 		}
 	}
 }

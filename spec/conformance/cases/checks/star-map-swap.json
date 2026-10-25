@@ -1,5 +1,5 @@
 {
-  "description": "A key set to the default is removed (Format 8.3), so a change to a \"*\" map at 256 keys that removes one key and adds another stays within the limit of 256 (Format 14, 15.3)",
+  "description": "A key set to the default is removed, and a change applies to the state on its path, so each of two sibling changes to a \"*\" map at 255 keys that removes one key and adds two stays within the limit of 256 (Format 8.3, 8.5, 8.6, 14)",
   "bundle": {
     "kind": "bundle",
     "scenarios": [
@@ -302,8 +302,28 @@
               "state.inv.k251": 1,
               "state.inv.k252": 1,
               "state.inv.k253": 1,
-              "state.inv.k254": 1,
-              "state.inv.k255": 1
+              "state.inv.k254": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "2",
+        "parent": "1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "Swap one for two."
+          }
+        ],
+        "changes": [
+          {
+            "by": "player",
+            "set": {
+              "state.inv.k0": 0,
+              "state.inv.a": 1,
+              "state.inv.b": 1
             }
           }
         ]
@@ -315,15 +335,16 @@
         "content": [
           {
             "speaker": "p",
-            "text": "Swap one."
+            "text": "Swap one for two."
           }
         ],
         "changes": [
           {
             "by": "player",
             "set": {
-              "state.inv.k0": 0,
-              "state.inv.extra": 1
+              "state.inv.k1": 0,
+              "state.inv.c": 1,
+              "state.inv.d": 1
             }
           }
         ]
