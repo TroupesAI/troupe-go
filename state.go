@@ -197,6 +197,19 @@ func (st *state) revert(undo []edit) {
 	}
 }
 
+// value returns the value of b's variable in st, at the key k when it is
+// keyed: for a key a "*" map doesn't have, the default (Format 8.3).
+func (st *state) value(b *binding, k string) any {
+	x := st.values[b.name]
+	if k == "" {
+		return x
+	}
+	if x, ok := x.(map[string]any)[k]; ok {
+		return x
+	}
+	return zero(b.v)
+}
+
 // clone returns a copy of st that applying changes to doesn't change st.
 func (st *state) clone() *state {
 	c := *st

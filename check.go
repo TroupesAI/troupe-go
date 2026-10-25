@@ -50,13 +50,14 @@ func Check(b *Bundle, s *Session) []Diagnostic {
 // CheckChanges judges the changes of a message not yet recorded, given
 // before, the state at its parent. Each key is judged as Check judges a
 // recorded change's (Format 8.5), and against its variable's by, maxStep and
-// oneWay, which Format 8.1 leaves to whoever records a change: maxStep
-// bounds only a model's changes, the scene has no by, and an opening's change
-// is held to none of them, since a root records its opening's set as written
-// (Format 11.1). Each change is judged against the state the ones before it
-// leave, and maxStep and oneWay compare the key's value there with the one
-// the change gives it, both normalized, an absent key of a "*" map counting
-// as the default (Format 8.3, 8.6).
+// oneWay, which Format 8.1 leaves to whoever records a change: the scene has
+// no by, and an opening's change is held to none of them. Each change is
+// judged against the state the ones before it leave. oneWay compares a key's
+// value there with the one the change gives it, and maxStep how far the
+// message's changes by "model" move it together, from before the first of
+// them to after the last, reported at the last that sets it. Values are
+// compared normalized, an absent key of a "*" map counting as the default
+// (Format 8.3, 8.6).
 //
 // It returns a Diagnostic for each rule a key breaks, sorted as Check's are,
 // with Line 0 and the key's Pointer within the message, such as
@@ -67,13 +68,30 @@ func Check(b *Bundle, s *Session) []Diagnostic {
 func (st *Story) CheckChanges(before State, changes []Change) []Diagnostic {
 	sc := st.scope
 	c := &checker{names: sc.all}
+	first, last := -1, -1 // the message's first and last changes by "model"
+	for j := range changes {
+		if changes[j].By == "model" {
+			if first < 0 {
+				first = j
+			}
+			last = j
+		}
+	}
 	s, owned := before.s.clone(), map[string]bool{}
+	var base *state // the state before the first change by "model"
 	for j := range changes {
 		ch := &changes[j]
+		if j == first {
+			// The maps base shares with s are copied before s changes them.
+			base, owned = s.clone(), map[string]bool{}
+		}
 		p := ptr("", "changes", j, "set")
 		c.set(sc, place{}, p, ch.Set, sc.variable)
 		c.rules(sc, s, p, ch)
 		c.mapLimit(sc, place{}, p, ch.Set, sc.apply(s, ch.Set, nil, owned))
+		if j == last {
+			c.maxStep(sc, base, s, changes[:last+1])
+		}
 	}
 	return sortDiagnostics(c.diags)
 }
@@ -710,8 +728,8 @@ func (c *checker) set(sc *scope, at place, p jsontext.Pointer, set map[string]js
 	}
 }
 
-// rules reports the keys of ch that break their variable's by, maxStep or
-// oneWay, judged against s, the state before ch (Format 8.1).
+// rules reports the keys of ch that break their variable's by or oneWay,
+// judged against s, the state before ch (Format 8.1).
 func (c *checker) rules(sc *scope, s *state, p jsontext.Pointer, ch *Change) {
 	if ch.By == "opening" {
 		return
@@ -729,19 +747,32 @@ func (c *checker) rules(sc *scope, s *state, p jsontext.Pointer, ch *Change) {
 		if !ok {
 			continue
 		}
-		old := s.values[b.name]
-		if k != "" {
-			if old, ok = old.(map[string]any)[k]; !ok {
-				old = zero(v)
-			}
-		}
-		if v.Type == "int" && v.MaxStep > 0 && ch.By == "model" {
-			if d := x.(int64) - old.(int64); max(d, -d) > v.MaxStep {
-				c.report(CodeMaxStep, place{}, ptr(p, key))
-			}
-		}
-		if v.OneWay && backward(b, old, x) {
+		if v.OneWay && backward(b, s.value(b, k), x) {
 			c.report(CodeOneWay, place{}, ptr(p, key))
+		}
+	}
+}
+
+// maxStep reports the keys that a message's changes by "model", up to the
+// last of changes, move further than their variable's maxStep, from base,
+// the state before the first of them, to s, the state after the last (Format
+// 8.1). Each is reported at the last change by "model" that sets it validly.
+func (c *checker) maxStep(sc *scope, base, s *state, changes []Change) {
+	at := map[string]int{} // each key's last change by "model"
+	for j := range changes {
+		if changes[j].By != "model" {
+			continue
+		}
+		for key, raw := range changes[j].Set {
+			if b, _, ok := sc.variable(key); ok && b.v.Type == "int" && b.v.MaxStep > 0 && validValue(b.v, b.values, raw) {
+				at[key] = j
+			}
+		}
+	}
+	for key, j := range at {
+		b, k, _ := sc.variable(key)
+		if d := s.value(b, k).(int64) - base.value(b, k).(int64); max(d, -d) > b.v.MaxStep {
+			c.report(CodeMaxStep, place{}, ptr("", "changes", j, "set", key))
 		}
 	}
 }

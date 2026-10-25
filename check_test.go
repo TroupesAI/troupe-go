@@ -138,13 +138,19 @@ func TestCheckChanges(t *testing.T) {
 			at(troupe.CodeBy, "/changes/0/set/state.note"),
 			at(troupe.CodeBy, "/changes/1/set/state.note"),
 		}},
-		// maxStep bounds a model's changes only, by the normalized value: 104
-		// is 100. Each change steps from the value the one before leaves.
-		{"maxStep", `[{"by":"model","set":{"state.bell":14,"state.trust.a":104}},{"by":"model","set":{"state.trust.a":94}},
-			{"by":"player","set":{"state.trust.a":50}},{"by":"model","set":{"state.bell":16}},{"by":"model","set":{"state.bell":19}}]`, []troupe.Diagnostic{
+		// maxStep bounds a message's changes by "model" together, by the
+		// normalized value: 104 is 100. It is reported at the last that sets
+		// the key, and a player's changes aren't bounded.
+		{"maxStep", `[{"by":"model","set":{"state.bell":12,"state.trust.a":90}},{"by":"player","set":{"state.trust.p":50}},{"by":"model","set":{"state.bell":14,"state.trust.a":104}},
+			{"by":"model","set":{"state.lit":true}}]`, []troupe.Diagnostic{
+			at(troupe.CodeMaxStep, "/changes/2/set/state.bell"),
+		}},
+		{"maxStep invalid", `[{"by":"model","set":{"state.bell":20}},{"by":"model","set":{"state.bell":"x"}}]`, []troupe.Diagnostic{
 			at(troupe.CodeMaxStep, "/changes/0/set/state.bell"),
-			at(troupe.CodeMaxStep, "/changes/1/set/state.trust.a"),
-			at(troupe.CodeMaxStep, "/changes/4/set/state.bell"),
+			at(troupe.CodeInvalidValue, "/changes/1/set/state.bell"),
+		}},
+		{"maxStep after a player", `[{"by":"player","set":{"state.trust.a":50,"state.trust.p":50}},{"by":"model","set":{"state.trust.a":54,"state.trust.p":60}}]`, []troupe.Diagnostic{
+			at(troupe.CodeMaxStep, "/changes/1/set/state.trust.p"),
 		}},
 		// An absent key of a "*" map counts as the default, 0.
 		{"oneWay", `[{"by":"model","set":{"state.bell":10,"state.inv.torch":0,"state.inv.rope":-1,"state.phase":"calm","state.tags":["y"],"state.lit":false}}]`, []troupe.Diagnostic{

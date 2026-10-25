@@ -1,5 +1,5 @@
 {
-  "description": "A \"*\" map holds at most 256 keys after a change (Format 14, 15.3): a change that takes it to 256 is valid, and one that takes it past is INVALID_VALUE",
+  "description": "A \"*\" map holds at most 256 keys after a change, judged on the change's path (Format 8.3, 8.5, 8.6, 14): a change that takes it to 256 is valid, and one that takes it past is INVALID_VALUE, though a sibling branch removes a key",
   "bundle": {
     "kind": "bundle",
     "scenarios": [
@@ -310,6 +310,25 @@
       },
       {
         "id": "2",
+        "parent": "1",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "Drop one."
+          }
+        ],
+        "changes": [
+          {
+            "by": "player",
+            "set": {
+              "state.inv.k0": 0
+            }
+          }
+        ]
+      },
+      {
+        "id": "3",
         "parent": "1",
         "from": "player",
         "content": [
