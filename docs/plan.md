@@ -187,7 +187,7 @@ Each phase ends with its part of the work tested, lint clean, and its decisions 
 These are what the platform needs that the suite doesn't test. Build them in the order the platform asks for them, with tests of our own, since the suite has no cases for them:
 
 - Checking one proposed change, key and value, before the platform records it (Format 8.5), once players or models change state. `Check` already judges keys and values.
-- Writing sessions and packages back, keeping every `ext` and a package's other files (Format 12.3, 13), with a session's file fields, so packages with sessions can be imported and exported. A session's file fields need a `Line` beside the pointer, which `FileField` can gain without breaking callers. The model marshals as the spec writes it, and `ReplaceFileFields` replaces a bundle's file fields.
+- Writing sessions and packages back, keeping every `ext` and a package's other files (Format 12.3, 13), with a session's file fields, so packages with sessions can be imported and exported. A session's file fields are its lines': image parts, and the header's avatars and location images. Each line is one JSON value, so `SessionHeader` and `Message` can each give theirs as `Bundle.FileFields` does, and `ReplaceFileFields` already replaces them. The model marshals as the spec writes it.
 - The `pull` entries a point could retrieve (Format 7.2), once the platform retrieves them. Retrieving them, by search or at a model's request, is the platform's.
 
 ## What the platform needs
