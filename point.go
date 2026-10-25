@@ -47,7 +47,7 @@ func (st *Story) PointAt(before State, recent []Message, char string) *Point {
 	for i := range recent {
 		m := &recent[i]
 		prior := p.state.clone()
-		st.apply(p.state, m)
+		st.apply(p.state, m, map[string]bool{})
 		if m.Hidden || len(m.Content) == 0 {
 			continue
 		}

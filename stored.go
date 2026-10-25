@@ -108,7 +108,7 @@ func (st *Story) UnmarshalState(data []byte) (State, error) {
 		}
 	}
 	s := st.initial.clone()
-	sc.apply(s, v.Values, nil)
+	sc.apply(s, v.Values, nil, map[string]bool{})
 	s.user, s.turn, s.opening, s.at, s.parentAt = v.User, v.Turn, v.Opening, v.At, v.ParentAt
 	s.entries, s.activated, s.appeared = v.Entries, v.Activated, *v.Appeared
 	return State{sc, s}, nil

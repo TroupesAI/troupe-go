@@ -100,8 +100,13 @@ func initialValue(b *binding, raw jsontext.Value) any {
 // values that aren't valid, which a session that passes Check doesn't have.
 // It returns the full names of the "*" maps the change leaves with more than
 // maxSetMembers keys.
-func (sc *scope) apply(st *state, set map[string]jsontext.Value, undo *[]edit) []string {
-	var open []*binding // the "*" maps the change writes to
+//
+// owned holds the full names of st's keyed maps that no other state shares,
+// which apply changes in place, and apply adds each map it copies. Copying a
+// map once, rather than for each key, keeps applying a change, or a path's
+// changes to one state, linear in their keys.
+func (sc *scope) apply(st *state, set map[string]jsontext.Value, undo *[]edit, owned map[string]bool) map[string]bool {
+	open := map[*binding]bool{} // the "*" maps the change writes to
 	for key, raw := range set {
 		switch key {
 		case "scene.location":
@@ -116,7 +121,11 @@ func (sc *scope) apply(st *state, set map[string]jsontext.Value, undo *[]edit) [
 				record(undo, edit{name: key, old: st.present, had: true})
 				// scene.present keeps the cast's characters, once each, in
 				// cast order.
-				st.present = slices.DeleteFunc(slices.Clone(sc.cast), func(id string) bool { return !slices.Contains(ids, id) })
+				in := index(ids)
+				st.present = slices.DeleteFunc(slices.Clone(sc.cast), func(id string) bool {
+					_, ok := in[id]
+					return !ok
+				})
 			}
 		default:
 			b, k, ok := sc.variable(key)
@@ -132,9 +141,13 @@ func (sc *scope) apply(st *state, set map[string]jsontext.Value, undo *[]edit) [
 				st.values[b.name] = x
 				continue
 			}
-			// A keyed map is replaced, not changed in place, so a state
-			// that shares it with another isn't changed.
-			m := maps.Clone(st.values[b.name].(map[string]any))
+			// A keyed map another state may share is copied, so that state
+			// isn't changed.
+			m := st.values[b.name].(map[string]any)
+			if !owned[b.name] {
+				m = maps.Clone(m)
+				owned[b.name] = true
+			}
 			old, had := m[k]
 			record(undo, edit{name: b.name, key: k, old: old, had: had})
 			if b.v.Of.Any && isZero(b.v, x) {
@@ -145,15 +158,15 @@ func (sc *scope) apply(st *state, set map[string]jsontext.Value, undo *[]edit) [
 				m[k] = x
 			}
 			st.values[b.name] = m
-			if b.v.Of.Any && !slices.Contains(open, b) {
-				open = append(open, b)
+			if b.v.Of.Any {
+				open[b] = true
 			}
 		}
 	}
-	var over []string
-	for _, b := range open {
+	over := map[string]bool{}
+	for b := range open {
 		if len(st.values[b.name].(map[string]any)) > maxSetMembers {
-			over = append(over, b.name)
+			over[b.name] = true
 		}
 	}
 	return over
@@ -165,7 +178,8 @@ func record(undo *[]edit, e edit) {
 	}
 }
 
-// revert puts back what undo records, latest first.
+// revert puts back what undo records, latest first, changing the keyed maps
+// in place: apply owned the maps it recorded edits to.
 func (st *state) revert(undo []edit) {
 	for _, e := range slices.Backward(undo) {
 		switch {
@@ -175,14 +189,10 @@ func (st *state) revert(undo []edit) {
 			st.present = e.old.([]string)
 		case e.key == "":
 			st.values[e.name] = e.old
+		case e.had:
+			st.values[e.name].(map[string]any)[e.key] = e.old
 		default:
-			m := maps.Clone(st.values[e.name].(map[string]any))
-			if e.had {
-				m[e.key] = e.old
-			} else {
-				delete(m, e.key)
-			}
-			st.values[e.name] = m
+			delete(st.values[e.name].(map[string]any), e.key)
 		}
 	}
 }

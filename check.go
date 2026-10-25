@@ -575,15 +575,15 @@ func (c *checker) openings(sc *scope) {
 	for j, o := range sc.scenario.Openings {
 		p := ptr("", "scenarios", sc.index, "openings", j, "set")
 		c.set(sc, inBundle, p, o.Set, sc.openingVariable)
-		c.mapLimit(sc, inBundle, p, o.Set, sc.apply(initial.clone(), o.Set, nil))
+		c.mapLimit(sc, inBundle, p, o.Set, sc.apply(initial.clone(), o.Set, nil, map[string]bool{}))
 	}
 }
 
 // mapLimit reports the keys of set that write to a "*" map in over, which a
 // change left with more than maxSetMembers keys (Format 8.5, 14).
-func (c *checker) mapLimit(sc *scope, at place, p jsontext.Pointer, set map[string]jsontext.Value, over []string) {
+func (c *checker) mapLimit(sc *scope, at place, p jsontext.Pointer, set map[string]jsontext.Value, over map[string]bool) {
 	for key := range set {
-		if b, _, ok := sc.variable(key); ok && slices.Contains(over, b.name) {
+		if b, _, ok := sc.variable(key); ok && over[b.name] {
 			c.report(CodeInvalidValue, at, ptr(p, key))
 		}
 	}
@@ -605,7 +605,7 @@ func (c *checker) messages(sc *scope) {
 	}
 	// The state along each path, for the "*" map limit. Each message's
 	// changes are undone on the way back up.
-	st := sc.initial()
+	st, owned := sc.initial(), map[string]bool{}
 	undo := make([][]edit, len(msgs))
 	// Session entries apply from the message that adds them onward on its
 	// path, the latest per ID, and disabled removes one (Format 11.3).
@@ -613,7 +613,7 @@ func (c *checker) messages(sc *scope) {
 	walkPaths(msgs, func(i int) {
 		m := &msgs[i]
 		for j, ch := range m.Changes {
-			over := sc.apply(st, ch.Set, &undo[i])
+			over := sc.apply(st, ch.Set, &undo[i], owned)
 			c.mapLimit(sc, inMessage(i, m), ptr("", "changes", j, "set"), ch.Set, over)
 		}
 		// activated names the entries in use at the message's evaluation

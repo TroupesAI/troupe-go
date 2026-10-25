@@ -81,7 +81,7 @@ func (st *Story) Initial() State {
 // keeps each message's state never replays a path.
 func (st *Story) Apply(before State, m *Message) State {
 	s := before.s.clone()
-	st.apply(s, m)
+	st.apply(s, m, map[string]bool{})
 	return State{st.scope, s}
 }
 
@@ -89,10 +89,10 @@ func (st *Story) Apply(before State, m *Message) State {
 // for a player message, a round, and with a speaking part, the first such
 // part's speaker as {{user}} (Format 9, 11.1); for a root, its opening; m's
 // at; its entries, then its activated, which its own entries may be in
-// (Format 11.3).
-func (st *Story) apply(s *state, m *Message) {
+// (Format 11.3). owned is as scope.apply takes it.
+func (st *Story) apply(s *state, m *Message, owned map[string]bool) {
 	for _, c := range m.Changes {
-		st.scope.apply(s, c.Set, nil)
+		st.scope.apply(s, c.Set, nil, owned)
 	}
 	for _, id := range s.present {
 		if !slices.Contains(s.appeared, id) {
@@ -160,9 +160,9 @@ func (st *Story) StateAt(id string) (State, error) {
 		}
 		i = parent
 	}
-	s := st.initial.clone()
+	s, owned := st.initial.clone(), map[string]bool{}
 	for _, i := range slices.Backward(path) {
-		st.apply(s, &st.messages[i])
+		st.apply(s, &st.messages[i], owned)
 	}
 	return State{st.scope, s}, nil
 }
