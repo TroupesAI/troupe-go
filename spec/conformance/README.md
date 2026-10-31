@@ -98,7 +98,7 @@ The runner validates the bundle and the session's lines against the schemas, the
 
 - `expect.codes` is the sorted list of distinct diagnostic codes reported. It is compared exactly.
 - Each session line after the header is validated against `message.schema.json`. Validators assert `format`, so a malformed timestamp is `SCHEMA`.
-- `SCHEMA` covers schema failures, such as `null`, `""` or `[]` in an optional field (Format 2.2).
+- `SCHEMA` covers schema failures, such as `null`, `""` or `[]` in most optional fields (Format 2.2).
 - `check` tests don't use `PARSE` or `UNSUPPORTED_VERSION`; `parse` tests (section 3.6) cover them.
 - `expect.includes` lists `{code, at}` pairs that must each appear, compared on both fields.
 

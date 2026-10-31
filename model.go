@@ -7,18 +7,20 @@ import (
 
 // Bundle is a bundle (Format 3).
 type Bundle struct {
-	Schema     string         `json:"$schema,omitempty"`
-	Troupe     string         `json:"troupe"`
-	ID         string         `json:"id,omitempty"`
-	Name       string         `json:"name,omitempty"`
-	Tagline    string         `json:"tagline,omitempty"`
-	Version    string         `json:"version,omitempty"`
-	Authors    []string       `json:"authors,omitempty"`
-	Credits    string         `json:"credits,omitempty"`
-	Language   string         `json:"language,omitempty"`
-	Tags       []string       `json:"tags,omitempty"`
-	Rating     string         `json:"rating,omitempty"` // "general", "mature" or "explicit"
-	Warnings   []string       `json:"warnings,omitempty"`
+	Schema   string   `json:"$schema,omitempty"`
+	Troupe   string   `json:"troupe"`
+	ID       string   `json:"id,omitempty"`
+	Name     string   `json:"name,omitempty"`
+	Tagline  string   `json:"tagline,omitempty"`
+	Version  string   `json:"version,omitempty"`
+	Authors  []string `json:"authors,omitempty"`
+	Credits  string   `json:"credits,omitempty"`
+	Language string   `json:"language,omitempty"`
+	Tags     []string `json:"tags,omitempty"`
+	Rating   string   `json:"rating,omitempty"` // "general", "mature" or "explicit"; "" for unrated, which may be explicit
+	// Warnings is nil when absent, which says nothing about the content, and
+	// points to an empty list when no warning applies.
+	Warnings   *[]string      `json:"warnings,omitzero"`
 	Cover      string         `json:"cover,omitempty"`
 	Characters []Character    `json:"characters,omitempty"`
 	Worlds     []World        `json:"worlds,omitempty"`

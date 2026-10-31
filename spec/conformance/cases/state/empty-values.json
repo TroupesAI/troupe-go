@@ -1,7 +1,8 @@
 {
-  "description": "Empty values that are values (Format 2.2, 6, 8.5): scenario.worlds [] means no world is in use; \"\" and [] are state values, in initial values, an opening's set and recorded changes",
+  "description": "Empty values that are values (Format 2.2, 3, 6, 8.5): warnings [] means no warning applies; scenario.worlds [] means no world is in use; \"\" and [] are state values, in initial values, an opening's set and recorded changes",
   "bundle": {
     "kind": "bundle",
+    "warnings": [],
     "worlds": [
       {
         "id": "w",
@@ -125,7 +126,7 @@
   "tests": [
     {
       "type": "check",
-      "name": "worlds [], initial [] and \"\", and \"\" and [] in set and changes are valid",
+      "name": "warnings [], worlds [], initial [] and \"\", and \"\" and [] in set and changes are valid",
       "expect": {
         "codes": []
       }

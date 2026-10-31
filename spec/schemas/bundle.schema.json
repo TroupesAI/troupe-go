@@ -54,7 +54,11 @@
       ]
     },
     "warnings": {
-      "$ref": "#/$defs/list"
+      "description": "Content warnings; [] for none.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/nonEmpty"
+      }
     },
     "cover": {
       "$ref": "#/$defs/image"
