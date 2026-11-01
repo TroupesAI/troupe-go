@@ -1,17 +1,18 @@
 package troupe
 
 import (
-	"regexp"
 	"slices"
 	"strings"
+
+	"github.com/TroupesAI/troupe-go/internal/macro"
 )
 
 // scope is what a scenario has in use, as a session plays it or, without a
 // session, as the scenario is written (Format 6.4).
 type scope struct {
-	all      *names // every character, world and location of the bundle and session
+	all      *names // every character, world and location of the story and session
 	scenario *Scenario
-	index    int // the scenario's index in the bundle
+	index    int // the scenario's index in the story
 	// cast is the cast's characters in cast order (Format 11.2). Without a
 	// session, its seats are unfilled and left out (conformance README
 	// section 2).
@@ -48,22 +49,22 @@ type binding struct {
 	name  string // such as "state.bell" or "state.kai.nerve"
 	owner string // the scenario's, world's or character's ID
 	v     *Variable
-	// values and keys are index(v.Values) and index(v.Of.List).
+	// values and keys are index(v.Values) and index(v.Per.List).
 	values, keys map[string]int
 }
 
 // names indexes what references can name: the characters, worlds and
-// locations of a bundle and its session, the first of each ID.
+// locations of a story and its session, the first of each ID.
 type names struct {
 	characters map[string]*Character
 	worlds     map[string]*World
 	locations  map[string]*Location
 }
 
-// newNames returns the names of b, and of s when s isn't nil.
-func newNames(b *Bundle, s *Session) *names {
+// newNames returns the names of st, and of s when s isn't nil.
+func newNames(st *Story, s *Session) *names {
 	n := &names{characters: map[string]*Character{}, worlds: map[string]*World{}, locations: map[string]*Location{}}
-	n.add(b.Characters, b.Worlds)
+	n.add(st.Characters, st.Worlds)
 	if s != nil {
 		n.add(s.Header.Characters, s.Header.Worlds)
 	}
@@ -89,16 +90,16 @@ func (n *names) add(characters []Character, worlds []World) {
 	}
 }
 
-// scenarioIndex returns the index of b's scenario with the ID id, or -1.
-func scenarioIndex(b *Bundle, id string) int {
-	return slices.IndexFunc(b.Scenarios, func(sc Scenario) bool { return sc.ID == id })
+// scenarioIndex returns the index of st's scenario with the ID id, or -1.
+func scenarioIndex(st *Story, id string) int {
+	return slices.IndexFunc(st.Scenarios, func(sc Scenario) bool { return sc.ID == id })
 }
 
-// newScope returns the scope of the bundle's scenario i, played in s when s
+// newScope returns the scope of the story's scenario i, played in s when s
 // isn't nil.
-func newScope(b *Bundle, s *Session, i int) *scope {
-	n := newNames(b, s)
-	scenario := &b.Scenarios[i]
+func newScope(st *Story, s *Session, i int) *scope {
+	n := newNames(st, s)
+	scenario := &st.Scenarios[i]
 	sc := &scope{
 		all:        n,
 		scenario:   scenario,
@@ -115,9 +116,9 @@ func newScope(b *Bundle, s *Session, i int) *scope {
 
 	members := scenario.Cast
 	if members == nil {
-		// One player seat, then every bundle character (Format 6.1).
+		// One player seat, then every story character (Format 6.1).
 		members = []CastMember{{}}
-		for _, c := range b.Characters {
+		for _, c := range st.Characters {
 			members = append(members, CastMember{Character: c.ID})
 		}
 	}
@@ -145,11 +146,11 @@ func newScope(b *Bundle, s *Session, i int) *scope {
 
 	var worldIDs []string
 	if scenario.Worlds != nil {
-		// A copy, since the session's are appended, and the bundle may be
+		// A copy, since the session's are appended, and the story may be
 		// shared.
 		worldIDs = slices.Clone(*scenario.Worlds)
 	} else {
-		for _, w := range b.Worlds {
+		for _, w := range st.Worlds {
 			worldIDs = append(worldIDs, w.ID)
 		}
 	}
@@ -179,7 +180,7 @@ func newScope(b *Bundle, s *Session, i int) *scope {
 func (sc *scope) bind(owner, prefix string, vars []Variable) {
 	for i := range vars {
 		v := &vars[i]
-		b := &binding{name: prefix + v.ID, owner: owner, v: v, values: index(v.Values), keys: index(v.Of.List)}
+		b := &binding{name: prefix + v.ID, owner: owner, v: v, values: index(v.Values), keys: index(v.Per.List)}
 		if _, ok := sc.byName[b.name]; !ok {
 			sc.bindings = append(sc.bindings, b)
 			sc.byName[b.name] = b
@@ -226,8 +227,8 @@ func sessionCast(members []CastMember, h *SessionHeader) (cast []castMember, joi
 	return cast, joiners
 }
 
-// variable returns the variable a change key names, and the key within it
-// for a keyed variable. It reports whether the change key is valid (Format
+// variable returns the variable a state key names, and the key within it for
+// a keyed variable. It reports whether the state key is valid (Format
 // 8.5): a full name (Format 8.2), followed by a key the variable allows when
 // it is keyed (Format 8.3).
 func (sc *scope) variable(key string) (*binding, string, bool) {
@@ -243,14 +244,14 @@ func (sc *scope) openingVariable(key string) (*binding, string, bool) {
 // lookup is variable, with cast as a "cast" variable's keys.
 func (sc *scope) lookup(key string, cast []string) (*binding, string, bool) {
 	if b, ok := sc.byName[key]; ok {
-		return b, "", !b.v.Of.keyed()
+		return b, "", !b.v.Per.keyed()
 	}
 	i := strings.LastIndexByte(key, '.')
 	if i < 0 {
 		return nil, "", false
 	}
 	b, ok := sc.byName[key[:i]]
-	if !ok || !b.v.Of.keyed() || !allows(b, key[i+1:], cast) {
+	if !ok || !b.v.Per.keyed() || !allows(b, key[i+1:], cast) {
 		return nil, "", false
 	}
 	return b, key[i+1:], true
@@ -259,19 +260,19 @@ func (sc *scope) lookup(key string, cast []string) (*binding, string, bool) {
 // keys returns the keys of a "cast" or list variable, in order; nil for a
 // "*" map, whose keys appear as changes set them (Format 8.3).
 func (sc *scope) keys(v *Variable) []string {
-	if v.Of.Cast {
+	if v.Per.Cast {
 		return sc.cast
 	}
-	return v.Of.List
+	return v.Per.List
 }
 
 // allows reports whether a keyed variable has the key k, with cast as a
 // "cast" variable's keys (Format 8.3).
 func allows(b *binding, k string, cast []string) bool {
 	switch {
-	case b.v.Of.Cast:
+	case b.v.Per.Cast:
 		return slices.Contains(cast, k)
-	case b.v.Of.Any:
+	case b.v.Per.Any:
 		return isKey(k)
 	default:
 		_, ok := b.keys[k]
@@ -298,18 +299,10 @@ func (k Keys) keyed() bool {
 	return k.Cast || k.Any || k.List != nil
 }
 
-var authorID = regexp.MustCompile(`^[a-z][a-z0-9_]{0,63}$`)
-
-// celReserved are the words no author ID can be (Format 2.3).
-var celReserved = []string{
-	"as", "break", "const", "continue", "else", "false", "for", "function", "if", "import",
-	"in", "let", "loop", "namespace", "null", "package", "return", "true", "var", "void", "while",
-}
-
 // isKey reports whether k can be a key of a "*" map: an author ID other than
-// char and user (Format 8.3).
+// char and player (Format 8.3).
 func isKey(k string) bool {
-	return authorID.MatchString(k) && !slices.Contains(celReserved, k) && k != "char" && k != "user"
+	return macro.IsAuthorID(k) && k != "char" && k != "player"
 }
 
 // declared resolves a macro's state or own path to the variable it names

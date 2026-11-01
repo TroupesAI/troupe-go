@@ -1,7 +1,7 @@
 {
   "description": "Integers (Format 2.2, 8.5, 9): int values within ±(2^53 − 1) are valid and render as decimal integers, and a number written with a zero fraction, such as 8.0, is an integer",
-  "bundle": {
-    "kind": "bundle",
+  "story": {
+    "kind": "story",
     "scenarios": [
       {
         "id": "s",

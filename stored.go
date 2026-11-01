@@ -16,8 +16,8 @@ type stored struct {
 	// Values holds every key the state holds, as All yields it, with its
 	// value.
 	Values    map[string]jsontext.Value `json:"values"`
-	User      string                    `json:"user,omitempty"`
-	Turn      int                       `json:"turn,omitzero"`
+	Player    string                    `json:"player,omitempty"`
+	Round     int                       `json:"round,omitzero"`
 	Opening   string                    `json:"opening,omitempty"`
 	At        string                    `json:"at,omitempty"`
 	ParentAt  string                    `json:"parentAt,omitempty"`
@@ -49,8 +49,8 @@ func (s State) MarshalJSON() ([]byte, error) {
 	v := stored{
 		Troupe:    Version,
 		Values:    map[string]jsontext.Value{},
-		User:      s.s.user,
-		Turn:      s.s.turn,
+		Player:    s.s.player,
+		Round:     s.s.round,
 		Opening:   s.s.opening,
 		At:        s.s.at,
 		ParentAt:  s.s.parentAt,
@@ -77,14 +77,14 @@ func (s State) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalState returns the state that State.MarshalJSON wrote as data. It
-// is this story's state as it was stored, but for what the story has added
+// is this play's state as it was stored, but for what the play has added
 // since: a key the stored state doesn't hold, such as one of a joiner the
 // session's header has added, holds its initial value (Format 8.3).
 //
 // It fails when data isn't a stored state, or holds a key or value that isn't
-// valid in this story (Format 8.5), and wraps ErrStateFormat when the state is
+// valid in this play (Format 8.5), and wraps ErrStateFormat when the state is
 // stored in a format this release doesn't read.
-func (st *Story) UnmarshalState(data []byte) (State, error) {
+func (pl *Play) UnmarshalState(data []byte) (State, error) {
 	if bytes.Contains(data, []byte(`\u0001`)) {
 		var err error
 		if data, err = mapStrings(data, showNUL.Replace); err != nil {
@@ -101,15 +101,15 @@ func (st *Story) UnmarshalState(data []byte) (State, error) {
 	if v.Appeared == nil {
 		return State{}, fmt.Errorf("troupe: %w: it doesn't say who has been present", ErrStateFormat)
 	}
-	sc := st.scope
+	sc := pl.scope
 	for key, raw := range v.Values {
 		if !sc.valid(key, raw) {
-			return State{}, errors.New("troupe: the stored state holds a key or value that isn't valid in this story")
+			return State{}, errors.New("troupe: the stored state holds a key or value that isn't valid in this play")
 		}
 	}
-	s := st.initial.clone()
+	s := pl.initial.clone()
 	sc.apply(s, v.Values, nil, map[string]bool{})
-	s.user, s.turn, s.opening, s.at, s.parentAt = v.User, v.Turn, v.Opening, v.At, v.ParentAt
+	s.player, s.round, s.opening, s.at, s.parentAt = v.Player, v.Round, v.Opening, v.At, v.ParentAt
 	s.entries, s.activated, s.appeared = v.Entries, v.Activated, *v.Appeared
 	return State{sc, s}, nil
 }

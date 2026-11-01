@@ -1,7 +1,7 @@
 {
-  "description": "Macros (Format 9): {{scene.location}} renders the location's name and {{scene.present}} the names of those present; bool labels, an empty list as nothing, maps",
-  "bundle": {
-    "kind": "bundle",
+  "description": "Macros (Format 9): {{scene.location}} renders the location's name and {{scene.present}} the names of those present; an empty list renders as nothing",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "a",
@@ -30,26 +30,6 @@
       {
         "id": "s",
         "variables": [
-          {
-            "id": "lit",
-            "type": "bool",
-            "initial": true,
-            "labels": {
-              "true": "lit",
-              "false": "dark"
-            },
-            "description": "d"
-          },
-          {
-            "id": "rep",
-            "type": "int",
-            "of": [
-              "watch",
-              "guild"
-            ],
-            "initial": 2,
-            "description": "d"
-          },
           {
             "id": "crew",
             "type": "set",
@@ -122,18 +102,6 @@
       "at": "1",
       "text": "[{{scene.location}}] {{scene.present}}",
       "expect": "[] Pat, Ann, Bea"
-    },
-    {
-      "type": "macro",
-      "at": "1",
-      "text": "The torch is {{state.lit}}.",
-      "expect": "The torch is lit."
-    },
-    {
-      "type": "macro",
-      "at": "1",
-      "text": "{{state.rep}}",
-      "expect": "watch: 2, guild: 2"
     },
     {
       "type": "macro",

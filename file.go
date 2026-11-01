@@ -25,34 +25,34 @@ type FileField struct {
 	Data      []byte // a data: URI's content, decoded
 }
 
-// FileFields yields the bundle's fields that hold a file: its cover, then its
+// FileFields yields the story's fields that hold a file: its cover, then its
 // characters' avatars, its locations' images and the image parts of its
 // openings. It decodes each data: URI as it yields it, so only one is in
-// memory at a time. In a bundle that fails the schema, a value of none of the
+// memory at a time. In a story that fails the schema, a value of none of the
 // three forms is left out.
-func (b *Bundle) FileFields() iter.Seq[FileField] {
+func (st *Story) FileFields() iter.Seq[FileField] {
 	return func(yield func(FileField) bool) {
 		field := func(pointer, v string) bool {
 			f, ok := fileValue(v)
 			f.Pointer = pointer
 			return !ok || yield(f)
 		}
-		if !field("/cover", b.Cover) {
+		if !field("/cover", st.Cover) {
 			return
 		}
-		for i, c := range b.Characters {
+		for i, c := range st.Characters {
 			if !field(fmt.Sprintf("/characters/%d/avatar", i), c.Avatar) {
 				return
 			}
 		}
-		for i, w := range b.Worlds {
+		for i, w := range st.Worlds {
 			for j, l := range w.Locations {
 				if !field(fmt.Sprintf("/worlds/%d/locations/%d/image", i, j), l.Image) {
 					return
 				}
 			}
 		}
-		for i, s := range b.Scenarios {
+		for i, s := range st.Scenarios {
 			for j, o := range s.Openings {
 				for k, part := range o.Content {
 					if !field(fmt.Sprintf("/scenarios/%d/openings/%d/content/%d/src", i, j, k), part.Src) {

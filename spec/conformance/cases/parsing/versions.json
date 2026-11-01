@@ -1,11 +1,12 @@
 {
-  "description": "Versions (Format 13, 15.3), against this 0.14 document: a file of any other version, minor or major, is UNSUPPORTED_VERSION and reported with that code only, even when it also fails this version's schema; a troupe value that isn't major.minor fails the schema instead",
+  "description": "Versions (Format 13, 15.3), against this 0.15 document: a file of any other version, minor or major, is UNSUPPORTED_VERSION and reported with that code only, judged by nothing this version defines past being I-JSON within the size and nesting limits, and a session past its header not read; a troupe value that isn't major.minor fails the schema instead",
   "tests": [
     {
       "type": "parse",
-      "name": "a newer minor",
-      "kind": "bundle",
-      "text": "{\"troupe\":\"0.15\",\"kind\":\"bundle\"}",
+      "name": "an older minor, which also fails this version's kind and schema",
+      "note": "0.14 called a story a bundle. The kind would make it UNREADABLE, the empty tags SCHEMA and mystery an UNKNOWN_FIELD in a 0.15 story.",
+      "kind": "story",
+      "text": "{\"troupe\":\"0.14\",\"kind\":\"bundle\",\"tags\":[],\"mystery\":true}",
       "expect": {
         "codes": [
           "UNSUPPORTED_VERSION"
@@ -14,32 +15,10 @@
     },
     {
       "type": "parse",
-      "name": "an older minor",
-      "kind": "bundle",
-      "text": "{\"troupe\":\"0.13\",\"kind\":\"bundle\"}",
-      "expect": {
-        "codes": [
-          "UNSUPPORTED_VERSION"
-        ]
-      }
-    },
-    {
-      "type": "parse",
-      "name": "an older minor that also fails this version's schema",
-      "note": "The empty tags would be SCHEMA and mystery an UNKNOWN_FIELD in a 0.14 bundle.",
-      "kind": "bundle",
-      "text": "{\"troupe\":\"0.13\",\"kind\":\"bundle\",\"tags\":[],\"mystery\":true}",
-      "expect": {
-        "codes": [
-          "UNSUPPORTED_VERSION"
-        ]
-      }
-    },
-    {
-      "type": "parse",
-      "name": "0.9 is another minor, not 0.90",
-      "kind": "bundle",
-      "text": "{\"troupe\":\"0.9\",\"kind\":\"bundle\"}",
+      "name": "a newer minor, not judged by this version's package paths",
+      "note": "In a 0.15 story file, the package path would make it UNREADABLE (Format 12.2).",
+      "kind": "story",
+      "text": "{\"troupe\":\"0.16\",\"kind\":\"story\",\"cover\":\"cover.webp\"}",
       "expect": {
         "codes": [
           "UNSUPPORTED_VERSION"
@@ -49,8 +28,8 @@
     {
       "type": "parse",
       "name": "another major",
-      "kind": "bundle",
-      "text": "{\"troupe\":\"1.0\",\"kind\":\"bundle\"}",
+      "kind": "story",
+      "text": "{\"troupe\":\"1.0\",\"kind\":\"story\"}",
       "expect": {
         "codes": [
           "UNSUPPORTED_VERSION"
@@ -60,8 +39,8 @@
     {
       "type": "parse",
       "name": "another major with the same minor",
-      "kind": "bundle",
-      "text": "{\"troupe\":\"1.14\",\"kind\":\"bundle\"}",
+      "kind": "story",
+      "text": "{\"troupe\":\"1.15\",\"kind\":\"story\"}",
       "expect": {
         "codes": [
           "UNSUPPORTED_VERSION"
@@ -70,9 +49,9 @@
     },
     {
       "type": "parse",
-      "name": "a session of another minor",
+      "name": "a session of another minor, not read past its header",
       "kind": "session",
-      "text": "{\"troupe\":\"0.15\",\"kind\":\"session\",\"scenario\":\"s\"}\n{\"id\":\"1\",\"from\":\"player\",\"content\":[{\"text\":\"Hi.\"}]}\n",
+      "text": "{\"troupe\":\"0.16\",\"kind\":\"session\",\"scenario\":\"s\"}\nnot json\n",
       "expect": {
         "codes": [
           "UNSUPPORTED_VERSION"
@@ -82,8 +61,8 @@
     {
       "type": "parse",
       "name": "troupe with three parts",
-      "kind": "bundle",
-      "text": "{\"troupe\":\"0.14.0\",\"kind\":\"bundle\"}",
+      "kind": "story",
+      "text": "{\"troupe\":\"0.15.0\",\"kind\":\"story\"}",
       "expect": {
         "codes": [
           "SCHEMA"
@@ -93,8 +72,8 @@
     {
       "type": "parse",
       "name": "troupe as a number",
-      "kind": "bundle",
-      "text": "{\"troupe\":0.14,\"kind\":\"bundle\"}",
+      "kind": "story",
+      "text": "{\"troupe\":0.15,\"kind\":\"story\"}",
       "expect": {
         "codes": [
           "SCHEMA"

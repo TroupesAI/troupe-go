@@ -2,9 +2,9 @@ package troupe
 
 import "slices"
 
-// Member is a member of a story's cast (Format 6.1, 11.2).
+// Member is a member of a play's cast (Format 6.1, 11.2).
 type Member struct {
-	// Character is the member's character, from the bundle or the session's
+	// Character is the member's character, from the story or the session's
 	// header; nil for a seat without one, which only a scenario played on
 	// its own has.
 	Character *Character
@@ -41,16 +41,16 @@ func (s State) Spoilers() []string {
 	return out
 }
 
-// Cast returns the story's cast, in cast order (Format 6.1, 11.2). In a
+// Cast returns the play's cast, in cast order (Format 6.1, 11.2). In a
 // session, that is the scenario cast with its seats filled by the players'
 // header characters, then the new seats, then the joiners; a seat no player
 // fills is left out. A scenario played on its own has no players, so it lists
 // every member as written, seats included, with the default of one seat and
-// every bundle character: what a person starting a session can choose from.
+// every story character: what a person starting a session can choose from.
 // Its seats aren't in the cast its states have (conformance README section
 // 2).
-func (st *Story) Cast() []Member {
-	sc := st.scope
+func (pl *Play) Cast() []Member {
+	sc := pl.scope
 	var out []Member
 	for _, m := range sc.members {
 		c := sc.all.characters[m.id]
@@ -67,25 +67,25 @@ func (st *Story) Cast() []Member {
 }
 
 // Worlds returns the worlds in use, in order: the scenario's worlds, or every
-// bundle world when its worlds is absent, then the session's (Format 6.4).
-func (st *Story) Worlds() []*World {
-	out := make([]*World, len(st.scope.worldIDs))
-	for i, id := range st.scope.worldIDs {
-		out[i] = st.scope.worlds[id]
+// story world when its worlds is absent, then the session's (Format 6.4).
+func (pl *Play) Worlds() []*World {
+	out := make([]*World, len(pl.scope.worldIDs))
+	for i, id := range pl.scope.worldIDs {
+		out[i] = pl.scope.worlds[id]
 	}
 	return out
 }
 
 // Mode returns the scenario's mode: "characters" or "narrator" (Format 6.2).
-func (st *Story) Mode() string {
-	if st.scope.scenario.Mode == "" {
+func (pl *Play) Mode() string {
+	if pl.scope.scenario.Mode == "" {
 		return "characters"
 	}
-	return st.scope.scenario.Mode
+	return pl.scope.scenario.Mode
 }
 
-// Narrator returns what text calls the narrator: the scenario's narrator, or
-// "the narrator" (Format 6).
-func (st *Story) Narrator() string {
-	return st.scope.narrator()
+// NarratorName returns what text calls the narrator: the scenario's
+// narratorName, or "the narrator" (Format 6).
+func (pl *Play) NarratorName() string {
+	return pl.scope.narrator()
 }

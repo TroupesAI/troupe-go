@@ -1,7 +1,7 @@
 {
-  "description": "turn counts player messages on the path, inclusive (Format 10.1, 11.1): an opening root is round 0, a system message adds none, and a hidden player message still counts (Format 11.4)",
-  "bundle": {
-    "kind": "bundle",
+  "description": "Round (Format 10.1, 11.1): round counts player messages on the path, inclusive: an opening root is round 0, a system message adds none, and a hidden player message still counts (Format 11.4)",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "a",
@@ -123,34 +123,34 @@
       "type": "cel",
       "name": "an opening root is round 0",
       "at": "r",
-      "expr": "turn == 0",
+      "expr": "round == 0",
       "expect": true
     },
     {
       "type": "cel",
       "at": "2",
-      "expr": "turn == 1",
+      "expr": "round == 1",
       "expect": true
     },
     {
       "type": "cel",
       "name": "a model message has its parent's round",
       "at": "3",
-      "expr": "turn == 1",
+      "expr": "round == 1",
       "expect": true
     },
     {
       "type": "cel",
       "name": "a records-only system message adds no round",
       "at": "4",
-      "expr": "turn == 1 && state.n == 1",
+      "expr": "round == 1 && state.n == 1",
       "expect": true
     },
     {
       "type": "cel",
       "name": "a hidden player message counts",
       "at": "5",
-      "expr": "turn == 2",
+      "expr": "round == 2",
       "expect": true
     },
     {

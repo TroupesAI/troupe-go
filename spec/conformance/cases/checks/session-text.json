@@ -1,7 +1,7 @@
 {
-  "description": "A session's characters and entries are checked as a bundle's are (Format 9, 10.2, 15.3): an unknown macro in a header character or a session entry is UNKNOWN_MACRO, and a session entry's condition is checked with its scenario, without own",
-  "bundle": {
-    "kind": "bundle",
+  "description": "A session's characters and entries are checked as a story's are (Format 9, 10.2, 15.3): an unknown macro in a header character or a session entry is UNKNOWN_MACRO, and own in a session entry's condition is CEL_ERROR",
+  "story": {
+    "kind": "story",
     "scenarios": [
       {
         "id": "s",
@@ -42,11 +42,6 @@
         ],
         "entries": [
           {
-            "id": "fine",
-            "when": "state.v > 0",
-            "text": "Pat has noted it."
-          },
-          {
             "id": "no_own",
             "when": "own.v > 0",
             "text": "No own here."
@@ -74,11 +69,11 @@
           },
           {
             "code": "CEL_ERROR",
-            "at": "message:1/entries/1/when"
+            "at": "message:1/entries/0/when"
           },
           {
             "code": "UNKNOWN_MACRO",
-            "at": "message:1/entries/2/text"
+            "at": "message:1/entries/1/text"
           }
         ]
       }

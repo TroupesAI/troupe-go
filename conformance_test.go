@@ -27,9 +27,9 @@ import (
 var spec = os.DirFS("spec")
 
 type testCase struct {
-	Bundle     jsontext.Value `json:"bundle"`
-	BundleFile string         `json:"bundleFile"`
-	Session    *struct {
+	Story     jsontext.Value `json:"story"`
+	StoryFile string         `json:"storyFile"`
+	Session   *struct {
 		Header   jsontext.Value   `json:"header"`
 		Messages []jsontext.Value `json:"messages"`
 	} `json:"session"`
@@ -187,8 +187,8 @@ func runParse(tc test, expect *codesExpect) error {
 	var diags []troupe.Diagnostic
 	var err error
 	switch tc.Kind {
-	case "bundle":
-		_, diags, err = troupe.ReadBundle(bytes.NewReader(input))
+	case "story":
+		_, diags, err = troupe.ReadStory(bytes.NewReader(input))
 	case "session":
 		_, diags, err = troupe.ReadSession(bytes.NewReader(input))
 	case "package":
@@ -208,11 +208,11 @@ func runParse(tc test, expect *codesExpect) error {
 // runCheck validates the case's documents as reading them does, then runs
 // every other check (conformance README section 3.4).
 func runCheck(c *testCase, expect *checkExpect) error {
-	b, s, diags, err := c.read()
+	st, s, diags, err := c.read()
 	if err != nil {
 		return err
 	}
-	diags = append(diags, troupe.Check(b, s)...)
+	diags = append(diags, troupe.Check(st, s)...)
 	if err := compareCodes(diags, expect.Codes); err != nil {
 		return err
 	}
@@ -230,13 +230,13 @@ func runCheck(c *testCase, expect *checkExpect) error {
 // subset of it, and checks that the keys absent lists aren't in it
 // (conformance README section 3.1).
 func runState(c *testCase, tc test, expect map[string]jsontext.Value) error {
-	story, _, err := c.story()
+	play, _, err := c.play()
 	if err != nil {
 		return err
 	}
-	state := story.Initial()
+	state := play.Initial()
 	if tc.At != "" {
-		if state, err = story.StateAt(tc.At); err != nil {
+		if state, err = play.StateAt(tc.At); err != nil {
 			return err
 		}
 	}
@@ -265,7 +265,7 @@ func runState(c *testCase, tc test, expect map[string]jsontext.Value) error {
 // runKnows compares who knows a part of a message with expect (conformance
 // README section 3.5).
 func runKnows(c *testCase, tc test, expect []string) error {
-	story, s, err := c.story()
+	play, s, err := c.play()
 	if err != nil {
 		return err
 	}
@@ -274,9 +274,9 @@ func runKnows(c *testCase, tc test, expect []string) error {
 		return fmt.Errorf("no message %s", tc.Message)
 	}
 	m := &s.Messages[i]
-	before := story.Initial()
+	before := play.Initial()
 	if m.Parent != "" {
-		if before, err = story.StateAt(m.Parent); err != nil {
+		if before, err = play.StateAt(m.Parent); err != nil {
 			return err
 		}
 	}
@@ -284,7 +284,7 @@ func runKnows(c *testCase, tc test, expect []string) error {
 	if err := json.Unmarshal(tc.Part, &part); err != nil {
 		return err
 	}
-	if got := story.KnownBy(before, m)[part]; !slices.Equal(got, expect) {
+	if got := play.KnownBy(before, m)[part]; !slices.Equal(got, expect) {
 		return fmt.Errorf("known by %q, want %q", got, expect)
 	}
 	return nil
@@ -294,7 +294,7 @@ func runKnows(c *testCase, tc test, expect []string) error {
 // message part's as it is shown (conformance README section 3.2). Picks in
 // these tests have one option or are chosen already, so any source will do.
 func runMacro(c *testCase, tc test, expect string) error {
-	story, s, err := c.story()
+	play, s, err := c.play()
 	if err != nil {
 		return err
 	}
@@ -313,21 +313,21 @@ func runMacro(c *testCase, tc test, expect string) error {
 			return fmt.Errorf("no message %s", part.Message)
 		}
 		m := &s.Messages[i]
-		before := story.Initial()
+		before := play.Initial()
 		if m.Parent != "" {
-			if before, err = story.StateAt(m.Parent); err != nil {
+			if before, err = play.StateAt(m.Parent); err != nil {
 				return err
 			}
 		}
-		got = story.RenderParts(before, m, r)[part.Index].Text
+		got = play.RenderParts(before, m, r)[part.Index].Text
 	} else {
-		ctx := troupe.RenderContext{Char: tc.Char, Owner: tc.Owner, Narrator: tc.Narrator, State: story.Initial()}
+		ctx := troupe.RenderContext{Char: tc.Char, Owner: tc.Owner, Narrator: tc.Narrator, State: play.Initial()}
 		if tc.At != "" {
-			if ctx.State, err = story.StateAt(tc.At); err != nil {
+			if ctx.State, err = play.StateAt(tc.At); err != nil {
 				return err
 			}
 		}
-		got = story.Render(tc.Text, ctx, r)
+		got = play.Render(tc.Text, ctx, r)
 	}
 	if got != expect {
 		return fmt.Errorf("rendered %q, want %q", got, expect)
@@ -339,7 +339,7 @@ func runMacro(c *testCase, tc test, expect string) error {
 // self and scanning scanDepth messages, and compares the result with expect:
 // a bool, or a CEL_ERROR (conformance README section 3.3).
 func runCel(c *testCase, tc test, expect any) error {
-	story, s, err := c.story()
+	play, s, err := c.play()
 	if err != nil {
 		return err
 	}
@@ -356,7 +356,7 @@ func runCel(c *testCase, tc test, expect any) error {
 			return err
 		}
 	}
-	got, err := story.PointAt(story.Initial(), path, tc.Char).Eval(tc.Expr, self, scanDepth)
+	got, err := play.PointAt(play.Initial(), path, tc.Char).Eval(tc.Expr, self, scanDepth)
 	if want, ok := expect.(*celError); ok {
 		if err == nil || !want.CheckError {
 			return fmt.Errorf("%s compiles, want a CEL_ERROR", tc.Expr)
@@ -387,14 +387,14 @@ func pathTo(s *troupe.Session, id string) ([]troupe.Message, error) {
 	return path, nil
 }
 
-// scenario returns the ID of the scenario the story plays: the session's, or
-// without one the bundle's first (conformance README section 2).
+// scenario returns the ID of the scenario the case plays: the session's, or
+// without one the story's first (conformance README section 2).
 func (c *testCase) scenario(s *troupe.Session) string {
 	if s != nil {
 		return s.Header.Scenario
 	}
-	b, _, _, _ := c.read()
-	return b.Scenarios[0].ID
+	st, _, _, _ := c.read()
+	return st.Scenarios[0].ID
 }
 
 // sameJSON reports whether got, encoded as JSON, equals want, comparing
@@ -414,53 +414,53 @@ func sameJSON(got any, want jsontext.Value) (bool, error) {
 	return reflect.DeepEqual(g, w), nil
 }
 
-// story returns the story of the case's bundle and session (conformance
+// play returns the play of the case's story and session (conformance
 // README section 2), and the session.
-func (c *testCase) story() (*troupe.Story, *troupe.Session, error) {
-	b, s, _, err := c.read()
+func (c *testCase) play() (*troupe.Play, *troupe.Session, error) {
+	st, s, _, err := c.read()
 	if err != nil {
 		return nil, nil, err
 	}
-	story, err := troupe.NewStory(b, s)
-	return story, s, err
+	play, err := troupe.NewPlay(st, s)
+	return play, s, err
 }
 
-// read reads a fresh copy of the case's bundle and session, as conformance
+// read reads a fresh copy of the case's story and session, as conformance
 // README section 1 describes them, with the diagnostics of reading them.
-func (c *testCase) read() (*troupe.Bundle, *troupe.Session, []troupe.Diagnostic, error) {
-	if path.Base(c.BundleFile) == "bundle.json" {
-		b, s, diags, err := c.readPackage()
+func (c *testCase) read() (*troupe.Story, *troupe.Session, []troupe.Diagnostic, error) {
+	if path.Base(c.StoryFile) == "story.json" {
+		st, s, diags, err := c.readPackage()
 		if err != nil || s != nil || c.Session == nil {
-			return b, s, diags, err
+			return st, s, diags, err
 		}
 		s, sdiags, err := c.readSession()
-		return b, s, append(diags, sdiags...), err
+		return st, s, append(diags, sdiags...), err
 	}
-	var bundle []byte
+	var story []byte
 	var err error
 	switch {
-	case c.BundleFile != "":
-		bundle, err = fs.ReadFile(spec, c.file(c.BundleFile))
-	case c.Bundle != nil:
-		bundle, err = withVersion(c.Bundle)
+	case c.StoryFile != "":
+		story, err = fs.ReadFile(spec, c.file(c.StoryFile))
+	case c.Story != nil:
+		story, err = withVersion(c.Story)
 	default:
-		bundle, err = withVersion(jsontext.Value(`{"kind":"bundle"}`))
+		story, err = withVersion(jsontext.Value(`{"kind":"story"}`))
 	}
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	b, diags, err := troupe.ReadBundle(bytes.NewReader(bundle))
+	st, diags, err := troupe.ReadStory(bytes.NewReader(story))
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	if b == nil {
-		return nil, nil, nil, fmt.Errorf("the bundle doesn't read: %v", diags)
+	if st == nil {
+		return nil, nil, nil, fmt.Errorf("the story doesn't read: %v", diags)
 	}
 	if c.SessionFile == "" && c.Session == nil {
-		return b, nil, diags, nil
+		return st, nil, diags, nil
 	}
 	s, sdiags, err := c.readSession()
-	return b, s, append(diags, sdiags...), err
+	return st, s, append(diags, sdiags...), err
 }
 
 // readSession reads the case's session, from its file or as given inline.
@@ -498,10 +498,10 @@ func (c *testCase) readSession() (*troupe.Session, []troupe.Diagnostic, error) {
 	return s, diags, nil
 }
 
-// readPackage reads the package whose bundle.json the case names, and the
+// readPackage reads the package whose story.json the case names, and the
 // session of it the case names (conformance README section 1).
-func (c *testCase) readPackage() (*troupe.Bundle, *troupe.Session, []troupe.Diagnostic, error) {
-	dir := path.Dir(c.file(c.BundleFile))
+func (c *testCase) readPackage() (*troupe.Story, *troupe.Session, []troupe.Diagnostic, error) {
+	dir := path.Dir(c.file(c.StoryFile))
 	files, err := fs.Sub(spec, dir)
 	if err != nil {
 		return nil, nil, nil, err
@@ -529,14 +529,14 @@ func (c *testCase) readPackage() (*troupe.Bundle, *troupe.Session, []troupe.Diag
 		return nil, nil, nil, fmt.Errorf("the package's sessions don't read: %v", diags)
 	}
 	if c.SessionFile == "" {
-		return p.Bundle, nil, diags, nil
+		return p.Story, nil, diags, nil
 	}
 	name := strings.TrimPrefix(c.file(c.SessionFile), dir+"/")
 	s := sessions[name]
 	if s == nil {
 		return nil, nil, nil, fmt.Errorf("no session %s in the package", name)
 	}
-	return p.Bundle, s, diags, nil
+	return p.Story, s, diags, nil
 }
 
 // file returns the path within spec of a file the case names.

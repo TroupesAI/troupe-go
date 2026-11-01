@@ -1,7 +1,7 @@
 {
   "description": "References in a session's messages that checks/session.json leaves out (Format 6.4, 15.3): a recorded location that no world has is UNKNOWN_LOCATION, and an activated entry of a character outside the cast, whose entries aren't in use, is UNKNOWN_ENTRY",
-  "bundle": {
-    "kind": "bundle",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "a",

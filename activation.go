@@ -35,17 +35,17 @@ func (a *ActiveEntry) group() string {
 // present or the message is written for, and the session's; of these, those
 // whoever the message is for knows (Format 7.4).
 //
-// An entry with keys activates when one matches its scanned text, one with
-// pull when retrieved names its reference, one with both by either, and one
-// with neither always, while its when holds. retrieved are the references of
-// the entries the caller retrieved, of those Retrievable gives; any other
-// reference changes nothing. The rounds of the messages that record an
-// entry in activated time it: sticky keeps it active, and once and cooldown
-// keep it from activating again. Of the entries that would activate, group
-// keeps one of each owner's group, of the highest priority, chosen by weight
-// among equals, where an entry sticky keeps wins against equals that aren't
-// kept, and then chance lets each through, so a chosen entry that fails it
-// leaves its group empty. r draws for weight and chance, so activation is
+// An entry with keywords activates when one matches its scanned text, a
+// retrievable one when retrieved names its reference, one with both by either, and
+// one with neither always, while its when holds. retrieved are the references
+// of the entries the caller retrieved, of those Retrievable gives; any other
+// reference changes nothing. The rounds of the messages that record an entry
+// in activated time it: sticky keeps it active, and once and cooldown keep it
+// from activating again. Of the entries that would activate, group keeps one
+// of each owner's group, of the highest priority, chosen by weight among
+// equals, where an entry sticky keeps wins against equals that aren't kept,
+// and then chance lets each through, so a chosen entry that fails it leaves
+// its group empty. r draws for weight and chance, so activation is
 // reproducible from the caller's source.
 //
 // Which active entries reach the model is the caller's to choose, by their
@@ -54,13 +54,13 @@ func (a *ActiveEntry) group() string {
 // those Kept; one whose text renders as nothing or only whitespace reaches
 // nothing (Format 11.4).
 func (p *Point) Active(retrieved []string, r *rand.Rand) []ActiveEntry {
-	pulled := make(map[string]bool, len(retrieved))
+	wanted := make(map[string]bool, len(retrieved))
 	for _, ref := range retrieved {
-		pulled[ref] = true
+		wanted[ref] = true
 	}
 	var active []ActiveEntry
 	for _, a := range p.inUse() {
-		if p.activates(&a, pulled[a.ref()]) {
+		if p.activates(&a, wanted[a.ref()]) {
 			active = append(active, a)
 		}
 	}
@@ -70,12 +70,13 @@ func (p *Point) Active(retrieved []string, r *rand.Rand) []ActiveEntry {
 	})
 }
 
-// Retrievable returns the entries with pull that retrieving would activate at
-// p, in Active's order: those that activate when retrieved and not otherwise,
-// and that can win their group, since no entry of it active without retrieval
-// has a higher priority, or an equal one and is kept (Format 7.2). chance is
-// drawn only once they are retrieved. The caller retrieves those that are
-// relevant, by their title or text, and passes their references to Active.
+// Retrievable returns the retrievable entries that retrieving would activate
+// at p, in Active's order: those that activate when retrieved and not
+// otherwise, and that can win their group, since no entry of it active without
+// retrieval has a higher priority, or an equal one and is kept (Format 7.2).
+// chance is drawn only once they are retrieved. The caller retrieves those
+// that are relevant, by their title or text, and passes their references to
+// Active.
 func (p *Point) Retrievable() []ActiveEntry {
 	var out []ActiveEntry
 	top := map[string]int{} // the highest rank of each group's entries active without retrieval
@@ -85,7 +86,7 @@ func (p *Point) Retrievable() []ActiveEntry {
 			if a.Entry.Group != "" {
 				top[a.group()] = max(top[a.group()], rank(&a))
 			}
-		case a.Entry.Pull && p.activates(&a, true):
+		case a.Entry.Retrievable && p.activates(&a, true):
 			out = append(out, a)
 		}
 	}
@@ -97,7 +98,7 @@ func (p *Point) Retrievable() []ActiveEntry {
 // inUse returns the entries in use at p that whoever the message being
 // written is for knows, and that aren't disabled (Format 6.4, 7.1, 7.4).
 func (p *Point) inUse() []ActiveEntry {
-	sc := p.story.scope
+	sc := p.play.scope
 	var out []ActiveEntry
 	add := func(owner string, entries []Entry) {
 		for _, e := range entries {
@@ -123,7 +124,7 @@ func (p *Point) inUse() []ActiveEntry {
 // (Format 7.4).
 func (p *Point) knows(e *Entry) bool {
 	if p.char == "" {
-		return e.KnownBy == nil || slices.Contains(e.KnownBy, narrator) || p.story.scope.scenario.Mode == "narrator"
+		return e.KnownBy == nil || slices.Contains(e.KnownBy, narrator) || p.play.scope.scenario.Mode == "narrator"
 	}
 	return e.KnownBy == nil || slices.Contains(e.KnownBy, p.char)
 }
@@ -137,12 +138,12 @@ func (p *Point) activates(a *ActiveEntry, retrieved bool) bool {
 	// through round t + s, and with cooldown c can't activate again through
 	// round t + s + c.
 	if t, ok := p.state.activated[a.ref()]; ok {
-		turn, end := int64(p.state.turn), int64(t)+e.Sticky
+		round, end := int64(p.state.round), int64(t)+e.Sticky
 		switch {
-		case e.Sticky > 0 && turn <= end:
+		case e.Sticky > 0 && round <= end:
 			a.Kept = true
 			return true
-		case e.Once, e.Cooldown > 0 && turn <= end+e.Cooldown:
+		case e.Once, e.Cooldown > 0 && round <= end+e.Cooldown:
 			return false
 		}
 	}
@@ -151,9 +152,9 @@ func (p *Point) activates(a *ActiveEntry, retrieved bool) bool {
 		depth = *e.ScanDepth
 	}
 	switch {
-	case e.Pull && retrieved:
-	case slices.ContainsFunc(e.Keys, func(k string) bool { return p.hit(k, depth) }):
-	case len(e.Keys) > 0 || e.Pull:
+	case e.Retrievable && retrieved:
+	case slices.ContainsFunc(e.Keywords, func(k string) bool { return p.hit(k, depth) }):
+	case len(e.Keywords) > 0 || e.Retrievable:
 		return false
 	}
 	if e.When != "" {

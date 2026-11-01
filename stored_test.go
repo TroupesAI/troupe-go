@@ -19,10 +19,10 @@ import (
 // Stored, it holds no U+0000, though a value and a session entry do.
 func TestStoreState(t *testing.T) {
 	lines := append(slices.Clone(activationSession),
-		`{"id":"5","parent":"4","from":"model","char":"a","at":"2026-10-17T09:59:00+02:00","content":[{"text":"x"}],"entries":[{"id":"nul","text":"\u0000\u0001","keys":["x"]}],"activated":["s/cool"]}`,
+		`{"id":"5","parent":"4","from":"model","char":"a","at":"2026-10-17T09:59:00+02:00","content":[{"text":"x"}],"entries":[{"id":"nul","text":"\u0000\u0001","keywords":["x"]}],"activated":["s/cool"]}`,
 		`{"id":"6","parent":"5","from":"model","char":"b","at":"2026-10-17T10:00:00+02:00","content":[{"text":"x"}],"changes":[{"by":"model","set":{"state.note":"a\u0000b\u0001c\u00010"}}]}`)
-	story, s := readStory(t, activationBundle, lines...)
-	probes := []string{"turn == 1", "turn == 3", "user == 'p'", "elapsed == 60", "hour == 10", "state.note.size() == 7"}
+	play, s := readPlay(t, activationStory, lines...)
+	probes := []string{"round == 1", "round == 3", "player == 'p'", "elapsed == 60", "hour == 10", "state.note.size() == 7"}
 	seen := map[bool]bool{}
 	eval := func(p *troupe.Point) []any {
 		var out []any
@@ -36,7 +36,7 @@ func TestStoreState(t *testing.T) {
 		}
 		return append(out, refs(p.Active(nil, rand.New(rand.NewPCG(1, 2))))) //nolint:gosec // G404: a seeded source makes the test reproducible
 	}
-	before := story.Initial()
+	before := play.Initial()
 	for _, m := range s.Messages {
 		data, err := json.Marshal(before)
 		if err != nil {
@@ -45,7 +45,7 @@ func TestStoreState(t *testing.T) {
 		if bytes.Contains(data, []byte(`\u0000`)) {
 			t.Errorf("before message %s, the stored state holds U+0000: %s", m.ID, data)
 		}
-		restored, err := story.UnmarshalState(data)
+		restored, err := play.UnmarshalState(data)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -53,10 +53,10 @@ func TestStoreState(t *testing.T) {
 			t.Errorf("before message %s, restored %v, want %v", m.ID, got, want)
 		}
 		recent := []troupe.Message{m}
-		if got, want := eval(story.PointAt(restored, recent, "a")), eval(story.PointAt(before, recent, "a")); !reflect.DeepEqual(got, want) {
+		if got, want := eval(play.PointAt(restored, recent, "a")), eval(play.PointAt(before, recent, "a")); !reflect.DeepEqual(got, want) {
 			t.Errorf("at message %s, restored %v, want %v", m.ID, got, want)
 		}
-		before = story.Apply(before, &m)
+		before = play.Apply(before, &m)
 	}
 	if !seen[true] || !seen[false] {
 		t.Fatal("the probes don't tell points apart")
@@ -65,10 +65,10 @@ func TestStoreState(t *testing.T) {
 		t.Errorf("state.note is %q", got)
 	}
 
-	// A story whose header has gained a joiner restores the state, with the
+	// A play whose header has gained a joiner restores the state, with the
 	// joiner's keys at their initial values.
-	header := `{"troupe":"0.14","kind":"session","scenario":"s","characters":[{"id":"p","name":"Pat","description":"Pat."},{"id":"j","name":"Jo","description":"Jo."}],"players":["p"]}`
-	joined, _ := readStory(t, activationBundle, header)
+	header := `{"troupe":"0.15","kind":"session","scenario":"s","characters":[{"id":"p","name":"Pat","description":"Pat."},{"id":"j","name":"Jo","description":"Jo."}],"players":["p"]}`
+	joined, _ := readPlay(t, activationStory, header)
 	data, err := json.Marshal(before)
 	if err != nil {
 		t.Fatal(err)
@@ -99,11 +99,11 @@ func TestStoreState(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := story.UnmarshalState(edited); err == nil || errors.Is(err, troupe.ErrStateFormat) != c.format {
+		if _, err := play.UnmarshalState(edited); err == nil || errors.Is(err, troupe.ErrStateFormat) != c.format {
 			t.Errorf("a stored state with %s restores with %v", name, err)
 		}
 	}
-	if _, err := story.UnmarshalState([]byte(`{"troupe":`)); err == nil || errors.Is(err, troupe.ErrStateFormat) {
+	if _, err := play.UnmarshalState([]byte(`{"troupe":`)); err == nil || errors.Is(err, troupe.ErrStateFormat) {
 		t.Errorf("a stored state that isn't JSON restores with %v", err)
 	}
 }

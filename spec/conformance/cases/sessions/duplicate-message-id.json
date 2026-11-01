@@ -1,7 +1,7 @@
 {
   "description": "A message ID appears once (Format 2.3, 15.3): a later line with it is DUPLICATE_ID",
-  "bundle": {
-    "kind": "bundle",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "kai",

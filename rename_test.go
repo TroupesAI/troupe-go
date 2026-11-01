@@ -17,12 +17,12 @@ import (
 // members, worlds, parents, knownBy, speakers, set keys and scene values,
 // keyed variables' of and initial, macros, and the names and literals of
 // conditions.
-const references = `{"troupe": "0.14", "kind": "bundle",
+const references = `{"troupe": "0.15", "kind": "story",
 	"characters": [
 		{"id": "kai", "name": "Kai", "description": "{{state.kai.nerve}}, {{state.trust.kai}}, {{own.nerve}}.",
-			"examples": [[{"speaker": "kai", "text": "Hi."}, {"speaker": "user", "text": "Hey."}]],
+			"examples": [[{"speaker": "kai", "text": "Hi."}, {"speaker": "player", "text": "Hey."}]],
 			"entries": [{"id": "fear", "text": "Heights.", "knownBy": ["kai", "narrator"],
-				"when": "char == 'kai' && self == \"kai\" && 'kai' in scene.present && user != 'kai' && 'kai' in players && char in ['kai', 'mara'] && state.kai.nerve > 1 && has(own.nerve) && state.trust['kai'] > 2 && 'kai' in state.trust && state.ledger.kai == 1 && (hit('café') || char == 'kai' || state . kai .// next\n nerve >= 0)"}],
+				"when": "char == 'kai' && self == \"kai\" && 'kai' in scene.present && player != 'kai' && 'kai' in players && char in ['kai', 'mara'] && state.kai.nerve > 1 && has(own.nerve) && state.trust['kai'] > 2 && 'kai' in state.trust && state.ledger.kai == 1 && (hit('café') || char == 'kai' || state . kai .// next\n nerve >= 0)"}],
 			"variables": [{"id": "nerve", "type": "int", "description": "{{own.nerve}}"}]},
 		{"id": "mara", "name": "Mara", "description": "Mara.",
 			"entries": [{"id": "fear", "text": "Rats.", "when": "scene.location == 'vault' || 'vault' in scene.within"}]}],
@@ -35,9 +35,9 @@ const references = `{"troupe": "0.14", "kind": "bundle",
 		"worlds": ["harbor"],
 		"variables": [
 			{"id": "bell", "type": "int", "description": "d"},
-			{"id": "trust", "type": "int", "of": "cast", "initial": {"kai": 5, "*": 1}, "description": "d"},
-			{"id": "ledger", "type": "int", "of": ["kai", "guild"], "initial": {"kai": 2}, "description": "d"},
-			{"id": "inventory", "type": "int", "of": "*", "description": "d"}],
+			{"id": "trust", "type": "int", "per": "cast", "initial": {"kai": 5, "*": 1}, "description": "d"},
+			{"id": "ledger", "type": "int", "per": ["kai", "guild"], "initial": {"kai": 2}, "description": "d"},
+			{"id": "inventory", "type": "int", "per": "*", "description": "d"}],
 		"openings": [{"id": "dawn",
 			"set": {"scene.location": "vault", "scene.present": ["kai"], "state.kai.nerve": 2, "state.trust.kai": 3,
 				"state.ledger.kai": 1, "state.inventory.kai": 1, "state.bell": 1, "state.harbor.tide": 2},
@@ -47,9 +47,9 @@ const references = `{"troupe": "0.14", "kind": "bundle",
 // RenameID rewrites every reference to what it renames, for each kind of
 // object, and leaves nothing.
 func TestRenameID(t *testing.T) {
-	b, diags, err := troupe.ReadBundle(strings.NewReader(references))
-	if err != nil || len(append(diags, troupe.Check(b, nil)...)) > 0 {
-		t.Fatal(err, diags, troupe.Check(b, nil))
+	st, diags, err := troupe.ReadStory(strings.NewReader(references))
+	if err != nil || len(append(diags, troupe.Check(st, nil)...)) > 0 {
+		t.Fatal(err, diags, troupe.Check(st, nil))
 	}
 	for _, c := range []struct{ object, old, id string }{
 		{"/characters/0", "kai", "kai_m"},
@@ -63,7 +63,7 @@ func TestRenameID(t *testing.T) {
 		{"/scenarios/0/variables/0", "bell", "chime"},
 		{"/scenarios/0/variables/1", "trust", "faith"},
 	} {
-		patch, left, err := b.RenameID(c.object, c.id)
+		patch, left, err := st.RenameID(c.object, c.id)
 		if err != nil || left != nil {
 			t.Errorf("%s: %v, left %v", c.object, err, left)
 			continue
@@ -86,7 +86,7 @@ func TestRenameID(t *testing.T) {
 // clash or merge, and names that refer to something else in another scenario
 // using them, as written or as renamed.
 func TestRenameIDLeaves(t *testing.T) {
-	b, _, err := troupe.ReadBundle(strings.NewReader(`{"troupe": "0.14", "kind": "bundle",
+	st, _, err := troupe.ReadStory(strings.NewReader(`{"troupe": "0.15", "kind": "story",
 		"characters": [
 			{"id": "kai", "name": "Kai", "description": "d", "entries": [
 				{"id": "a", "text": "t", "when": "char == 'kai' || state.lead == 'kai'"},
@@ -100,7 +100,7 @@ func TestRenameIDLeaves(t *testing.T) {
 		"scenarios": [
 			{"id": "one", "premise": "{{state.pair.kai}}", "variables": [{"id": "bell", "type": "int", "description": "d"},
 				{"id": "lead", "type": "string", "initial": "kai", "description": "d"},
-				{"id": "pair", "type": "int", "of": ["kai", "kai_m"], "description": "d"},
+				{"id": "pair", "type": "int", "per": ["kai", "kai_m"], "description": "d"},
 				{"id": "crew", "type": "set", "description": "d"}],
 				"entries": [{"id": "e", "text": "t", "when": "'kai' in state.crew"}],
 				"openings": [{"id": "dawn", "set": {"state.lead": "kai"}}]},
@@ -124,13 +124,13 @@ func TestRenameIDLeaves(t *testing.T) {
 			"/scenarios/0/openings/0/set/state.lead",
 			"/scenarios/0/premise",
 			"/scenarios/0/variables/1/initial",
-			"/scenarios/0/variables/2/of/0",
+			"/scenarios/0/variables/2/per/0",
 		}},
 		{"/scenarios/0/variables/0", "chime", []string{"/characters/1/description"}},
 		{"/scenarios/0/openings/0", "dusk", []string{"/characters/0/entries/3/when"}},
 		{"/scenarios/0/variables/1", "toll", []string{"/characters/0/entries/0/when"}},
 	} {
-		patch, left, err := b.RenameID(c.object, c.id)
+		patch, left, err := st.RenameID(c.object, c.id)
 		if err != nil || !slices.Equal(slices.Sorted(slices.Values(left)), c.left) {
 			t.Errorf("%s: %v, left %q, want %q", c.object, err, left, c.left)
 		}
@@ -150,7 +150,7 @@ func TestRenameIDLeaves(t *testing.T) {
 // object can't take (Format 2.3), with an error that says which. Renaming to
 // the same ID is an empty patch.
 func TestRenameIDErrors(t *testing.T) {
-	b, _, err := troupe.ReadBundle(strings.NewReader(`{"troupe": "0.14", "kind": "bundle",
+	st, _, err := troupe.ReadStory(strings.NewReader(`{"troupe": "0.15", "kind": "story",
 		"characters": [{"id": "kai", "name": "Kai", "description": "d"}, {"id": "mara", "name": "Mara", "description": "d"},
 			{"id": "mara", "name": "Mara", "description": "d"}],
 		"scenarios": [{"id": "heist", "variables": [{"id": "bell", "type": "int", "description": "d"}]}]}`))
@@ -175,20 +175,20 @@ func TestRenameIDErrors(t *testing.T) {
 		{"/characters/0/id", "elena", troupe.ErrBadPointer},
 		{"/cast/0", "elena", troupe.ErrBadPointer},
 	} {
-		if patch, _, err := b.RenameID(c.object, c.id); !errors.Is(err, c.want) {
+		if patch, _, err := st.RenameID(c.object, c.id); !errors.Is(err, c.want) {
 			t.Errorf("%s to %s: %v, and %s", c.object, c.id, err, patch)
 		}
 	}
-	if patch, left, err := b.RenameID("/characters/0", "kai"); string(patch) != "[]" || left != nil || err != nil {
+	if patch, left, err := st.RenameID("/characters/0", "kai"); string(patch) != "[]" || left != nil || err != nil {
 		t.Errorf("to its own ID: %s, %v, %v", patch, left, err)
 	}
 }
 
 // RenameID gives an object whose ID another shares (DUPLICATE_ID) the new ID
 // alone, leaves every reference that could refer to it, but not one only the
-// other can mean, and doesn't change the bundle.
+// other can mean, and doesn't change the story.
 func TestRenameIDShared(t *testing.T) {
-	b, _, err := troupe.ReadBundle(strings.NewReader(`{"troupe": "0.14", "kind": "bundle",
+	st, _, err := troupe.ReadStory(strings.NewReader(`{"troupe": "0.15", "kind": "story",
 		"characters": [
 			{"id": "mara", "name": "Mara", "description": "{{state.mara.calm}}", "variables": [{"id": "calm", "type": "int", "description": "d"}]},
 			{"id": "mara", "name": "Mara", "description": "{{state.mara.nerve}}", "variables": [{"id": "nerve", "type": "int", "description": "d"}]},
@@ -202,7 +202,7 @@ func TestRenameIDShared(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	before, _ := json.Marshal(b)
+	before, _ := json.Marshal(st)
 	for _, c := range []struct {
 		object, id string
 		left       []string
@@ -212,14 +212,14 @@ func TestRenameIDShared(t *testing.T) {
 		{"/scenarios/0/variables/0", "chime", []string{"/characters/2/description"}},
 		{"/worlds/0/locations/1", "safe", []string{"/worlds/0/locations/2/parent"}},
 	} {
-		patch, left, err := b.RenameID(c.object, c.id)
+		patch, left, err := st.RenameID(c.object, c.id)
 		want := `[{"op":"add","path":"` + c.object + `/id","value":"` + c.id + `"}]`
 		if err != nil || string(patch) != want || !slices.Equal(slices.Sorted(slices.Values(left)), c.left) {
 			t.Errorf("%s: %s, left %q, %v; want left %q", c.object, patch, left, err, c.left)
 		}
 	}
-	if after, _ := json.Marshal(b); string(after) != string(before) {
-		t.Errorf("the bundle is now %s", after)
+	if after, _ := json.Marshal(st); string(after) != string(before) {
+		t.Errorf("the story is now %s", after)
 	}
 }
 

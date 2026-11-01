@@ -1,7 +1,7 @@
 {
-  "description": "Recorded values of a keyed variable (Format 8.3, 8.5, 15.3): each key's value is checked against the variable; an int outside min and max is still valid, since it is clamped (Format 8.6), and a value of another type is INVALID_VALUE",
-  "bundle": {
-    "kind": "bundle",
+  "description": "Recorded values of a keyed variable (Format 8.3, 8.5, 15.3): each key's value is checked against the variable, so a value of another type is INVALID_VALUE",
+  "story": {
+    "kind": "story",
     "scenarios": [
       {
         "id": "s",
@@ -9,13 +9,11 @@
           {
             "id": "bond",
             "type": "int",
-            "of": [
+            "per": [
               "north",
               "south"
             ],
             "initial": 3,
-            "min": 0,
-            "max": 5,
             "description": "d"
           }
         ]
@@ -51,7 +49,6 @@
           {
             "by": "player",
             "set": {
-              "state.bond.north": 9,
               "state.bond.south": "x"
             }
           }

@@ -1,7 +1,7 @@
 {
-  "description": "A root that records the keys of a cast member marked player whose seat no player fills (Format 6.3, 8.5, 11.1): the session's cast leaves the character out, so the keys are UNKNOWN_VARIABLE, though the opening may set them",
-  "bundle": {
-    "kind": "bundle",
+  "description": "A root that records the state keys of a cast member marked player whose seat no player fills (Format 6.3, 8.5, 11.1): the session's cast leaves the character out, so the state keys are UNKNOWN_STATE_KEY, though the opening may set them",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "kai",
@@ -38,7 +38,7 @@
           {
             "id": "trust",
             "type": "int",
-            "of": "cast",
+            "per": "cast",
             "description": "Trust in the crew."
           }
         ],
@@ -105,15 +105,15 @@
       "type": "check",
       "expect": {
         "codes": [
-          "UNKNOWN_VARIABLE"
+          "UNKNOWN_STATE_KEY"
         ],
         "includes": [
           {
-            "code": "UNKNOWN_VARIABLE",
+            "code": "UNKNOWN_STATE_KEY",
             "at": "message:1/changes/0/set/state.kai.nerve"
           },
           {
-            "code": "UNKNOWN_VARIABLE",
+            "code": "UNKNOWN_STATE_KEY",
             "at": "message:1/changes/0/set/state.trust.kai"
           }
         ]

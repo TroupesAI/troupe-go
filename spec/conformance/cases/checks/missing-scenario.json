@@ -1,7 +1,7 @@
 {
   "description": "A session without a scenario is SCHEMA at its header, not UNKNOWN_SCENARIO (Format 15.3), and its other checks are skipped as for an unknown scenario: its opening and its change to a variable, which no scenario defines, aren't reported",
-  "bundle": {
-    "kind": "bundle",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "a",

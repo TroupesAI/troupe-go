@@ -12,16 +12,16 @@ import (
 	"github.com/TroupesAI/troupe-go"
 )
 
-// Reading a bundle reports what the file breaks, and Check what it means
+// Reading a story reports what the file breaks, and Check what it means
 // that doesn't hold, here a cast member naming no character.
-func ExampleReadBundle() {
-	b, diags, err := troupe.ReadBundle(strings.NewReader(`{"troupe": "0.14", "kind": "bundle",
+func ExampleReadStory() {
+	st, diags, err := troupe.ReadStory(strings.NewReader(`{"troupe": "0.15", "kind": "story",
 		"characters": [{"id": "kai", "name": "Kai", "description": "A thief."}],
 		"scenarios": [{"id": "heist", "cast": [{}, {"character": "kai"}, {"character": "ghost"}]}]}`))
 	if err != nil {
 		log.Fatal(err)
 	}
-	diags = append(diags, troupe.Check(b, nil)...)
+	diags = append(diags, troupe.Check(st, nil)...)
 	for _, d := range diags {
 		fmt.Println(d.Code, d.Location())
 	}
@@ -29,10 +29,10 @@ func ExampleReadBundle() {
 	// UNKNOWN_CHARACTER /scenarios/0/cast/2/character
 }
 
-// A story gives the state at each message from its parent's, and evaluates
+// A play gives the state at each message from its parent's, and evaluates
 // conditions where the next message is being written.
-func ExampleStory() {
-	b, _, err := troupe.ReadBundle(strings.NewReader(`{"troupe": "0.14", "kind": "bundle",
+func ExamplePlay() {
+	st, _, err := troupe.ReadStory(strings.NewReader(`{"troupe": "0.15", "kind": "story",
 		"characters": [{"id": "kai", "name": "Kai", "description": "A thief."}],
 		"scenarios": [{"id": "heist", "cast": [{}, {"character": "kai"}],
 			"variables": [{"id": "bell", "type": "int", "by": ["player"], "description": "The last bell rung."}]}]}`))
@@ -40,26 +40,26 @@ func ExampleStory() {
 		log.Fatal(err)
 	}
 	s, _, err := troupe.ReadSession(strings.NewReader(
-		`{"troupe": "0.14", "kind": "session", "scenario": "heist", "characters": [{"id": "mara", "name": "Mara", "description": "A smuggler."}], "players": ["mara"]}
+		`{"troupe": "0.15", "kind": "session", "scenario": "heist", "characters": [{"id": "mara", "name": "Mara", "description": "A smuggler."}], "players": ["mara"]}
 {"id": "1", "from": "player", "content": [{"speaker": "mara", "text": "We wait for the bell."}], "changes": [{"by": "player", "set": {"state.bell": 7}}]}`))
 	if err != nil {
 		log.Fatal(err)
 	}
-	story, err := troupe.NewStory(b, s)
+	play, err := troupe.NewPlay(st, s)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// A caller that keeps each message's state applies only the next one.
-	state := story.Initial()
+	state := play.Initial()
 	for i := range s.Messages {
-		state = story.Apply(state, &s.Messages[i])
+		state = play.Apply(state, &s.Messages[i])
 	}
 	bell, _ := state.Get("state.bell")
 	fmt.Println("bell:", bell)
 
 	// The message being written is for Kai, after message 1.
-	point := story.PointAt(story.Initial(), s.Messages, "kai")
+	point := play.PointAt(play.Initial(), s.Messages, "kai")
 	ok, err := point.Eval("state.bell >= 7 && hit('bell')", "heist", 4)
 	fmt.Println(ok, err)
 	// Output:
@@ -71,9 +71,9 @@ func ExampleStory() {
 // stored state before the messages a scan reaches, builds the point after
 // them, and gets the entries active for the message being written.
 func ExamplePoint_Active() {
-	b, _, err := troupe.ReadBundle(strings.NewReader(`{"troupe": "0.14", "kind": "bundle",
+	st, _, err := troupe.ReadStory(strings.NewReader(`{"troupe": "0.15", "kind": "story",
 		"characters": [{"id": "kai", "name": "Kai", "description": "A thief.",
-			"entries": [{"id": "fear", "text": "Kai fears heights.", "keys": ["/roofs?/"], "sticky": 2}]}],
+			"entries": [{"id": "fear", "text": "Kai fears heights.", "keywords": ["/roofs?/"], "sticky": 2}]}],
 		"scenarios": [{"id": "heist", "cast": [{}, {"character": "kai"}],
 			"openings": [{"id": "rooftop", "set": {"scene.present": ["kai"]},
 				"content": [{"text": "Rain on the {{pick::roof::slates}}."}]}]}]}`))
@@ -97,26 +97,26 @@ func ExamplePoint_Active() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	story, err := troupe.NewStory(b, s)
+	play, err := troupe.NewPlay(st, s)
 	if err != nil {
 		log.Fatal(err)
 	}
 	r := rand.New(rand.NewPCG(1, 2)) //nolint:gosec // G404: a seeded source makes the example reproducible
 
-	root, err := story.Root("rooftop", r)
+	root, err := play.Root("rooftop", r)
 	if err != nil {
 		log.Fatal(err)
 	}
 	root.ID = "1"
 	fmt.Println(root.Content[0].Text, string(root.Changes[0].Set["scene.present"]))
-	stored, err := json.Marshal(story.Apply(story.Initial(), &root))
+	stored, err := json.Marshal(play.Apply(play.Initial(), &root))
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Message 2 is written for Kai, after the root, which the scan reaches.
 	reply := troupe.Message{ID: "2", Parent: "1", From: "model", Char: "kai", Content: []troupe.Part{{Text: "Kai grips the ledge."}}}
-	for _, a := range story.PointAt(story.Initial(), []troupe.Message{root}, "kai").Active(nil, r) {
+	for _, a := range play.PointAt(play.Initial(), []troupe.Message{root}, "kai").Active(nil, r) {
 		fmt.Println(a.Owner+"/"+a.Entry.ID, a.Kept)
 		if !a.Kept {
 			reply.Activated = append(reply.Activated, a.Owner+"/"+a.Entry.ID)
@@ -125,11 +125,11 @@ func ExamplePoint_Active() {
 
 	// Message 3 is written for Kai too, after message 2, from the root's
 	// stored state.
-	before, err := story.UnmarshalState(stored)
+	before, err := play.UnmarshalState(stored)
 	if err != nil {
 		log.Fatal(err)
 	}
-	for _, a := range story.PointAt(before, []troupe.Message{reply}, "kai").Active(nil, r) {
+	for _, a := range play.PointAt(before, []troupe.Message{reply}, "kai").Active(nil, r) {
 		fmt.Println(a.Owner+"/"+a.Entry.ID, a.Kept)
 	}
 	// Output:
@@ -138,16 +138,16 @@ func ExamplePoint_Active() {
 	// kai/fear true
 }
 
-// On import, a file a bundle holds as a data: URI can be stored apart, and
+// On import, a file a story holds as a data: URI can be stored apart, and
 // its field set to the file's path, with every other byte kept as written.
 func ExampleReplaceFileFields() {
-	doc := []byte(`{"troupe": "0.14", "kind": "bundle", "cover": "data:image/png;base64,iVBORw0KGgo=", "ext": {"x.y": [1, 2.0]}}`)
-	b, _, err := troupe.ReadBundle(bytes.NewReader(doc))
+	doc := []byte(`{"troupe": "0.15", "kind": "story", "cover": "data:image/png;base64,iVBORw0KGgo=", "ext": {"x.y": [1, 2.0]}}`)
+	st, _, err := troupe.ReadStory(bytes.NewReader(doc))
 	if err != nil {
 		log.Fatal(err)
 	}
 	paths := map[string]string{}
-	for f := range b.FileFields() {
+	for f := range st.FileFields() {
 		if f.MediaType != "" {
 			fmt.Println(f.Pointer, f.MediaType, len(f.Data), "bytes")
 			paths[f.Pointer] = "images/cover.png"
@@ -160,21 +160,21 @@ func ExampleReplaceFileFields() {
 	fmt.Println(string(doc))
 	// Output:
 	// /cover image/png 8 bytes
-	// {"troupe": "0.14", "kind": "bundle", "cover": "images/cover.png", "ext": {"x.y": [1, 2.0]}}
+	// {"troupe": "0.15", "kind": "story", "cover": "images/cover.png", "ext": {"x.y": [1, 2.0]}}
 }
 
-// A package's bundle.json, stored apart from its ZIP, reads back given the
+// A package's story.json, stored apart from its ZIP, reads back given the
 // paths of the package's files, such as Package.Files.
-func ExampleReadPackageBundle() {
-	doc := `{"troupe": "0.14", "kind": "bundle", "cover": "images/cover.png"}`
-	b, diags, err := troupe.ReadPackageBundle(strings.NewReader(doc), []string{"images/cover.png"})
+func ExampleReadPackageStory() {
+	doc := `{"troupe": "0.15", "kind": "story", "cover": "images/cover.png"}`
+	st, diags, err := troupe.ReadPackageStory(strings.NewReader(doc), []string{"images/cover.png"})
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(b.Cover, len(diags))
+	fmt.Println(st.Cover, len(diags))
 
 	// Without that file, the path names nothing.
-	_, diags, err = troupe.ReadPackageBundle(strings.NewReader(doc), nil)
+	_, diags, err = troupe.ReadPackageStory(strings.NewReader(doc), nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -183,23 +183,23 @@ func ExampleReadPackageBundle() {
 	}
 	// Output:
 	// images/cover.png 0
-	// PARSE bundle.json /cover
+	// UNREADABLE story.json /cover
 }
 
 // An editor renames a character, and every reference to it, with a JSON
-// Patch, which a patch library applies to the stored bundle.json.
-func ExampleBundle_RenameID() {
-	b, _, err := troupe.ReadBundle(strings.NewReader(`{"troupe": "0.14", "kind": "bundle",
+// Patch, which a patch library applies to the stored story.json.
+func ExampleStory_RenameID() {
+	st, _, err := troupe.ReadStory(strings.NewReader(`{"troupe": "0.15", "kind": "story",
 		"characters": [{"id": "kai_moreau", "name": "Kai Moreau", "description": "A thief."}],
 		"scenarios": [{"id": "heist", "cast": [{}, {"character": "kai_moreau"}],
 			"entries": [{"id": "watch", "text": "The guard is near.", "when": "'kai_moreau' in scene.present"}]}]}`))
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := b.CheckID("/characters", "kai_moreau"); errors.Is(err, troupe.ErrIDTaken) {
+	if err := st.CheckID("/characters", "kai_moreau"); errors.Is(err, troupe.ErrIDTaken) {
 		fmt.Println("taken")
 	}
-	patch, left, err := b.RenameID("/characters/0", "kai")
+	patch, left, err := st.RenameID("/characters/0", "kai")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -209,25 +209,25 @@ func ExampleBundle_RenameID() {
 	// [{"op":"add","path":"/characters/0/id","value":"kai"},{"op":"replace","path":"/scenarios/0/cast/1/character","value":"kai"},{"op":"replace","path":"/scenarios/0/entries/0/when","value":"'kai' in scene.present"}] []
 }
 
-// An editor offers the keys an opening's set can write, each with the
+// An editor offers the state keys an opening's set can write, each with the
 // variable that says how to enter its value.
-func ExampleStory_StateKeys() {
-	b, _, err := troupe.ReadBundle(strings.NewReader(`{"troupe": "0.14", "kind": "bundle",
+func ExamplePlay_StateKeys() {
+	st, _, err := troupe.ReadStory(strings.NewReader(`{"troupe": "0.15", "kind": "story",
 		"characters": [{"id": "kai", "name": "Kai", "description": "A thief.",
 			"variables": [{"id": "nerve", "type": "int", "min": 0, "max": 5, "description": "How steady Kai is."}]}],
 		"scenarios": [{"id": "heist", "cast": [{}, {"character": "kai"}],
 			"variables": [
 				{"id": "bell", "type": "int", "description": "The last bell rung."},
-				{"id": "trust", "type": "int", "of": "cast", "description": "Trust in the player."},
-				{"id": "loot", "type": "int", "of": "*", "description": "What the crew carries."}]}]}`))
+				{"id": "trust", "type": "int", "per": "cast", "description": "Trust in the player."},
+				{"id": "loot", "type": "int", "per": "*", "description": "What the crew carries."}]}]}`))
 	if err != nil {
 		log.Fatal(err)
 	}
-	story, err := troupe.NewScenarioStory(b, "heist")
+	play, err := troupe.NewScenarioPlay(st, "heist")
 	if err != nil {
 		log.Fatal(err)
 	}
-	for _, k := range story.StateKeys() {
+	for _, k := range play.StateKeys() {
 		switch {
 		case k.Variable == nil:
 			fmt.Println(k.Name)

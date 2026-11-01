@@ -1,7 +1,7 @@
 {
-  "description": "A \"cast\" variable's initial object (Format 8.3, 15.3): a member naming a character of the bundle or session is checked though the character is in no cast, so an invalid value for it is INVALID_VALUE",
-  "bundle": {
-    "kind": "bundle",
+  "description": "A \"cast\" variable's initial object (Format 8.3, 15.3): a member naming a character of the story or session is checked though the character is in no cast, so an invalid value for it is INVALID_VALUE",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "a",
@@ -26,7 +26,7 @@
           {
             "id": "trust",
             "type": "int",
-            "of": "cast",
+            "per": "cast",
             "description": "Trust in each cast member.",
             "initial": {
               "a": 1,

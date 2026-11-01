@@ -13,17 +13,17 @@ import (
 
 // RenderContext is where author text is rendered (Format 9).
 type RenderContext struct {
-	// State is the state the macros read, a state of the story: at the
+	// State is the state the macros read, a state of the play: at the
 	// message the text is in, or elsewhere at the evaluation point, the
 	// session's head, or the initial state when there is no head (Format 9).
-	// {{user}} comes from it too.
+	// {{player}} comes from it too.
 	State State
 	// Char is the character {{char}} means: a part's speaker, the character
 	// the text belongs to, or the one the message being written is for. ""
 	// means none.
 	Char string
 	// Narrator reports whether the text is for a message written for the
-	// narrator, so {{char}}, without Char, is the scenario's narrator.
+	// narrator, so {{char}}, without Char, renders as NarratorName gives it.
 	Narrator bool
 	// Owner is the text's owner, which own means: a character, world or
 	// scenario ID, or "session" or "" for a session entry, which has none
@@ -32,7 +32,7 @@ type RenderContext struct {
 }
 
 // Render returns author text with its macros resolved (Format 9): the texts
-// of a bundle, and of a session's characters, worlds and entries, where
+// of a story, and of a session's characters, worlds and entries, where
 // macros resolve. A message part's text is RenderParts's to show, since a
 // player's or model's words are used as written. r chooses each pick's
 // option, so rendering is reproducible from the caller's source.
@@ -40,8 +40,8 @@ type RenderContext struct {
 // Text between {{ and }} that is no macro, or that names an undeclared
 // variable, is left as written; a declared variable with nothing to show
 // renders as nothing.
-func (st *Story) Render(text string, c RenderContext, r *rand.Rand) string {
-	sc := st.scope
+func (pl *Play) Render(text string, c RenderContext, r *rand.Rand) string {
+	sc := pl.scope
 	own := sc.all.ownOf(sc.scenario, c.Owner)
 	tokens, _ := macro.Parse(text)
 	var b strings.Builder
@@ -58,9 +58,9 @@ func (st *Story) Render(text string, c RenderContext, r *rand.Rand) string {
 			default:
 				b.WriteString(t.Text)
 			}
-		case macro.User:
-			if u := c.State.s.user; u != "" {
-				b.WriteString(sc.characterName(u))
+		case macro.Player:
+			if p := c.State.s.player; p != "" {
+				b.WriteString(sc.characterName(p))
 			} else {
 				b.WriteString(t.Text)
 			}
@@ -87,26 +87,26 @@ func (st *Story) Render(text string, c RenderContext, r *rand.Rand) string {
 }
 
 // RenderParts returns m's parts as they are shown (Format 9), given this
-// story's state before m, as KnownBy and Apply take it. In a root made from
+// play's state before m, as KnownBy and Apply take it. In a root made from
 // an opening, their text and alt resolve at the root, with each part's
 // speaker as {{char}} and own meaning state; r chooses a pick's option,
 // though a root has its picks chosen already (Format 11.1). Any other message
 // is a player's or a model's words, used as written, so no state leaks
 // through model output or prompt attacks (Format Appendix C).
-func (st *Story) RenderParts(before State, m *Message, r *rand.Rand) []Part {
-	return st.renderParts(st.Apply(before, m), m, r)
+func (pl *Play) RenderParts(before State, m *Message, r *rand.Rand) []Part {
+	return pl.renderParts(pl.Apply(before, m), m, r)
 }
 
 // renderParts returns m's parts as they are shown, given the state at m.
-func (st *Story) renderParts(at State, m *Message, r *rand.Rand) []Part {
+func (pl *Play) renderParts(at State, m *Message, r *rand.Rand) []Part {
 	parts := slices.Clone(m.Content)
 	if m.Parent != "" || m.Opening == "" {
 		return parts
 	}
 	for i := range parts {
-		c := RenderContext{State: at, Char: parts[i].Speaker, Owner: st.scope.scenario.ID}
-		parts[i].Text = st.Render(parts[i].Text, c, r)
-		parts[i].Alt = st.Render(parts[i].Alt, c, r)
+		c := RenderContext{State: at, Char: parts[i].Speaker, Owner: pl.scope.scenario.ID}
+		parts[i].Text = pl.Render(parts[i].Text, c, r)
+		parts[i].Alt = pl.Render(parts[i].Alt, c, r)
 	}
 	return parts
 }
@@ -126,7 +126,7 @@ var escaper = strings.NewReplacer(`\`, `\\`, "{{", `\{{`)
 
 // renderAt renders the part of a variable's value x that the path's segments
 // below the variable name: x itself, or a keyed variable's key, where char
-// and user mean the macros' characters (Format 9). It renders as nothing when
+// and player mean the macros' characters (Format 9). It renders as nothing when
 // there is nothing there: an absent key, a path below a value that isn't a
 // map, or a variable whose owner isn't in use, which the state doesn't hold.
 func (sc *scope) renderAt(c RenderContext, v *Variable, x any, below []string) string {
@@ -147,8 +147,8 @@ func (sc *scope) renderAt(c RenderContext, v *Variable, x any, below []string) s
 	switch key {
 	case "char":
 		key = c.Char
-	case "user":
-		key = c.State.s.user
+	case "player":
+		key = c.State.s.player
 	}
 	if y, ok := m[key]; ok && key != "" {
 		return sc.render(v, y)
@@ -183,7 +183,7 @@ func (sc *scope) render(v *Variable, x any) string {
 // and any other its underscores as spaces.
 func (sc *scope) renderMap(v *Variable, m map[string]any) string {
 	keys := sc.keys(v)
-	if v.Of.Any {
+	if v.Per.Any {
 		keys = slices.Sorted(maps.Keys(m))
 	}
 	pairs := make([]string, 0, len(keys))
@@ -229,8 +229,8 @@ func (sc *scope) characterNames(ids []string) string {
 
 // narrator returns what text calls the narrator (Format 6).
 func (sc *scope) narrator() string {
-	if sc.scenario.Narrator != "" {
-		return sc.scenario.Narrator
+	if sc.scenario.NarratorName != "" {
+		return sc.scenario.NarratorName
 	}
 	return "the narrator"
 }

@@ -1,12 +1,12 @@
 {
-  "description": "The narrator's name (Format 6, 9): {{char}} for the narrator renders as the scenario's narrator, so a story in any language names it naturally",
-  "bundle": {
-    "kind": "bundle",
+  "description": "The narrator's name (Format 6, 9): {{char}} for the narrator renders as the scenario's narratorName, so a story in any language names it naturally",
+  "story": {
+    "kind": "story",
     "language": "es",
     "scenarios": [
       {
         "id": "s",
-        "narrator": "el narrador"
+        "narratorName": "el narrador"
       }
     ]
   },

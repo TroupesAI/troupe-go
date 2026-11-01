@@ -1,7 +1,7 @@
 {
-  "description": "Macros in message parts (Format 9, 11.1): only roots made from openings resolve. There {{char}} is the part's speaker, else it is left as written; {{user}} follows the path to the message; own means state; parts resolve against the state at their message.",
-  "bundle": {
-    "kind": "bundle",
+  "description": "Macros in message parts (Format 9, 11.1): only roots made from openings resolve. There {{char}} is the part's speaker, else it is left as written; {{player}} follows the path to the message; own means state; parts resolve against the state at their message.",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "a",
@@ -50,7 +50,7 @@
               },
               {
                 "speaker": "a",
-                "text": "I'm {{char}}, and you are {{user}}."
+                "text": "I'm {{char}}, and you are {{player}}."
               }
             ]
           }
@@ -90,7 +90,7 @@
           },
           {
             "speaker": "a",
-            "text": "I'm {{char}}, and you are {{user}}."
+            "text": "I'm {{char}}, and you are {{player}}."
           }
         ],
         "changes": [
@@ -128,7 +128,7 @@
         "char": "a",
         "content": [
           {
-            "text": "{{char}} shrugs at {{user}}."
+            "text": "{{char}} shrugs at {{player}}."
           },
           {
             "speaker": "b",
@@ -156,7 +156,7 @@
     },
     {
       "type": "macro",
-      "name": "a part's speaker; {{user}} before any player message is the first player",
+      "name": "a part's speaker; {{player}} before any player message is the first player",
       "part": {
         "message": "1",
         "index": 1
@@ -167,7 +167,7 @@
       "type": "macro",
       "name": "author text at message 3",
       "at": "3",
-      "text": "Bell {{state.bell}} for {{user}}.",
+      "text": "Bell {{state.bell}} for {{player}}.",
       "expect": "Bell 8 for Quin."
     }
   ]

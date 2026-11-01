@@ -1,7 +1,7 @@
 {
   "description": "Open \"*\" maps (Format 8.1, 8.3, 9): no initial; keys start absent and appear when a change sets them; a key whose normalized value is the type's default is removed, including a value that clamps to it; keys are in code point order",
-  "bundle": {
-    "kind": "bundle",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "a",
@@ -22,14 +22,14 @@
           {
             "id": "inv",
             "type": "int",
-            "of": "*",
+            "per": "*",
             "min": 0,
             "description": "default 0"
           },
           {
             "id": "charges",
             "type": "int",
-            "of": "*",
+            "per": "*",
             "min": 2,
             "max": 5,
             "description": "default 0 raised to min: 2"
@@ -37,7 +37,7 @@
           {
             "id": "marks",
             "type": "set",
-            "of": "*",
+            "per": "*",
             "description": "default []"
           }
         ]

@@ -1,7 +1,7 @@
 {
-  "description": "A session character or world can't take a scenario variable's ID (Format 2.3, 15.3): DUPLICATE_ID, at the session's id, since the bundle comes first (conformance README section 3.4)",
-  "bundle": {
-    "kind": "bundle",
+  "description": "A session character or world can't take a scenario variable's ID (Format 2.3, 15.3): DUPLICATE_ID, at the session's id, since the story comes first (conformance README section 3.4)",
+  "story": {
+    "kind": "story",
     "scenarios": [
       {
         "id": "s",

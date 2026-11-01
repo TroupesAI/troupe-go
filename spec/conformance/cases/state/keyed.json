@@ -1,7 +1,7 @@
 {
-  "description": "Keyed and owned variables (Format 8.2, 8.3, 9, 10.1): of cast (every cast character, players included), a list and \"*\" (open keys); character-owned variables read as state.<owner>.<id> and own.<id>; computed keys by brackets in CEL",
-  "bundle": {
-    "kind": "bundle",
+  "description": "Keyed and owned variables (Format 8.2, 8.3, 9, 10.1): per cast (every cast character, players included), a list and \"*\" (open keys); character-owned variables read as state.<owner>.<id> and own.<id>; computed keys by brackets in CEL",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "a",
@@ -11,7 +11,7 @@
           {
             "id": "feelings",
             "type": "int",
-            "of": "cast",
+            "per": "cast",
             "initial": {
               "*": 0,
               "b": 3
@@ -36,7 +36,7 @@
           {
             "id": "trust",
             "type": "int",
-            "of": "cast",
+            "per": "cast",
             "initial": {
               "*": 50,
               "a": 70
@@ -51,14 +51,14 @@
           {
             "id": "hp",
             "type": "int",
-            "of": "cast",
+            "per": "cast",
             "initial": 10,
             "description": "players included"
           },
           {
             "id": "rep",
             "type": "int",
-            "of": [
+            "per": [
               "watch",
               "guild"
             ],
@@ -70,7 +70,7 @@
           {
             "id": "inv",
             "type": "int",
-            "of": "*",
+            "per": "*",
             "min": 0,
             "description": "open keys appear when a change sets them"
           },
@@ -81,7 +81,7 @@
               "calm",
               "upset"
             ],
-            "of": "cast",
+            "per": "cast",
             "initial": "upset",
             "description": "one value for every key"
           }
@@ -182,7 +182,7 @@
       "at": "1",
       "char": "a",
       "self": "a",
-      "expr": "own.feelings[user] == 5 && state.a.feelings.b == 3 && state.trust[char] == 70 && state.hp[user] == 7 && 'torch' in state.inv && state.inv.torch == 2 && !('lamp' in state.inv)",
+      "expr": "own.feelings[player] == 5 && state.a.feelings.b == 3 && state.trust[char] == 70 && state.hp[player] == 7 && 'torch' in state.inv && state.inv.torch == 2 && !('lamp' in state.inv)",
       "expect": true
     },
     {
@@ -190,7 +190,7 @@
       "name": "every cast character, the player too, is a key of a cast map",
       "at": "1",
       "char": "a",
-      "expr": "user in state.trust && user in state.hp && char in state.trust",
+      "expr": "player in state.trust && player in state.hp && char in state.trust",
       "expect": true
     },
     {
@@ -203,10 +203,10 @@
     },
     {
       "type": "macro",
-      "name": "owner paths and char and user segments in macros; maps render with names, in cast order",
+      "name": "owner paths and char and player segments in macros; maps render with names, in cast order",
       "at": "1",
       "char": "a",
-      "text": "{{state.a.feelings.b}} {{state.trust.char}} {{state.hp.user}} | {{state.trust}} | {{state.inv}}",
+      "text": "{{state.a.feelings.b}} {{state.trust.char}} {{state.hp.player}} | {{state.trust}} | {{state.inv}}",
       "expect": "3 70 7 | Pat: 50, Ann: 70, Bea: 90 | torch: 2"
     },
     {

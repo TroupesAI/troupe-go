@@ -1,7 +1,7 @@
 {
   "description": "Empty values: null, \"\" and [] in optional fields fail the schema (Format 2.2); state/empty-values.json covers the fields where they are values",
-  "bundle": {
-    "kind": "bundle",
+  "story": {
+    "kind": "story",
     "tagline": "",
     "characters": [
       {
@@ -13,14 +13,14 @@
         "entries": [
           {
             "id": "e",
-            "keys": [],
+            "keywords": [],
             "when": null,
             "knownBy": [],
             "text": "x"
           },
           {
             "id": "f",
-            "keys": null,
+            "keywords": null,
             "text": "y"
           }
         ]
@@ -32,7 +32,7 @@
         "openings": [
           {
             "id": "o",
-            "title": "Anywhere",
+            "name": "Anywhere",
             "content": []
           }
         ]
@@ -61,7 +61,7 @@
           },
           {
             "code": "SCHEMA",
-            "at": "/characters/0/entries/0/keys"
+            "at": "/characters/0/entries/0/keywords"
           },
           {
             "code": "SCHEMA",
@@ -73,7 +73,7 @@
           },
           {
             "code": "SCHEMA",
-            "at": "/characters/0/entries/1/keys"
+            "at": "/characters/0/entries/1/keywords"
           },
           {
             "code": "SCHEMA",

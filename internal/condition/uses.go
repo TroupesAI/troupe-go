@@ -52,7 +52,7 @@ var idNames = map[string]struct {
 	list bool
 }{
 	"char":           {CharacterID, false},
-	"user":           {CharacterID, false},
+	"player":         {CharacterID, false},
 	"self":           {OwnerID, false},
 	"scenario":       {ScenarioID, false},
 	"opening":        {OpeningID, false},
@@ -72,7 +72,7 @@ var parseEnv = sync.OnceValue(func() *cel.Env {
 })
 
 // Uses returns what expr selects from state and own, and its other string
-// literals, other than hit()'s keys, which are text (Format 7.2, 10.1). It
+// literals, other than hit()'s keywords, which are text (Format 7.2, 10.1). It
 // fails when expr doesn't parse.
 func Uses(expr string) ([]Selection, []Literal, error) {
 	a, iss := parseEnv().Parse(expr)

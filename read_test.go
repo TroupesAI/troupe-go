@@ -23,19 +23,19 @@ import (
 // its index. What the model holds is what the document says: an integer may
 // be written with a zero fraction, a part has only the fields its type
 // defines, and ext keeps its bytes as written.
-func TestReadBundleModel(t *testing.T) {
-	in := `{"troupe":"0.14","kind":"bundle","name":5,"tags":["a",5],"ext":{"x.y": [1, 2.0]},
+func TestReadStoryModel(t *testing.T) {
+	in := `{"troupe":"0.15","kind":"story","name":5,"tags":["a",5],"ext":{"x.y": [1, 2.0]},
 		"scenarios":[{"id":"s",
 			"entries":[{"id":"e","text":"t","scanDepth":8.0,"chance":"often"}],
 			"openings":[{"id":"o","set":{"state.v":1,"state.w":null},
 				"content":[{"text":"hi","src":"x.png"},{"type":"image","src":"https://x.test/a.png","text":"no"}]}]}]}`
-	b, _, err := troupe.ReadBundle(strings.NewReader(in))
+	st, _, err := troupe.ReadStory(strings.NewReader(in))
 	if err != nil {
 		t.Fatal(err)
 	}
 	eight := 8
-	want := &troupe.Bundle{
-		Troupe: "0.14",
+	want := &troupe.Story{
+		Troupe: "0.15",
 		Ext:    jsontext.Value(`{"x.y": [1, 2.0]}`),
 		Scenarios: []troupe.Scenario{{
 			ID:      "s",
@@ -50,23 +50,23 @@ func TestReadBundleModel(t *testing.T) {
 			}},
 		}},
 	}
-	if !reflect.DeepEqual(b, want) {
-		t.Errorf("got  %+v\nwant %+v", b, want)
+	if !reflect.DeepEqual(st, want) {
+		t.Errorf("got  %+v\nwant %+v", st, want)
 	}
 }
 
 // A package's sessions are its files anywhere under sessions/, by path, read
 // only by ReadSessions, and every diagnostic names the file it is in. Its
 // other files, which aren't documents, are listed and open by path, and
-// bundle.json is kept as written. A session that fails PARSE fails the whole
-// package as ReadSessions reads it, which is then reported with that code
-// only (Format 15.2, 15.3).
+// story.json is kept as written. A session that fails UNREADABLE fails the
+// whole package as ReadSessions reads it, which is then reported with that
+// code only (Format 15.2, 15.3).
 func TestReadPackage(t *testing.T) {
-	header := `{"troupe":"0.14","kind":"session","scenario":"s"}` + "\n"
+	header := `{"troupe":"0.15","kind":"session","scenario":"s"}` + "\n"
 	message := `{"id":"1","from":"player","content":[{"text":"Hi."}]}`
-	bundle := `{"troupe":"0.14","kind":"bundle","mystery":1,"scenarios":[{"id":"s"}]}`
+	story := `{"troupe":"0.15","kind":"story","mystery":1,"scenarios":[{"id":"s"}]}`
 	files := map[string]string{
-		"bundle.json":                          bundle,
+		"story.json":                           story,
 		"sessions/a.troupe-session.jsonl":      header + message,
 		"sessions/old/b.troupe-session.jsonl":  header + `{"id":"1","from":"player","content":[{"text":"Hi."}],"mystery":1}`,
 		"sessions/notes.txt":                   "not a session",
@@ -101,8 +101,8 @@ func TestReadPackage(t *testing.T) {
 	if !slices.Equal(p.Sessions, sessionPaths) {
 		t.Errorf("sessions %q", p.Sessions)
 	}
-	bundleDiag := troupe.Diagnostic{Code: troupe.CodeUnknownField, File: "bundle.json", Pointer: "/mystery"}
-	if want := []troupe.Diagnostic{bundleDiag}; !reflect.DeepEqual(diags, want) {
+	storyDiag := troupe.Diagnostic{Code: troupe.CodeUnknownField, File: "story.json", Pointer: "/mystery"}
+	if want := []troupe.Diagnostic{storyDiag}; !reflect.DeepEqual(diags, want) {
 		t.Errorf("diagnostics %+v, want %+v", diags, want)
 	}
 	sessions, diags, err := p.ReadSessions()
@@ -113,13 +113,13 @@ func TestReadPackage(t *testing.T) {
 		t.Errorf("read sessions %q", got)
 	}
 	if want := []troupe.Diagnostic{
-		bundleDiag,
 		{Code: troupe.CodeUnknownField, File: "sessions/old/b.troupe-session.jsonl", Line: 2, Message: "1", Pointer: "/mystery"},
+		storyDiag,
 	}; !reflect.DeepEqual(diags, want) {
 		t.Errorf("diagnostics with sessions %+v, want %+v", diags, want)
 	}
-	if string(p.BundleJSON) != bundle {
-		t.Errorf("bundle.json %q", p.BundleJSON)
+	if string(p.StoryJSON) != story {
+		t.Errorf("story.json %q", p.StoryJSON)
 	}
 	if want := []string{"elsewhere/stray.troupe-session.jsonl", "sessions/notes.txt"}; !slices.Equal(p.Files, want) {
 		t.Errorf("files %q, want %q", p.Files, want)
@@ -139,35 +139,35 @@ func TestReadPackage(t *testing.T) {
 	}
 
 	files["sessions/broken.troupe-session.jsonl"] = header + `{"id":`
-	if p, diags = read(); p == nil || !reflect.DeepEqual(diags, []troupe.Diagnostic{bundleDiag}) {
-		t.Fatalf("with a broken session, the bundle doesn't read: %+v", diags)
+	if p, diags = read(); p == nil || !reflect.DeepEqual(diags, []troupe.Diagnostic{storyDiag}) {
+		t.Fatalf("with a broken session, the story doesn't read: %+v", diags)
 	}
 	if sessions, diags, err := p.ReadSessions(); err != nil || sessions != nil || !reflect.DeepEqual(diags, []troupe.Diagnostic{
-		{Code: troupe.CodeParse, File: "sessions/broken.troupe-session.jsonl", Line: 2, Pointer: "/id"},
+		{Code: troupe.CodeUnreadable, File: "sessions/broken.troupe-session.jsonl", Line: 2, Pointer: "/id"},
 	}) {
 		t.Errorf("with a broken session: %v, %v, diagnostics %+v", sessions != nil, err, diags)
 	}
 }
 
-// A package's bundle.json, read without the package but with its files'
+// A package's story.json, read without the package but with its files'
 // paths, reads as ReadPackage reads it: a package path must name one of them.
-func TestReadPackageBundle(t *testing.T) {
+func TestReadPackageStory(t *testing.T) {
 	for _, c := range []struct {
 		doc  string
 		want []string
 	}{
 		{
-			`{"troupe":"0.14","kind":"bundle","mystery":1,"cover":"images/cover.png"}`,
-			[]string{"UNKNOWN_FIELD bundle.json /mystery"},
+			`{"troupe":"0.15","kind":"story","mystery":1,"cover":"images/cover.png"}`,
+			[]string{"UNKNOWN_FIELD story.json /mystery"},
 		},
 		{
-			`{"troupe":"0.14","kind":"bundle","characters":[{"id":"kai","name":"Kai","description":"A thief.","avatar":"images/kai.png"}]}`,
-			[]string{"PARSE bundle.json /characters/0/avatar"},
+			`{"troupe":"0.15","kind":"story","characters":[{"id":"kai","name":"Kai","description":"A thief.","avatar":"images/kai.png"}]}`,
+			[]string{"UNREADABLE story.json /characters/0/avatar"},
 		},
 	} {
 		var buf bytes.Buffer
 		w := zip.NewWriter(&buf)
-		for name, data := range map[string]string{"bundle.json": c.doc, "images/cover.png": "PNG"} {
+		for name, data := range map[string]string{"story.json": c.doc, "images/cover.png": "PNG"} {
 			f, err := w.Create(name)
 			if err != nil {
 				t.Fatal(err)
@@ -183,17 +183,17 @@ func TestReadPackageBundle(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		var pb *troupe.Bundle
+		var pb *troupe.Story
 		if p != nil {
-			pb = p.Bundle
+			pb = p.Story
 		}
 
-		b, diags, err := troupe.ReadPackageBundle(strings.NewReader(c.doc), []string{"images/cover.png"})
+		st, diags, err := troupe.ReadPackageStory(strings.NewReader(c.doc), []string{"images/cover.png"})
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !reflect.DeepEqual(b, pb) {
-			t.Errorf("%s: got  %+v\nReadPackage %+v", c.doc, b, pb)
+		if !reflect.DeepEqual(st, pb) {
+			t.Errorf("%s: got  %+v\nReadPackage %+v", c.doc, st, pb)
 		}
 		if !reflect.DeepEqual(diags, pdiags) {
 			t.Errorf("%s: diagnostics %+v\nReadPackage %+v", c.doc, diags, pdiags)
@@ -220,15 +220,15 @@ func TestReadLimits(t *testing.T) {
 		}
 		return strings.Join(es, ",")
 	}
-	bundle := func(scenario string) func() ([]troupe.Diagnostic, error) {
+	story := func(scenario string) func() ([]troupe.Diagnostic, error) {
 		return func() ([]troupe.Diagnostic, error) {
-			_, d, err := troupe.ReadBundle(strings.NewReader(`{"troupe":"0.14","kind":"bundle","scenarios":[{"id":"s",` + scenario + `}]}`))
+			_, d, err := troupe.ReadStory(strings.NewReader(`{"troupe":"0.15","kind":"story","scenarios":[{"id":"s",` + scenario + `}]}`))
 			return d, err
 		}
 	}
 	session := func(lines ...string) func() ([]troupe.Diagnostic, error) {
 		return func() ([]troupe.Diagnostic, error) {
-			header := `{"troupe":"0.14","kind":"session","scenario":"s"}`
+			header := `{"troupe":"0.15","kind":"session","scenario":"s"}`
 			_, d, err := troupe.ReadSession(strings.NewReader(header + "\n" + strings.Join(lines, "\n")))
 			return d, err
 		}
@@ -247,29 +247,35 @@ func TestReadLimits(t *testing.T) {
 	}
 	root := `{"id":"r","from":"player","content":[{"text":""}]}`
 	tests := []struct {
-		name  string
-		read  func() ([]troupe.Diagnostic, error)
-		parse bool
+		name       string
+		read       func() ([]troupe.Diagnostic, error)
+		unreadable bool
 	}{
-		{"a bundle over 32 MiB", func() ([]troupe.Diagnostic, error) {
-			_, d, err := troupe.ReadBundle(io.MultiReader(strings.NewReader(`{"troupe":"0.14","kind":"bundle"}`), spaces{}))
+		{"a story over 32 MiB", func() ([]troupe.Diagnostic, error) {
+			_, d, err := troupe.ReadStory(io.MultiReader(strings.NewReader(`{"troupe":"0.15","kind":"story"}`), spaces{}))
 			return d, err
 		}, true},
-		{"10,000 entries", bundle(`"entries":[` + entries(10_000) + `]`), false},
-		{"10,001 entries", bundle(`"entries":[` + entries(10_001) + `]`), true},
-		{"1,001 variables", bundle(`"variables":[` + strings.Join(variables, ",") + `]`), true},
-		{"a text over 1 MiB", bundle(`"entries":[{"id":"e","text":"` + strings.Repeat("a", 1<<20+1) + `"}]`), true},
-		{"256 members of a scenario's cast", bundle(`"cast":[` + strings.Repeat(`{},`, 255) + `{}]`), false},
-		{"257 members of a scenario's cast", bundle(`"cast":[` + strings.Repeat(`{},`, 256) + `{}]`), true},
+		// Past its header, a session of another version is judged only by
+		// its size, and one over it is UNREADABLE alone (Format 15.3).
+		{"a session of another version over 256 MiB", func() ([]troupe.Diagnostic, error) {
+			_, d, err := troupe.ReadSession(io.MultiReader(strings.NewReader(`{"troupe":"0.16","kind":"session"}`+"\n"), blankLines{}))
+			return d, err
+		}, true},
+		{"10,000 entries", story(`"entries":[` + entries(10_000) + `]`), false},
+		{"10,001 entries", story(`"entries":[` + entries(10_001) + `]`), true},
+		{"1,001 variables", story(`"variables":[` + strings.Join(variables, ",") + `]`), true},
+		{"a text over 1 MiB", story(`"entries":[{"id":"e","text":"` + strings.Repeat("a", 1<<20+1) + `"}]`), true},
+		{"256 members of a scenario's cast", story(`"cast":[` + strings.Repeat(`{},`, 255) + `{}]`), false},
+		{"257 members of a scenario's cast", story(`"cast":[` + strings.Repeat(`{},`, 256) + `{}]`), true},
 		{"257 characters a session adds", func() ([]troupe.Diagnostic, error) {
-			header := `{"troupe":"0.14","kind":"session","scenario":"s","characters":[` + strings.Join(characters, ",") + `]}`
+			header := `{"troupe":"0.15","kind":"session","scenario":"s","characters":[` + strings.Join(characters, ",") + `]}`
 			_, d, err := troupe.ReadSession(strings.NewReader(header))
 			return d, err
 		}, true},
 		// A limit counts the document as written, items of the wrong type
 		// included (Format 15.3).
 		{"257 characters a session adds, one not an object", func() ([]troupe.Diagnostic, error) {
-			header := `{"troupe":"0.14","kind":"session","scenario":"s","characters":[` + strings.Join(characters[1:], ",") + `,5]}`
+			header := `{"troupe":"0.15","kind":"session","scenario":"s","characters":[` + strings.Join(characters[1:], ",") + `,5]}`
 			_, d, err := troupe.ReadSession(strings.NewReader(header))
 			return d, err
 		}, true},
@@ -305,7 +311,7 @@ func TestReadLimits(t *testing.T) {
 			}
 		}), true},
 		{"a session whose data doesn't match its checksum", pkg(func(w *zip.Writer) {
-			data := `{"troupe":"0.14","kind":"session","scenario":"s"}`
+			data := `{"troupe":"0.15","kind":"session","scenario":"s"}`
 			h := &zip.FileHeader{Name: "sessions/a.troupe-session.jsonl", Method: zip.Store, CRC32: 1, CompressedSize64: uint64(len(data)), UncompressedSize64: uint64(len(data))}
 			f, err := w.CreateRaw(h)
 			if err != nil {
@@ -322,18 +328,18 @@ func TestReadLimits(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if parse := len(diags) > 0 && diags[0].Code == troupe.CodeParse; parse != tt.parse || len(diags) > 1 {
+			if unreadable := len(diags) > 0 && diags[0].Code == troupe.CodeUnreadable; unreadable != tt.unreadable || len(diags) > 1 {
 				t.Errorf("diagnostics %q", locations(diags))
 			}
 		})
 	}
 }
 
-// A reader that fails is an error, not a PARSE.
+// A reader that fails is an error, not an UNREADABLE.
 func TestReadErrors(t *testing.T) {
 	fail := errors.New("broken")
-	if _, _, err := troupe.ReadBundle(io.MultiReader(strings.NewReader("{"), failing{fail})); !errors.Is(err, fail) {
-		t.Errorf("ReadBundle: %v", err)
+	if _, _, err := troupe.ReadStory(io.MultiReader(strings.NewReader("{"), failing{fail})); !errors.Is(err, fail) {
+		t.Errorf("ReadStory: %v", err)
 	}
 	if _, _, err := troupe.ReadSession(failing{fail}); !errors.Is(err, fail) {
 		t.Errorf("ReadSession: %v", err)
@@ -344,8 +350,8 @@ func TestReadErrors(t *testing.T) {
 	var buf bytes.Buffer
 	w := zip.NewWriter(&buf)
 	for name, data := range map[string]string{
-		"bundle.json":                     `{"troupe":"0.14","kind":"bundle"}`,
-		"sessions/a.troupe-session.jsonl": `{"troupe":"0.14","kind":"session","scenario":"s"}`,
+		"story.json":                      `{"troupe":"0.15","kind":"story"}`,
+		"sessions/a.troupe-session.jsonl": `{"troupe":"0.15","kind":"session","scenario":"s"}`,
 	} {
 		f, err := w.Create(name)
 		if err != nil {
@@ -377,16 +383,16 @@ func locations(diags []troupe.Diagnostic) []string {
 	return out
 }
 
-// pkg returns a reading of the package that write makes, with a bundle.json.
+// pkg returns a reading of the package that write makes, with a story.json.
 func pkg(write func(*zip.Writer)) func() ([]troupe.Diagnostic, error) {
 	return func() ([]troupe.Diagnostic, error) {
 		var buf bytes.Buffer
 		w := zip.NewWriter(&buf)
-		f, err := w.Create("bundle.json")
+		f, err := w.Create("story.json")
 		if err != nil {
 			return nil, err
 		}
-		if _, err := f.Write([]byte(`{"troupe":"0.14","kind":"bundle"}`)); err != nil {
+		if _, err := f.Write([]byte(`{"troupe":"0.15","kind":"story"}`)); err != nil {
 			return nil, err
 		}
 		write(w)
@@ -396,6 +402,16 @@ func pkg(write func(*zip.Writer)) func() ([]troupe.Diagnostic, error) {
 		_, d, err := troupe.ReadPackage(bytes.NewReader(buf.Bytes()), int64(buf.Len()))
 		return d, err
 	}
+}
+
+// blankLines is endless lines of spaces, which no session of this version
+// holds.
+type blankLines struct{}
+
+func (blankLines) Read(p []byte) (int, error) {
+	n, _ := spaces{}.Read(p)
+	p[n-1] = '\n'
+	return n, nil
 }
 
 // spaces is endless JSON whitespace.

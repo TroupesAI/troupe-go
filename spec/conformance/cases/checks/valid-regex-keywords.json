@@ -1,64 +1,64 @@
 {
-  "description": "Regex keys within the shared syntax and its limits are valid (Format 7.2, 14): every flag, categories, class escapes, a lazy quantifier, an escaped slash, a word boundary, groups nested 100 deep, and patterns of up to 1000 bytes written out in full. A key whose text after its last slash isn't lowercase letters, such as /r/ fans, is a plain key",
-  "note": "Written out, (a{10}){83} is (aaaaaaaaaa) 83 times, 996 bytes, and a{998,} is 998 copies of a then a*, 1000 bytes. The slashes around a key aren't part of its pattern.",
-  "bundle": {
-    "kind": "bundle",
+  "description": "Regex keywords within the shared syntax and its limits are valid (Format 7.2, 14): every flag, categories, class escapes, a lazy quantifier, an escaped slash, a word boundary, groups nested 100 deep, and patterns of up to 1000 bytes written out in full. A keyword whose text after its last slash isn't lowercase letters, such as /r/ fans, is a plain keyword",
+  "note": "Written out, (a{10}){83} is (aaaaaaaaaa) 83 times, 996 bytes, and a{998,} is 998 copies of a then a*, 1000 bytes. The slashes around a keyword aren't part of its pattern.",
+  "story": {
+    "kind": "story",
     "scenarios": [
       {
         "id": "s",
         "entries": [
           {
             "id": "under",
-            "keys": [
+            "keywords": [
               "/(a{10}){83}/"
             ],
             "text": "996 bytes written out"
           },
           {
             "id": "open_under",
-            "keys": [
+            "keywords": [
               "/a{998,}/"
             ],
             "text": "1000 bytes written out"
           },
           {
             "id": "deep",
-            "keys": [
+            "keywords": [
               "/((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((a))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))/"
             ],
             "text": "groups nested 100 deep"
           },
           {
             "id": "flags",
-            "keys": [
+            "keywords": [
               "/lamp/ims"
             ],
             "text": "every flag"
           },
           {
             "id": "forms",
-            "keys": [
+            "keywords": [
               "/\\p{Lu}\\w+[-a-z\\-.]+?\\/\\b/"
             ],
             "text": "a category, class escapes, a class with a literal -, a lazy quantifier, an escaped slash and a word boundary"
           },
           {
             "id": "plain",
-            "keys": [
+            "keywords": [
               "/r/ fans"
             ],
-            "text": "a plain key"
+            "text": "a plain keyword"
           },
           {
             "id": "words",
-            "keys": [
+            "keywords": [
               "/\\b(sword|blade)s?\\b/i"
             ],
-            "text": "a SillyTavern-style key"
+            "text": "a SillyTavern-style keyword"
           },
           {
             "id": "classes",
-            "keys": [
+            "keywords": [
               "/[-a\\[\\]][{}^$.*+?()|/]\\t\\P{Zs}/",
               "/a{1000}/"
             ],

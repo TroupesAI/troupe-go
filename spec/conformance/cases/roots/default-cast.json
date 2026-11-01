@@ -1,7 +1,7 @@
 {
-  "description": "A scenario without cast or worlds (Format 6.1, 6.4, 8.6, 11.1): the default cast is one player seat and every bundle character in bundle order, all present from the start; every bundle world is in use; the root records the opening's set",
-  "bundle": {
-    "kind": "bundle",
+  "description": "A scenario without cast or worlds (Format 6.1, 6.4, 8.6, 11.1): the default cast is one player seat and every story character in story order, all present from the start; every story world is in use; the root records the opening's set",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "elena",
@@ -17,7 +17,7 @@
             "by": [
               "model"
             ],
-            "description": "How patient {{char}} is with {{user}}."
+            "description": "How patient {{char}} is with {{player}}."
           }
         ]
       },

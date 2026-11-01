@@ -2,13 +2,13 @@
 
 A Go library for [Troupe](https://github.com/TroupesAI/troupe), an open file format for AI roleplay. It reads Troupe files, checks them, and computes what they mean: the state at a message, how macros render, how conditions evaluate and who knows what.
 
-**Status:** in development, targeting Troupe 0.14, the spec's current draft. It passes the whole conformance suite; the [plan](docs/plan.md) says what is still to come.
+**Status:** in development, targeting Troupe 0.15, the spec's current draft. It passes the whole conformance suite; the [plan](docs/plan.md) says what is still to come.
 
 ## Scope
 
 In scope: everything the [spec](https://github.com/TroupesAI/troupe/blob/main/spec/format.md) defines.
 
-- Reading bundles, packages and sessions: I-JSON, the limits, versions, the schemas and unknown fields (Format 2.2, 11, 12, 13, 14).
+- Reading stories, packages and sessions: I-JSON, the limits, versions, the schemas and unknown fields (Format 2.2, 11, 12, 13, 14).
 - The checks and their codes (Format 15.3).
 - The state at a message (Format 8.6).
 - Macros (Format 9) and conditions in CEL (Format 10).

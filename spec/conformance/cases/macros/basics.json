@@ -1,7 +1,7 @@
 {
-  "description": "Macro parsing (Format 9): {{char}}, {{user}}, no spaces outside comments and options, comments, escapes, picks, which end at the first }}; unknown forms, such as {{foo}}, are left as written and rescanned from the next character",
-  "bundle": {
-    "kind": "bundle",
+  "description": "Macro parsing (Format 9): {{char}}, {{player}}, no spaces outside comments and options, comments, escapes, picks, which end at the first }}; unknown forms, such as {{foo}}, are left as written and rescanned from the next character",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "a",
@@ -35,7 +35,7 @@
   "tests": [
     {
       "type": "macro",
-      "text": "{{char}} meets {{user}}.",
+      "text": "{{char}} meets {{player}}.",
       "char": "a",
       "expect": "Ann meets Pat."
     },
@@ -75,9 +75,9 @@
     {
       "type": "macro",
       "name": "macro names are case-sensitive",
-      "text": "{{Char}} {{USER}}",
+      "text": "{{Char}} {{PLAYER}}",
       "char": "a",
-      "expect": "{{Char}} {{USER}}"
+      "expect": "{{Char}} {{PLAYER}}"
     },
     {
       "type": "macro",

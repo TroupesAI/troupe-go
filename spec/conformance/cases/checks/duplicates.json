@@ -1,7 +1,7 @@
 {
   "description": "Duplicate IDs (Format 2.3, 15.3): characters, worlds and scenarios share one namespace; locations are unique across worlds; openings within a scenario; variables within an owner. A cast names each character once and worlds lists each world once. An entry and a variable of one owner may share an ID",
-  "bundle": {
-    "kind": "bundle",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "x",
@@ -77,11 +77,11 @@
         "openings": [
           {
             "id": "o",
-            "title": "First"
+            "name": "First"
           },
           {
             "id": "o",
-            "title": "Again"
+            "name": "Again"
           }
         ]
       },

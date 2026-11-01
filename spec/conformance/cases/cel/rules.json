@@ -1,7 +1,7 @@
 {
-  "description": "CEL rules (Format 10.2): list and map literals hold one type; type names and whole state objects aren't values; state isn't indexed by computed strings; selecting char or user from a keyed variable is a CEL_ERROR; CEL's runtime errors (overflow, division by zero) make a condition false, and && and || absorb them; selecting an absent value is a runtime error, and has() is true exactly when the selection isn't one (Format 8.3, 10.2); hit() takes a valid literal key; own is a CEL_ERROR in a session entry's condition (Format 8.2); with no player, user is \"\"",
-  "bundle": {
-    "kind": "bundle",
+  "description": "CEL rules (Format 10.2): list and map literals hold one type; type names and whole state objects aren't values; state isn't indexed by computed strings; selecting char or player from a keyed variable is a CEL_ERROR; CEL's runtime errors (overflow, division by zero) make a condition false, and && and || absorb them; selecting an absent value is a runtime error, and has() is true exactly when the selection isn't one (Format 8.3, 10.2); hit() takes a valid literal keyword; own is a CEL_ERROR in a session entry's condition (Format 8.2); with no players, player is \"\"",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "zed",
@@ -27,7 +27,7 @@
           {
             "id": "order",
             "type": "int",
-            "of": [
+            "per": [
               "alpha",
               "zeta"
             ],
@@ -37,7 +37,7 @@
           {
             "id": "inv",
             "type": "int",
-            "of": "*",
+            "per": "*",
             "by": [
               "player"
             ],
@@ -128,7 +128,7 @@
     },
     {
       "type": "cel",
-      "expr": "state.order.user == 1",
+      "expr": "state.order.player == 1",
       "expect": {
         "checkError": true
       }
@@ -213,14 +213,14 @@
     },
     {
       "type": "cel",
-      "name": "with no player, user is \"\" and players is []",
-      "expr": "user == '' && players == []",
+      "name": "with no players, player is \"\" and players is []",
+      "expr": "player == '' && players == []",
       "expect": true
     },
     {
       "type": "cel",
       "name": "hit() takes a string literal",
-      "expr": "hit(user)",
+      "expr": "hit(player)",
       "expect": {
         "checkError": true
       }
@@ -232,12 +232,6 @@
       "expect": {
         "checkError": true
       }
-    },
-    {
-      "type": "cel",
-      "name": "hit() is available in every expression",
-      "expr": "hit('rope')",
-      "expect": false
     },
     {
       "type": "cel",

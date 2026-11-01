@@ -1,7 +1,7 @@
 {
-  "description": "Variable keys can't be char or user (Format 2.3, 8.3): a list naming one is SCHEMA, and a \"*\" key named char is no valid key (Format 8.5), so UNKNOWN_VARIABLE",
-  "bundle": {
-    "kind": "bundle",
+  "description": "Variable keys can't be char or player (Format 2.3, 8.3): a list naming one is SCHEMA, and a \"*\" key named char is no valid key (Format 8.5), so UNKNOWN_STATE_KEY",
+  "story": {
+    "kind": "story",
     "scenarios": [
       {
         "id": "s",
@@ -9,15 +9,15 @@
           {
             "id": "inv",
             "type": "int",
-            "of": "*",
+            "per": "*",
             "description": "Items."
           },
           {
             "id": "rep",
             "type": "int",
-            "of": [
+            "per": [
               "watch",
-              "user"
+              "player"
             ],
             "description": "Standing."
           }
@@ -39,15 +39,15 @@
       "expect": {
         "codes": [
           "SCHEMA",
-          "UNKNOWN_VARIABLE"
+          "UNKNOWN_STATE_KEY"
         ],
         "includes": [
           {
             "code": "SCHEMA",
-            "at": "/scenarios/0/variables/1/of/1"
+            "at": "/scenarios/0/variables/1/per/1"
           },
           {
-            "code": "UNKNOWN_VARIABLE",
+            "code": "UNKNOWN_STATE_KEY",
             "at": "/scenarios/0/openings/0/set/state.inv.char"
           }
         ]

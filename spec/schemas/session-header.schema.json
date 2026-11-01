@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://docs.troupes.ai/schema/0.14/session-header.schema.json",
+  "$id": "https://docs.troupes.ai/schema/0.15/session-header.schema.json",
   "title": "Troupe session header",
-  "description": "The first line of a Troupe session file.",
+  "description": "The first line of a Troupe session.",
   "type": "object",
   "required": [
     "troupe",
@@ -12,31 +12,30 @@
   "additionalProperties": false,
   "properties": {
     "$schema": {
-      "type": "string",
-      "minLength": 1
+      "$ref": "story.schema.json#/$defs/nonEmpty"
     },
     "troupe": {
-      "$ref": "bundle.schema.json#/$defs/version"
+      "$ref": "story.schema.json#/$defs/version"
     },
     "kind": {
       "const": "session"
     },
     "name": {
-      "$ref": "bundle.schema.json#/$defs/nonEmpty"
+      "$ref": "story.schema.json#/$defs/nonEmpty"
     },
-    "bundle": {
-      "$ref": "bundle.schema.json#/$defs/opaqueId"
+    "story": {
+      "$ref": "story.schema.json#/$defs/opaqueId"
     },
-    "limits": {
-      "$ref": "bundle.schema.json#/$defs/limits"
+    "boundaries": {
+      "$ref": "story.schema.json#/$defs/boundaries"
     },
     "scenario": {
-      "$ref": "bundle.schema.json#/$defs/ownerId"
+      "$ref": "story.schema.json#/$defs/ownerId"
     },
     "characters": {
       "type": "array",
       "items": {
-        "$ref": "bundle.schema.json#/$defs/character"
+        "$ref": "story.schema.json#/$defs/character"
       },
       "minItems": 1
     },
@@ -44,22 +43,22 @@
       "type": "array",
       "uniqueItems": true,
       "items": {
-        "$ref": "bundle.schema.json#/$defs/characterId"
+        "$ref": "story.schema.json#/$defs/characterId"
       },
       "minItems": 1
     },
     "worlds": {
       "type": "array",
       "items": {
-        "$ref": "bundle.schema.json#/$defs/world"
+        "$ref": "story.schema.json#/$defs/world"
       },
       "minItems": 1
     },
     "head": {
-      "$ref": "bundle.schema.json#/$defs/opaqueId"
+      "$ref": "story.schema.json#/$defs/opaqueId"
     },
     "ext": {
-      "$ref": "bundle.schema.json#/$defs/ext"
+      "$ref": "story.schema.json#/$defs/ext"
     }
   }
 }

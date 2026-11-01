@@ -1,7 +1,7 @@
 {
   "description": "A root made from an opening holds the opening's content with each {{pick}} replaced by the option chosen (Format 9, 11.1), so the first message reads the same every time it is shown; its other macros still resolve at the root",
-  "bundle": {
-    "kind": "bundle",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "ann",
@@ -18,7 +18,7 @@
             "content": [
               {
                 "speaker": "ann",
-                "text": "{{pick::Rain::Fog}} again, {{user}}."
+                "text": "{{pick::Rain::Fog}} again, {{player}}."
               }
             ]
           }
@@ -49,7 +49,7 @@
         "content": [
           {
             "speaker": "ann",
-            "text": "Fog again, {{user}}."
+            "text": "Fog again, {{player}}."
           }
         ]
       }
@@ -64,7 +64,7 @@
     },
     {
       "type": "macro",
-      "name": "the chosen option, with {{user}} resolved at the root",
+      "name": "the chosen option, with {{player}} resolved at the root",
       "part": {
         "message": "1",
         "index": 0

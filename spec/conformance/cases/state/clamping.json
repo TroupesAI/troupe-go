@@ -1,7 +1,7 @@
 {
   "description": "Clamping (Format 8.5, 8.6): an int outside min and max is valid; initial and recorded values are clamped in the state; clamping raises a value to min, then lowers it to max, so max wins when the bounds cross",
-  "bundle": {
-    "kind": "bundle",
+  "story": {
+    "kind": "story",
     "scenarios": [
       {
         "id": "s",

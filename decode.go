@@ -14,8 +14,8 @@ import (
 // maxSafeInteger bounds integer fields and int values (Format 2.2, 8.5).
 const maxSafeInteger = 1<<53 - 1
 
-// lenient decodes into the typed model whatever passed PARSE. Unknown members
-// are ignored, since the schema pass reports them.
+// lenient decodes into the typed model whatever read without UNREADABLE.
+// Unknown members are ignored, since the schema pass reports them.
 var lenient json.Options
 
 func init() {
@@ -192,7 +192,7 @@ func fits(t reflect.Type, val jsontext.Value) bool {
 	}
 }
 
-// decodeKeys decodes `of` (Format 8.3): "cast", "*" or a list of keys.
+// decodeKeys decodes `per` (Format 8.3): "cast", "*" or a list of keys.
 func decodeKeys(dec *jsontext.Decoder, k *Keys) error {
 	switch dec.PeekKind() {
 	case '"':

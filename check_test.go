@@ -14,7 +14,7 @@ import (
 // (Format 8.2), even when another owner shares its ID, so Check reports only
 // the DUPLICATE_ID.
 func TestCheckOwnSharedID(t *testing.T) {
-	for _, c := range []struct{ name, bundle, at string }{
+	for _, c := range []struct{ name, story, at string }{
 		{"scenario", `"characters":[{"id":"kai","name":"Kai","description":"{{own.nerve}}",
 			"variables":[{"id":"nerve","type":"int","description":"n"}],
 			"entries":[{"id":"e","when":"own.nerve >= 2","text":"t"}]}],
@@ -27,12 +27,12 @@ func TestCheckOwnSharedID(t *testing.T) {
 			"scenarios":[{"id":"s"}]`, "/characters/1/id"},
 	} {
 		t.Run(c.name, func(t *testing.T) {
-			b, diags, err := troupe.ReadBundle(strings.NewReader(`{"troupe":"0.14","kind":"bundle",` + c.bundle + `}`))
+			st, diags, err := troupe.ReadStory(strings.NewReader(`{"troupe":"0.15","kind":"story",` + c.story + `}`))
 			if err != nil || diags != nil {
 				t.Fatal(err, diags)
 			}
 			want := []troupe.Diagnostic{{Code: troupe.CodeDuplicateID, Pointer: c.at}}
-			if got := troupe.Check(b, nil); !slices.Equal(got, want) {
+			if got := troupe.Check(st, nil); !slices.Equal(got, want) {
 				t.Errorf("Check = %v, want %v", got, want)
 			}
 		})
@@ -43,13 +43,13 @@ func TestCheckOwnSharedID(t *testing.T) {
 // state before the message, and its diagnostics with the spec's codes are
 // those Check gives the message once it is recorded.
 func TestCheckChanges(t *testing.T) {
-	b, diags, err := troupe.ReadBundle(strings.NewReader(`{"troupe":"0.14","kind":"bundle",
+	st, diags, err := troupe.ReadStory(strings.NewReader(`{"troupe":"0.15","kind":"story",
 		"characters":[{"id":"a","name":"Ann","description":"d"}],
 		"worlds":[{"id":"w","name":"W","description":"d","locations":[{"id":"dock","name":"Dock","description":"d"}]}],
 		"scenarios":[{"id":"s","cast":[{},{"character":"a"}],"worlds":["w"],"variables":[
 			{"id":"bell","type":"int","max":20,"by":["model"],"maxStep":2,"oneWay":true,"description":"d"},
-			{"id":"trust","type":"int","of":"cast","max":100,"by":["model","player"],"maxStep":5,"description":"d"},
-			{"id":"inv","type":"int","of":"*","by":["model"],"oneWay":true,"description":"d"},
+			{"id":"trust","type":"int","per":"cast","max":100,"by":["model","player"],"maxStep":5,"description":"d"},
+			{"id":"inv","type":"int","per":"*","by":["model"],"oneWay":true,"description":"d"},
 			{"id":"phase","type":"enum","values":["calm","tense","open"],"by":["model"],"oneWay":true,"description":"d"},
 			{"id":"tags","type":"set","by":["model"],"oneWay":true,"description":"d"},
 			{"id":"lit","type":"bool","by":["model"],"oneWay":true,"description":"d"},
@@ -62,16 +62,16 @@ func TestCheckChanges(t *testing.T) {
 	for i := range inv {
 		inv[i] = fmt.Sprintf(`"state.inv.k%d":1`, i)
 	}
-	s, diags, err := troupe.ReadSession(strings.NewReader(`{"troupe":"0.14","kind":"session","scenario":"s","characters":[{"id":"p","name":"Pat","description":"d"}],"players":["p"]}
+	s, diags, err := troupe.ReadSession(strings.NewReader(`{"troupe":"0.15","kind":"session","scenario":"s","characters":[{"id":"p","name":"Pat","description":"d"}],"players":["p"]}
 {"id":"1","from":"player","content":[{"text":"x"}],"changes":[{"by":"player","set":{"state.bell":11,"state.trust.a":98,"state.inv.torch":2,"state.phase":"tense","state.tags":["x"],"state.lit":true,` + strings.Join(inv, ",") + `}}]}`))
 	if err != nil || diags != nil {
 		t.Fatal(err, diags)
 	}
-	story, err := troupe.NewStory(b, s)
+	play, err := troupe.NewPlay(st, s)
 	if err != nil {
 		t.Fatal(err)
 	}
-	before := story.Apply(story.Initial(), &s.Messages[0])
+	before := play.Apply(play.Initial(), &s.Messages[0])
 
 	at := func(code troupe.Code, pointer string) troupe.Diagnostic {
 		return troupe.Diagnostic{Code: code, Pointer: pointer}
@@ -86,8 +86,8 @@ func TestCheckChanges(t *testing.T) {
 			at(troupe.CodeUnknownLocation, "/changes/0/set/scene.location"),
 			at(troupe.CodeUnknownCharacter, "/changes/0/set/scene.present/0"),
 			at(troupe.CodeInvalidValue, "/changes/0/set/state.bell"),
-			at(troupe.CodeUnknownVariable, "/changes/0/set/state.nope"),
-			at(troupe.CodeUnknownVariable, "/changes/0/set/state.trust.zed"),
+			at(troupe.CodeUnknownStateKey, "/changes/0/set/state.nope"),
+			at(troupe.CodeUnknownStateKey, "/changes/0/set/state.trust.zed"),
 		}},
 		{"map limit", `[{"by":"model","set":{"state.inv.k255":1}},{"by":"model","set":{"state.inv.k256":1}}]`, []troupe.Diagnostic{
 			at(troupe.CodeInvalidValue, "/changes/1/set/state.inv.k256"),
@@ -132,7 +132,7 @@ func TestCheckChanges(t *testing.T) {
 			if err := json.Unmarshal([]byte(c.changes), &changes); err != nil {
 				t.Fatal(err)
 			}
-			got := story.CheckChanges(before, changes)
+			got := play.CheckChanges(before, changes)
 			if !slices.Equal(got, c.want) {
 				t.Errorf("CheckChanges = %v, want %v", got, c.want)
 			}
@@ -146,7 +146,7 @@ func TestCheckChanges(t *testing.T) {
 					want = append(want, d)
 				}
 			}
-			if got := troupe.Check(b, &recorded); !slices.Equal(got, want) {
+			if got := troupe.Check(st, &recorded); !slices.Equal(got, want) {
 				t.Errorf("Check = %v, want %v", got, want)
 			}
 		})
@@ -156,8 +156,8 @@ func TestCheckChanges(t *testing.T) {
 // Check undoes a message's changes latest first before judging its sibling,
 // so a key the message removes and sets again is put back as it was.
 func TestCheckUndoOrder(t *testing.T) {
-	b, diags, err := troupe.ReadBundle(strings.NewReader(`{"troupe":"0.14","kind":"bundle",
-		"scenarios":[{"id":"s","variables":[{"id":"inv","type":"int","of":"*","description":"d"}]}]}`))
+	st, diags, err := troupe.ReadStory(strings.NewReader(`{"troupe":"0.15","kind":"story",
+		"scenarios":[{"id":"s","variables":[{"id":"inv","type":"int","per":"*","description":"d"}]}]}`))
 	if err != nil || diags != nil {
 		t.Fatal(err, diags)
 	}
@@ -170,7 +170,7 @@ func TestCheckUndoOrder(t *testing.T) {
 	}
 	again := `"from":"player","content":[{"text":"x"}],"changes":[{"by":"player","set":{"state.inv.k0":0}},{"by":"player","set":{"state.inv.k0":1}}]}`
 	s, diags, err := troupe.ReadSession(strings.NewReader(strings.Join([]string{
-		`{"troupe":"0.14","kind":"session","scenario":"s"}`,
+		`{"troupe":"0.15","kind":"session","scenario":"s"}`,
 		`{"id":"r","from":"player","content":[{"text":"x"}],"changes":[{"by":"player","set":{` + strings.Join(keys, ",") + `}}]}`,
 		`{"id":"x1","parent":"r",` + again,
 		`{"id":"y","parent":"r","from":"player","content":[{"text":"x"}],"changes":[{"by":"player","set":{"state.inv.n":1}}]}`,
@@ -180,7 +180,7 @@ func TestCheckUndoOrder(t *testing.T) {
 		t.Fatal(err, diags)
 	}
 	want := []troupe.Diagnostic{{Code: troupe.CodeInvalidValue, Line: 4, Message: "y", Pointer: "/changes/0/set/state.inv.n"}}
-	if got := troupe.Check(b, s); !slices.Equal(got, want) {
+	if got := troupe.Check(st, s); !slices.Equal(got, want) {
 		t.Errorf("Check = %v, want %v", got, want)
 	}
 }

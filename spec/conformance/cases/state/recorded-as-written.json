@@ -1,7 +1,7 @@
 {
   "description": "Recorded changes apply as written (Format 8.1, 8.6): by, maxStep and oneWay aren't checked, so a step beyond maxStep, a oneWay variable moving back, and a change by someone by doesn't list all apply; values are then normalized: clamped and deduplicated",
-  "bundle": {
-    "kind": "bundle",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "a",

@@ -1,7 +1,7 @@
 {
-  "description": "Session lines are validated with format asserted (Format 15.3): a malformed timestamp is SCHEMA, and an unknown message field is UNKNOWN_FIELD",
-  "bundle": {
-    "kind": "bundle",
+  "description": "Session lines are validated with format asserted (Format 15.3): a timestamp the pattern allows but date-time doesn't, at hour 25, is SCHEMA, and an unknown message field is UNKNOWN_FIELD",
+  "story": {
+    "kind": "story",
     "scenarios": [
       {
         "id": "s"
@@ -27,7 +27,7 @@
       {
         "id": "1",
         "from": "player",
-        "at": "yesterday",
+        "at": "2026-10-17T25:00:00Z",
         "content": [
           {
             "text": "x"

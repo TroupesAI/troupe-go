@@ -1,7 +1,7 @@
 {
   "description": "Map rendering (Format 9): keys that are character IDs show the character's name, in any keyed variable; other keys show underscores as spaces, in declared order",
-  "bundle": {
-    "kind": "bundle",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "bea",
@@ -22,7 +22,7 @@
           {
             "id": "met",
             "type": "int",
-            "of": [
+            "per": [
               "watch_post",
               "bea"
             ],

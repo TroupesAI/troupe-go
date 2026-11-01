@@ -15,7 +15,7 @@ import (
 	"cel.dev/cel-go/common/types/ref"
 	"cel.dev/cel-go/interpreter"
 
-	"github.com/TroupesAI/troupe-go/internal/keys"
+	"github.com/TroupesAI/troupe-go/internal/keywords"
 )
 
 // Kind is the kind of a variable's values.
@@ -51,14 +51,14 @@ var builtins = []Var{
 	{Name: "scene.location", Kind: String},
 	{Name: "scene.present", Kind: Strings},
 	{Name: "scene.within", Kind: Strings},
-	{Name: "turn", Kind: Int},
+	{Name: "round", Kind: Int},
 	{Name: "elapsed", Kind: Int},
 	{Name: "hour", Kind: Int},
 	{Name: "weekday", Kind: Int},
 	{Name: "opening", Kind: String},
 	{Name: "scenario", Kind: String},
 	{Name: "char", Kind: String},
-	{Name: "user", Kind: String},
+	{Name: "player", Kind: String},
 	{Name: "self", Kind: String},
 	{Name: "players", Kind: Strings},
 }
@@ -126,8 +126,8 @@ func declare(vars []Var) []cel.EnvOption {
 
 // Program is a compiled condition.
 type Program struct {
-	prg  cel.Program
-	keys []string // the keys its hit() calls take
+	prg      cel.Program
+	keywords []string // the keywords its hit() calls take
 }
 
 // Compile compiles a condition. It fails when the condition is a CEL_ERROR:
@@ -156,7 +156,7 @@ func (e *Env) Compile(expr string) (*Program, error) {
 	ast.PreOrderVisit(a.NativeRep().Expr(), ast.NewExprVisitor(func(x ast.Expr) {
 		if x.Kind() == ast.CallKind && x.AsCall().FunctionName() == operators.Index {
 			if args := x.AsCall().Args(); args[0].Kind() == ast.IdentKind && args[0].AsIdent() == hits {
-				p.keys = append(p.keys, string(args[1].AsLiteral().(types.String)))
+				p.keywords = append(p.keywords, string(args[1].AsLiteral().(types.String)))
 			}
 		}
 	}))
@@ -177,13 +177,13 @@ func dotted(x ast.Expr) bool {
 	return found
 }
 
-// Keys returns the keys the program's hit() calls take.
-func (p *Program) Keys() []string {
-	return p.keys
+// Keywords returns the keywords the program's hit() calls take.
+func (p *Program) Keywords() []string {
+	return p.keywords
 }
 
 // Eval evaluates the program, with the names it reads from vars and each of
-// its hit() keys found or not in hits. A runtime error makes the condition
+// its hit() keywords found or not in hits. A runtime error makes the condition
 // false (Format 10.2).
 func (p *Program) Eval(vars interpreter.Activation, hits map[string]bool) bool {
 	out, _, err := p.prg.Eval(withHits{vars, hits})
@@ -212,18 +212,18 @@ func expandHas(eh cel.MacroExprFactory, _ ast.Expr, args []ast.Expr) (ast.Expr, 
 	return eh.NewCall(hasValue, args[0]), nil
 }
 
-// expandHit expands hit(key) to a look-up of whether the key matches the
-// scanned text. The key is a string literal, and a regex key must be valid
-// (Format 10.2).
+// expandHit expands hit(keyword) to a look-up of whether the keyword matches
+// the scanned text. The keyword is a string literal, and a regex keyword must
+// be valid (Format 10.2).
 func expandHit(eh cel.MacroExprFactory, _ ast.Expr, args []ast.Expr) (ast.Expr, *cel.Error) {
-	key, ok := literalString(args[0])
+	keyword, ok := literalString(args[0])
 	if !ok {
 		return nil, eh.NewError(args[0].ID(), "hit() takes a string literal")
 	}
-	if _, err := keys.Compile(key); err != nil {
+	if _, err := keywords.Compile(keyword); err != nil {
 		return nil, eh.NewError(args[0].ID(), fmt.Sprintf("hit(): %v", err))
 	}
-	return eh.NewCall(operators.Index, eh.NewIdent(hits), eh.NewLiteral(types.String(key))), nil
+	return eh.NewCall(operators.Index, eh.NewIdent(hits), eh.NewLiteral(types.String(keyword))), nil
 }
 
 func literalString(x ast.Expr) (string, bool) {
@@ -247,7 +247,7 @@ var allowed = []string{
 // rules validates what the type check doesn't (Format 10.2): only the allowed
 // functions; only bool, int, string, list and map values, so no double,
 // bytes, uint or null literal and no type name used as a value; and no char
-// or user selected from a keyed variable, a map, which brackets look up.
+// or player selected from a keyed variable, a map, which brackets look up.
 type rules struct{}
 
 func (rules) Name() string { return "troupe.rules" }
@@ -271,7 +271,7 @@ func (rules) Validate(_ *cel.Env, _ cel.ValidatorConfig, a *ast.AST, iss *cel.Is
 		case ast.SelectKind:
 			s := x.AsSelect()
 			keyed := a.GetType(s.Operand().ID()).Kind() == types.MapKind
-			if ref, ok := refs[s.Operand().ID()]; ok && keyed && (s.FieldName() == "char" || s.FieldName() == "user") {
+			if ref, ok := refs[s.Operand().ID()]; ok && keyed && (s.FieldName() == "char" || s.FieldName() == "player") {
 				iss.ReportErrorAtID(x.ID(), "%s.%s selects a key named %s; brackets look up a computed key", ref.Name, s.FieldName(), s.FieldName())
 			}
 		}

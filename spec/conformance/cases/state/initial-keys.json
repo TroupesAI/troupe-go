@@ -1,7 +1,7 @@
 {
   "description": "A keyed initial object (Format 8.3): keys outside the key set are ignored, and a key without a value or \"*\" takes the type's default",
-  "bundle": {
-    "kind": "bundle",
+  "story": {
+    "kind": "story",
     "scenarios": [
       {
         "id": "s",
@@ -9,7 +9,7 @@
           {
             "id": "rep",
             "type": "int",
-            "of": [
+            "per": [
               "watch",
               "guild"
             ],

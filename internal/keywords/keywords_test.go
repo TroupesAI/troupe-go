@@ -1,17 +1,17 @@
-package keys
+package keywords
 
 import "testing"
 
-// A regex key means what it means in ECMAScript with the u flag (Format 14),
-// on the scanned text, whose every line break is \n (Format 7.2). Where RE2
-// reads a pattern differently, the translation gives ECMAScript's meaning:
+// A regex keyword means what it means in ECMAScript with the u flag (Format
+// 14), on the scanned text, whose every line break is \n (Format 7.2). Where
+// RE2 reads a pattern differently, the translation gives ECMAScript's meaning:
 // \s is Unicode white space, ſ and K are word characters under i, and \P{…}
-// under i holds every character with a case variant outside the category.
-// The expected results are V8's, on text whose line breaks are \n.
-func TestMatchRegexKey(t *testing.T) {
+// under i holds every character with a case variant outside the category. The
+// expected results are V8's, on text whose line breaks are \n.
+func TestMatchRegexKeyword(t *testing.T) {
 	tests := []struct {
-		key, text string
-		want      bool
+		keyword, text string
+		want          bool
 	}{
 		{"/a.b/", "a\rb", false},
 		{"/a.b/", "a\u2028b", false},
@@ -73,13 +73,13 @@ func TestMatchRegexKey(t *testing.T) {
 		{"/a\\nb/", "a\rb", true},
 	}
 	for _, tt := range tests {
-		k, err := Compile(tt.key)
+		k, err := Compile(tt.keyword)
 		if err != nil {
-			t.Errorf("%s: %v", tt.key, err)
+			t.Errorf("%s: %v", tt.keyword, err)
 			continue
 		}
 		if got := k.Match(Text(tt.text)); got != tt.want {
-			t.Errorf("%s on %q: %v, want %v", tt.key, tt.text, got, tt.want)
+			t.Errorf("%s on %q: %v, want %v", tt.keyword, tt.text, got, tt.want)
 		}
 	}
 }

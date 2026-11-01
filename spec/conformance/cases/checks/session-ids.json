@@ -1,7 +1,7 @@
 {
-  "description": "A session's characters and worlds share the ID namespace with the bundle's characters, worlds and scenarios, compared after them, and its locations are unique with the bundle's (Format 2.3, 15.3): a header character or world reusing a bundle ID of any kind, or a session location reusing a bundle location's, is DUPLICATE_ID, located at the session's ID",
-  "bundle": {
-    "kind": "bundle",
+  "description": "A session's characters and worlds share the ID namespace with the story's characters, worlds and scenarios, compared after them, and its locations are unique with the story's (Format 2.3, 15.3): a header character or world reusing a story ID of any kind, or a session location reusing a story location's, is DUPLICATE_ID, located at the session's ID",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "kai",
@@ -41,7 +41,7 @@
         {
           "id": "kai",
           "name": "Kai",
-          "description": "A persona with a story character's ID."
+          "description": "A joiner with a story character's ID."
         },
         {
           "id": "p",

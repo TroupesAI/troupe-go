@@ -1,7 +1,7 @@
 {
   "description": "A key set to the default is removed, and a change applies to the state on its path, so each of two sibling changes to a \"*\" map at 255 keys that removes one key and adds two stays within the limit of 256 (Format 8.3, 8.5, 8.6, 14)",
-  "bundle": {
-    "kind": "bundle",
+  "story": {
+    "kind": "story",
     "scenarios": [
       {
         "id": "s",
@@ -9,7 +9,7 @@
           {
             "id": "inv",
             "type": "int",
-            "of": "*",
+            "per": "*",
             "by": [
               "player"
             ],

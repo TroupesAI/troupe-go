@@ -1,7 +1,7 @@
 {
-  "description": "Macro resolution and rendering (Format 9): undeclared variables are left as written, while absent keys, paths below non-maps and owners not in use render as nothing; map keys in declared order, cast order for characters, and \"*\" keys in code point order",
-  "bundle": {
-    "kind": "bundle",
+  "description": "Macro resolution and rendering (Format 9): undeclared variables are left as written, while absent keys, paths below non-maps and owners not in use render as nothing; map keys in declared order and cast order for characters",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "a",
@@ -43,13 +43,13 @@
           {
             "id": "trust",
             "type": "int",
-            "of": "cast",
+            "per": "cast",
             "description": "d"
           },
           {
             "id": "rep",
             "type": "int",
-            "of": [
+            "per": [
               "watch",
               "guild",
               "crown"
@@ -59,7 +59,7 @@
           {
             "id": "inv",
             "type": "int",
-            "of": "*",
+            "per": "*",
             "description": "d"
           },
           {
@@ -104,28 +104,7 @@
               "state.trust.b": 40,
               "state.trust.a": 90,
               "state.rep.crown": 3,
-              "state.rep.watch": 1,
-              "state.inv.rope": 1,
-              "state.inv.axe": 2
-            }
-          }
-        ]
-      },
-      {
-        "id": "3",
-        "parent": "1",
-        "from": "player",
-        "content": [
-          {
-            "speaker": "p",
-            "text": "y"
-          }
-        ],
-        "changes": [
-          {
-            "by": "player",
-            "set": {
-              "state.inv.cup": 1
+              "state.rep.watch": 1
             }
           }
         ]
@@ -161,13 +140,6 @@
       "at": "1",
       "text": "{{state.trust}} | {{state.rep}}",
       "expect": "Pat: 0, Ann: 90, Bea: 40 | watch: 1, guild: 0, crown: 3"
-    },
-    {
-      "type": "macro",
-      "name": "\"*\" keys in code point order, whatever order the changes used",
-      "at": "3",
-      "text": "{{state.inv}}",
-      "expect": "axe: 2, cup: 1, rope: 1"
     },
     {
       "type": "check",

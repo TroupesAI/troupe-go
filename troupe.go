@@ -1,22 +1,22 @@
 // Package troupe reads files in the Troupe format, checks them, and computes
 // what they mean, as the Troupe specification defines.
 //
-// ReadBundle, ReadSession and ReadPackage read the three forms of a file,
+// ReadStory, ReadSession and ReadPackage read the three forms of a file,
 // Package.ReadSessions reads a package's sessions, and Check runs the checks
 // reading leaves. A document with any diagnostic doesn't conform, and serves
 // only to report them. Package.Open streams a package's other files, such as
-// its images, and ReadPackageBundle reads its bundle.json stored apart from
-// it. Bundle.FileFields yields the fields that
-// hold a file, and ReplaceFileFields sets them in a document's JSON, keeping
-// every other byte.
+// its images, and ReadPackageStory reads its story.json stored apart from it.
+// Story.FileFields yields the fields that hold a file, and ReplaceFileFields
+// sets them in a document's JSON, keeping every other byte.
 //
-// For an editor, Bundle.CheckID checks the ID of an object being added, and
-// Bundle.RenameID makes the JSON Patch that renames one with every reference
+// For an editor, Story.CheckID checks the ID of an object being added, and
+// Story.RenameID makes the JSON Patch that renames one with every reference
 // to it.
 //
-// NewStory makes the story a session plays, and NewScenarioStory a scenario
-// played on its own. A story gives its cast, the worlds in use, its mode,
-// what it calls the narrator, the keys its changes can write, and its states:
+// NewPlay makes the play of a session: a story's scenario as the session
+// plays it. NewScenarioPlay makes a scenario's play on its own. A play gives
+// its cast, the worlds in use, its mode, what it calls the narrator, the
+// state keys its changes can write, and its states:
 // Initial, StateAt for a message, and Apply, which gives a message's state
 // from its parent's, so a caller that keeps each message's state never
 // replays a path. CheckChanges judges a message's changes before they are
@@ -39,11 +39,10 @@
 // same JSON.
 //
 // The package does no I/O, and is deterministic: randomness comes from a
-// source the caller passes. Stories, states and points are safe for
-// concurrent use, and the package only reads the documents it is given, so
-// a bundle or session read once can serve any number of stories, checks and
-// calls at once.
+// source the caller passes. Plays, states and points are safe for concurrent
+// use, and the package only reads the documents it is given, so a story or
+// session read once can serve any number of plays, checks and calls at once.
 package troupe
 
 // Version is the Troupe version this module reads.
-const Version = "0.14"
+const Version = "0.15"

@@ -15,41 +15,41 @@ import (
 	"github.com/TroupesAI/troupe-go/internal/ijson"
 )
 
-// ReadBundle reads a bundle's JSON, as a single file holds it (Format 3, 12.1).
-// It returns the diagnostics of PARSE, UNSUPPORTED_VERSION, SCHEMA and
-// UNKNOWN_FIELD, sorted by location. The bundle is nil when it fails PARSE or
-// UNSUPPORTED_VERSION; with other diagnostics it serves only to report them.
-// The error is r's, when reading it fails.
-func ReadBundle(r io.Reader) (*Bundle, []Diagnostic, error) {
+// ReadStory reads a story file (Format 3, 12.1). It returns the diagnostics
+// of UNREADABLE, UNSUPPORTED_VERSION, SCHEMA and UNKNOWN_FIELD, sorted by
+// location. The story is nil when it fails UNREADABLE or UNSUPPORTED_VERSION;
+// with other diagnostics it serves only to report them. The error is r's,
+// when reading it fails.
+func ReadStory(r io.Reader) (*Story, []Diagnostic, error) {
 	var rd reader
-	b, _, err := rd.bundle(r)
+	st, _, err := rd.story(r)
 	if err != nil {
 		return nil, nil, err
 	}
-	return b, rd.diagnostics(), nil
+	return st, rd.diagnostics(), nil
 }
 
-// ReadPackageBundle reads bundle.json as a package holds it, without the
+// ReadPackageStory reads story.json as a package holds it, without the
 // package. Files are the paths of the package's files, such as Package.Files
 // and Package.Sessions, and its package paths must name one of them or
-// bundle.json (Format 12.2, 12.3). Its results are those ReadPackage
-// gives for that bundle.json, so every diagnostic's File is "bundle.json".
-func ReadPackageBundle(r io.Reader, files []string) (*Bundle, []Diagnostic, error) {
-	rd := reader{file: "bundle.json", files: map[string]bool{"bundle.json": true}}
+// story.json (Format 12.2, 12.3). Its results are those ReadPackage gives for
+// that story.json, so every diagnostic's File is "story.json".
+func ReadPackageStory(r io.Reader, files []string) (*Story, []Diagnostic, error) {
+	rd := reader{file: "story.json", files: map[string]bool{"story.json": true}}
 	for _, f := range files {
 		rd.files[f] = true
 	}
-	b, _, err := rd.bundle(r)
+	st, _, err := rd.story(r)
 	if err != nil {
 		return nil, nil, err
 	}
-	return b, rd.diagnostics(), nil
+	return st, rd.diagnostics(), nil
 }
 
 // ReadSession reads a session file, line by line (Format 11). Its results are
-// those of ReadBundle, for the whole file: the session is nil when any line
-// fails PARSE, or its header UNSUPPORTED_VERSION, and its diagnostics are then
-// only those.
+// those of ReadStory, for the whole file: the session is nil when any line
+// fails UNREADABLE, or its header UNSUPPORTED_VERSION, and its diagnostics are
+// then only those.
 func ReadSession(r io.Reader) (*Session, []Diagnostic, error) {
 	var rd reader
 	s, err := rd.session(r)
@@ -77,26 +77,34 @@ func readAll(r io.Reader, limit int64) ([]byte, error) {
 	return data, err
 }
 
-// bundle reads a bundle, and returns it with its bytes.
-func (rd *reader) bundle(r io.Reader) (*Bundle, []byte, error) {
-	data, err := readAll(r, maxBundleSize)
+// story reads a story, and returns it with its bytes.
+func (rd *reader) story(r io.Reader) (*Story, []byte, error) {
+	data, err := readAll(r, maxStorySize)
 	if errors.Is(err, errTooLarge) {
-		rd.report(Diagnostic{Code: CodeParse})
+		rd.report(Diagnostic{Code: CodeUnreadable})
 		return nil, nil, nil
 	}
 	if err != nil {
 		return nil, nil, err
 	}
-	var b Bundle
-	if !rd.document(data, 0, bundleDoc, &b) {
+	tree, ok := rd.parse(data, 0)
+	if !ok {
 		return nil, nil, nil
 	}
-	return &b, data, nil
+	if otherVersion(tree) {
+		rd.report(Diagnostic{Code: CodeUnsupportedVersion, Pointer: "/troupe"})
+		return nil, nil, nil
+	}
+	var st Story
+	if !rd.document(tree, data, 0, storyDoc, &st) {
+		return nil, nil, nil
+	}
+	return &st, data, nil
 }
 
 func (rd *reader) session(r io.Reader) (*Session, error) {
 	var s Session
-	ok := true
+	ok, other := true, false
 	br := bufio.NewReader(io.LimitReader(r, maxSessionSize+1))
 	size, line := 0, 0
 	for {
@@ -109,35 +117,45 @@ func (rd *reader) session(r io.Reader) (*Session, error) {
 		}
 		line++
 		if size += len(data); size > maxSessionSize {
-			rd.report(Diagnostic{Code: CodeParse, Line: line})
+			rd.report(Diagnostic{Code: CodeUnreadable, Line: line})
 			return nil, nil
+		}
+		// Past its header, a session of another version is judged only by
+		// its size (Format 15.3).
+		if other {
+			continue
 		}
 		// Lines end with \n or \r\n, and none is empty (Format 11).
 		data = bytes.TrimSuffix(bytes.TrimSuffix(data, []byte("\n")), []byte("\r"))
 		switch {
 		case line == 1:
 			// Without its header, a session's other lines mean nothing.
-			if len(data) == 0 {
-				rd.report(Diagnostic{Code: CodeParse, Line: line})
+			tree, read := rd.parse(data, line)
+			if !read {
 				return nil, nil
 			}
-			if !rd.document(data, line, headerDoc, &s.Header) {
+			if other = otherVersion(tree); !other && !rd.document(tree, data, line, headerDoc, &s.Header) {
 				return nil, nil
 			}
 		case len(data) == 0:
-			rd.report(Diagnostic{Code: CodeParse, Line: line})
+			rd.report(Diagnostic{Code: CodeUnreadable, Line: line})
 			ok = false
 		case line-1 > maxMessages:
-			rd.report(Diagnostic{Code: CodeParse, Line: line})
+			rd.report(Diagnostic{Code: CodeUnreadable, Line: line})
 			return nil, nil
 		default:
+			tree, read := rd.parse(data, line)
 			var m Message
-			ok = rd.document(data, line, messageDoc, &m) && ok
+			ok = read && rd.document(tree, data, line, messageDoc, &m) && ok
 			s.Messages = append(s.Messages, m)
 		}
 	}
 	if line == 0 {
-		rd.report(Diagnostic{Code: CodeParse, Line: 1})
+		rd.report(Diagnostic{Code: CodeUnreadable, Line: 1})
+		return nil, nil
+	}
+	if other {
+		rd.report(Diagnostic{Code: CodeUnsupportedVersion, Line: 1, Pointer: "/troupe"})
 		return nil, nil
 	}
 	if !ok || !rd.sessionEntries(&s) {
@@ -155,7 +173,7 @@ func (rd *reader) sessionEntries(s *Session) bool {
 		for j, e := range s.Messages[i].Entries {
 			if onPath[e.ID]++; onPath[e.ID] == 1 && len(onPath) == maxSessionEntries+1 {
 				at := inMessage(i, &s.Messages[i])
-				rd.report(Diagnostic{Code: CodeParse, Line: at.line, Message: at.message, Pointer: "/entries/" + strconv.Itoa(j)})
+				rd.report(Diagnostic{Code: CodeUnreadable, Line: at.line, Message: at.message, Pointer: "/entries/" + strconv.Itoa(j)})
 				ok = false
 			}
 		}
@@ -169,7 +187,7 @@ func (rd *reader) sessionEntries(s *Session) bool {
 	return ok
 }
 
-// docKind is a kind of document: a bundle, a session header or a message.
+// docKind is a kind of document: a story, a session header or a message.
 type docKind struct {
 	kind   string // the document's kind field; "" for a message, which has none
 	schema func() *jsonschema.Schema
@@ -177,7 +195,7 @@ type docKind struct {
 }
 
 var (
-	bundleDoc  = docKind{"bundle", func() *jsonschema.Schema { return schemas().bundle }, (*scan).bundle}
+	storyDoc   = docKind{"story", func() *jsonschema.Schema { return schemas().story }, (*scan).story}
 	headerDoc  = docKind{"session", func() *jsonschema.Schema { return schemas().header }, (*scan).header}
 	messageDoc = docKind{"", func() *jsonschema.Schema { return schemas().message }, (*scan).message}
 )
@@ -187,17 +205,32 @@ var (
 	messageID = regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}$`)
 )
 
-// document reads one document, at its line of a session or 0 for a bundle,
-// and decodes it into v. It reports false when the document fails PARSE or
-// UNSUPPORTED_VERSION, which it is then reported with only (Format 15.3).
-func (rd *reader) document(data []byte, line int, k docKind, v any) bool {
-	at := Diagnostic{Line: line}
+// parse reads one document, at its line of a session or 0 for a story, as
+// I-JSON within the nesting depth, and reports UNREADABLE when it isn't
+// (Format 15.3).
+func (rd *reader) parse(data []byte, line int) (any, bool) {
 	tree, err := ijson.Decode(data)
 	if e, ok := errors.AsType[*ijson.Error](err); ok {
-		at.Code, at.Pointer = CodeParse, string(e.Pointer)
-		rd.report(at)
-		return false
+		rd.report(Diagnostic{Code: CodeUnreadable, Line: line, Pointer: string(e.Pointer)})
+		return nil, false
 	}
+	return tree, true
+}
+
+// otherVersion reports whether a story or a session header names a version
+// other than this one; nothing else in it is then judged (Format 13, 15.3). A missing troupe, or one that isn't a version, is the
+// schema's to report.
+func otherVersion(tree any) bool {
+	doc, _ := tree.(map[string]any)
+	t, ok := doc["troupe"].(string)
+	return ok && version.MatchString(t) && t != Version
+}
+
+// document judges a parsed document of this version, at its line of a
+// session or 0 for a story, and decodes it into v. It reports false when the
+// document fails UNREADABLE.
+func (rd *reader) document(tree any, data []byte, line int, k docKind, v any) bool {
+	at := Diagnostic{Line: line}
 	doc, _ := tree.(map[string]any)
 	if id, ok := doc["id"].(string); ok && line > 1 {
 		at.Message = validID(id)
@@ -207,24 +240,13 @@ func (rd *reader) document(data []byte, line int, k docKind, v any) bool {
 		d.Code, d.Pointer = c, string(p)
 		rd.report(d)
 	}
-	if k.kind != "" {
-		// A document with a missing or other kind isn't one its form holds
-		// (Format 15.3).
-		kind := doc["kind"] == k.kind
-		if !kind {
-			report(CodeParse, "")
-		}
-		t, ok := doc["troupe"].(string)
-		supported := !ok || !version.MatchString(t) || t == Version
-		if !supported {
-			report(CodeUnsupportedVersion, "/troupe")
-		}
-		// The limits are this version's, for this kind of document.
-		if !kind || !supported {
-			return false
-		}
+	// A document with a missing or other kind isn't one its form holds, and
+	// the limits are those of its kind (Format 15.3).
+	if k.kind != "" && doc["kind"] != k.kind {
+		report(CodeUnreadable, "")
+		return false
 	}
-	sc := scan{report: func(p jsontext.Pointer) { report(CodeParse, p) }, files: rd.files}
+	sc := scan{report: func(p jsontext.Pointer) { report(CodeUnreadable, p) }, files: rd.files}
 	k.scan(&sc, doc)
 	if sc.failed {
 		return false
@@ -240,8 +262,8 @@ func (rd *reader) report(d Diagnostic) {
 }
 
 // diagnostics returns the input's diagnostics, sorted. An input, a whole file
-// or package, that fails PARSE or UNSUPPORTED_VERSION is reported with those
-// codes only (Format 15.3).
+// or package, that fails UNREADABLE or UNSUPPORTED_VERSION is reported with
+// those codes only (Format 15.3).
 func (rd *reader) diagnostics() []Diagnostic {
 	if rd.unread() {
 		rd.diags = slices.DeleteFunc(rd.diags, func(d Diagnostic) bool { return !unread(d) })
@@ -249,11 +271,11 @@ func (rd *reader) diagnostics() []Diagnostic {
 	return sortDiagnostics(rd.diags)
 }
 
-// unread reports whether the input fails PARSE or UNSUPPORTED_VERSION.
+// unread reports whether the input fails UNREADABLE or UNSUPPORTED_VERSION.
 func (rd *reader) unread() bool {
 	return slices.ContainsFunc(rd.diags, unread)
 }
 
 func unread(d Diagnostic) bool {
-	return d.Code == CodeParse || d.Code == CodeUnsupportedVersion
+	return d.Code == CodeUnreadable || d.Code == CodeUnsupportedVersion
 }

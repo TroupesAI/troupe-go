@@ -3,6 +3,7 @@ package macro
 
 import (
 	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -13,7 +14,7 @@ type Kind int
 const (
 	Text     Kind = iota // literal text, escapes resolved
 	Char                 // {{char}}
-	User                 // {{user}}
+	Player               // {{player}}
 	State                // {{state.<path>}}
 	Own                  // {{own.<path>}}
 	Location             // {{scene.location}}
@@ -30,8 +31,29 @@ type Token struct {
 	Options []string // a Pick's options
 }
 
-// path is a state path: author IDs joined by dots (Format 2.3).
-var path = regexp.MustCompile(`^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$`)
+var authorID = regexp.MustCompile(`^[a-z][a-z0-9_]{0,63}$`)
+
+// celReserved are the words no author ID can be.
+var celReserved = []string{
+	"as", "break", "const", "continue", "else", "false", "for", "function", "if", "import",
+	"in", "let", "loop", "namespace", "null", "package", "return", "true", "var", "void", "while",
+}
+
+// IsAuthorID reports whether s is an author ID: it fits the grammar and isn't
+// a CEL reserved word (Format 2.3).
+func IsAuthorID(s string) bool {
+	return authorID.MatchString(s) && !slices.Contains(celReserved, s)
+}
+
+// isPath reports whether s is a state path (Format 9).
+func isPath(s string) bool {
+	for seg := range strings.SplitSeq(s, ".") {
+		if !IsAuthorID(seg) {
+			return false
+		}
+	}
+	return true
+}
 
 // Parse parses text in one left-to-right scan (Format 9). At each {{, the
 // form up to the next }} is a macro when it is one of the table's, with no
@@ -148,8 +170,8 @@ func form(src, body string, options bool) (*Token, bool) {
 		return nil, true
 	case body == "char":
 		return &Token{Kind: Char, Text: src}, true
-	case body == "user":
-		return &Token{Kind: User, Text: src}, true
+	case body == "player":
+		return &Token{Kind: Player, Text: src}, true
 	case body == "scene.location":
 		return &Token{Kind: Location, Text: src}, true
 	case body == "scene.present":
@@ -164,7 +186,7 @@ func form(src, body string, options bool) (*Token, bool) {
 		prefix string
 		kind   Kind
 	}{{"state.", State}, {"own.", Own}} {
-		if p, ok := strings.CutPrefix(body, k.prefix); ok && path.MatchString(p) {
+		if p, ok := strings.CutPrefix(body, k.prefix); ok && isPath(p) {
 			return &Token{Kind: k.kind, Text: src, Path: strings.Split(p, ".")}, true
 		}
 	}

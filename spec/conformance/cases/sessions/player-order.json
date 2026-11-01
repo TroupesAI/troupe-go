@@ -1,7 +1,7 @@
 {
-  "description": "Players and seats (Format 6.1, 8.3, 8.6, 11.2): each listed header character fills the next seat without a character, in the order players lists them; one left over gets a seat after the scenario cast; a listed cast character is played by a person; other header characters are joiners after the new seats; scene.location takes a location of any bundle world, even one the scenario doesn't use (Format 8.5)",
-  "bundle": {
-    "kind": "bundle",
+  "description": "Players and seats (Format 6.1, 8.3, 8.6, 11.2): each listed header character fills the next seat without a character, in the order players lists them; one left over gets a seat after the scenario cast; a listed cast character is played by a person; other header characters are joiners after the new seats; scene.location takes a location of any story world, even one the scenario doesn't use (Format 8.5)",
+  "story": {
+    "kind": "story",
     "worlds": [
       {
         "id": "w1",
@@ -65,7 +65,7 @@
           {
             "id": "trust",
             "type": "int",
-            "of": "cast",
+            "per": "cast",
             "initial": 50,
             "description": "d"
           }
@@ -142,7 +142,7 @@
   "tests": [
     {
       "type": "cel",
-      "name": "every character people control, as listed",
+      "name": "every player's character, as listed",
       "expr": "players == ['p', 'a', 'q', 'b', 'r']",
       "expect": true
     },

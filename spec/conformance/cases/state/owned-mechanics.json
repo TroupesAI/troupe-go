@@ -1,7 +1,7 @@
 {
   "description": "Owned variables (Format 2.3, 6.4, 8.2): each variable keeps its owner, so a character, a world and a scenario can each declare a variable with the same ID, and an owner's entry may share its variable's ID",
-  "bundle": {
-    "kind": "bundle",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "a",

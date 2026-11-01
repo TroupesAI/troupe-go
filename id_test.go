@@ -12,7 +12,7 @@ import (
 // is unique where its list's objects must be (Format 2.3), and tells a bad
 // pointer, an invalid ID and a taken one apart.
 func TestCheckID(t *testing.T) {
-	b, _, err := troupe.ReadBundle(strings.NewReader(`{"troupe":"0.14","kind":"bundle",
+	st, _, err := troupe.ReadStory(strings.NewReader(`{"troupe":"0.15","kind":"story",
 		"characters":[{"id":"kai","name":"Kai","description":"d"}],
 		"worlds":[{"id":"city","name":"City","locations":[{"id":"vault","name":"Vault"}]},{"id":"sea","name":"Sea"}],
 		"scenarios":[{"id":"heist","variables":[{"id":"bell","type":"int","description":"d"}],"openings":[{"id":"o"}]}]}`))
@@ -46,7 +46,7 @@ func TestCheckID(t *testing.T) {
 		{"/worlds/0/openings", "elena", troupe.ErrBadPointer},
 		{"/cast", "elena", troupe.ErrBadPointer},
 	} {
-		if err := b.CheckID(c.list, c.id); !errors.Is(err, c.want) {
+		if err := st.CheckID(c.list, c.id); !errors.Is(err, c.want) {
 			t.Errorf("%s, %s: %v", c.list, c.id, err)
 		}
 	}

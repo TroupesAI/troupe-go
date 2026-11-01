@@ -1,6 +1,6 @@
 {
   "description": "Format Appendix B.1: valid; each opening played starts a root, and 'Shore leave' has no content, so its root is a records-only system message; neither opening has set, so neither root records a change (Format 6.3, 11.1, 11.4)",
-  "bundleFile": "../../../examples/mira-card.troupe.json",
+  "storyFile": "../../../examples/mira.troupe.json",
   "session": {
     "header": {
       "kind": "session",
@@ -69,7 +69,7 @@
       "type": "cel",
       "name": "the shore entry's condition holds at the records-only root",
       "at": "4",
-      "expr": "opening == 'shore_leave' && turn == 0",
+      "expr": "opening == 'shore_leave' && round == 0",
       "expect": true
     },
     {

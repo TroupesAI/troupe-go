@@ -16,23 +16,23 @@ import (
 
 // RenameID returns the JSON Patch (RFC 6902) that gives the object at the
 // JSON Pointer object the ID id, and rewrites every reference to it in the
-// bundle, unless another object shares its ID; for the ID the object has, an
+// story, unless another object shares its ID; for the ID the object has, an
 // empty one. The object is a character, world or scenario, such as
 // "/characters/0", a world's location, or an entry, variable or opening, such
 // as "/worlds/1/locations/2" or "/scenarios/0/variables/3". The patch moves a
 // member it renames to the end of its object.
 //
 // The references are the cast members, scenario worlds, parents, knownBy and
-// speakers that name it, the keys of openings' set and the scene values they
-// write, and the names macros and conditions read, each resolved as Format 9
-// and 10 resolve it in the scenarios that use it. A keyed variable's key that
-// is a renamed character's ID, as it is written in of, initial, set, macros and
-// conditions, is renamed with it, since it shows as the character's name and
-// char looks it up (Format 9, 10.1). In conditions, a string literal is a
-// reference when it is compared with char, user, self, scenario, opening,
-// scene.location, scene.present, scene.within or players.
+// speakers that name it, the state keys of openings' set and the scene values
+// they write, and the names macros and conditions read, each resolved as
+// Format 9 and 10 resolve it in the scenarios that use it. A keyed variable's
+// key that is a renamed character's ID, as it is written in per, initial, set,
+// macros and conditions, is renamed with it, since it shows as the character's
+// name and char looks it up (Format 9, 10.1). In conditions, a string literal
+// is a reference when it is compared with char, player, self, scenario,
+// opening, scene.location, scene.present, scene.within or players.
 //
-// It also returns pointers, into the bundle as it is, to the texts,
+// It also returns pointers, into the story as it is, to the texts,
 // conditions and values it leaves as written, whole, since rewriting them
 // could change what they mean:
 //   - a string value that is a renamed character's or location's ID, which
@@ -47,7 +47,7 @@ import (
 //     a condition that doesn't parse and has the ID as a word, and a key
 //     whose renamed form its object already has;
 //   - a renamed character's key of a list or "*" variable, wherever it is
-//     written, when the bundle already has the new ID as a word, since it may
+//     written, when the story already has the new ID as a word, since it may
 //     be a key of the same variable, which the two would merge into.
 //
 // When another object shares the object's ID, which is DUPLICATE_ID (Format
@@ -57,13 +57,13 @@ import (
 // returned.
 //
 // The error wraps ErrBadPointer for a pointer that names no such object, and
-// otherwise ErrIDInvalid or ErrIDTaken as CheckID's does. In a bundle that
+// otherwise ErrIDInvalid or ErrIDTaken as CheckID's does. In a story that
 // fails the schema, a value that reads as absent is left as written, and not
-// returned. A session played with the bundle isn't changed, so its references
+// returned. A session played with the story isn't changed, so its references
 // to the old ID name nothing.
-func (b *Bundle) RenameID(object, id string) (jsontext.Value, []string, error) {
+func (st *Story) RenameID(object, id string) (jsontext.Value, []string, error) {
 	p := jsontext.Pointer(object)
-	sc, ok := b.idScope(p.Parent())
+	sc, ok := st.idScope(p.Parent())
 	i, isIndex := arrayIndex(p.LastToken())
 	if !p.IsValid() || !ok || !isIndex || i >= len(sc.objects) {
 		return nil, nil, fmt.Errorf("troupe: %w: %q names no character, world, scenario, location, entry, variable or opening", ErrBadPointer, object)
@@ -76,25 +76,25 @@ func (b *Bundle) RenameID(object, id string) (jsontext.Value, []string, error) {
 		return nil, nil, err
 	}
 	shared := old != "" && len(sc.taken[old]) > 1
-	orig := b
+	orig := st
 	if shared {
 		// The others' IDs read as absent in a copy, whose JSON Pointers are
-		// the bundle's, so the references are found as if the object alone
+		// the story's, so the references are found as if the object alone
 		// had the ID.
-		b = b.clone()
-		sc, _ = b.idScope(p.Parent())
+		st = st.clone()
+		sc, _ = st.idScope(p.Parent())
 		for _, s := range sc.taken[old] {
 			if s != sc.ids[i] {
 				*s = ""
 			}
 		}
 	}
-	doc, err := json.Marshal(b)
+	doc, err := json.Marshal(st)
 	if err != nil {
 		panic(err) // a model that read
 	}
 	r := &renamer{
-		names:  newNames(b, nil),
+		names:  newNames(st, nil),
 		target: sc.objects[i],
 		old:    old,
 		id:     id,
@@ -102,16 +102,16 @@ func (b *Bundle) RenameID(object, id string) (jsontext.Value, []string, error) {
 		used:   regexp.MustCompile(`\b` + regexp.QuoteMeta(id) + `\b`).Match(doc),
 		inUse:  map[any][]*Scenario{},
 	}
-	// The ID may be absent, in a bundle that fails the schema.
+	// The ID may be absent, in a story that fails the schema.
 	r.ops = append(r.ops, operation{Op: "add", Path: string(ptr(p, "id")), Value: quote(id)})
 	if old != "" {
-		r.use(b, b)
+		r.use(st, st)
 		if shared {
 			// Hiding an owner's ID takes it out of the casts and worlds that
 			// name it, but its texts are still read in their scenarios.
-			r.use(orig, b)
+			r.use(orig, st)
 		}
-		r.bundle(b)
+		r.story(st)
 	}
 	if shared {
 		for _, op := range r.ops[1:] {
@@ -126,20 +126,20 @@ func (b *Bundle) RenameID(object, id string) (jsontext.Value, []string, error) {
 	return patch, r.left, nil
 }
 
-// clone returns a copy of b whose objects with IDs are its own.
-func (b *Bundle) clone() *Bundle {
-	c := *b
-	c.Characters = slices.Clone(b.Characters)
+// clone returns a copy of st whose objects with IDs are its own.
+func (st *Story) clone() *Story {
+	c := *st
+	c.Characters = slices.Clone(st.Characters)
 	for i := range c.Characters {
 		ch := &c.Characters[i]
 		ch.Entries, ch.Variables = slices.Clone(ch.Entries), slices.Clone(ch.Variables)
 	}
-	c.Worlds = slices.Clone(b.Worlds)
+	c.Worlds = slices.Clone(st.Worlds)
 	for i := range c.Worlds {
 		w := &c.Worlds[i]
 		w.Locations, w.Entries, w.Variables = slices.Clone(w.Locations), slices.Clone(w.Entries), slices.Clone(w.Variables)
 	}
-	c.Scenarios = slices.Clone(b.Scenarios)
+	c.Scenarios = slices.Clone(st.Scenarios)
 	for i := range c.Scenarios {
 		s := &c.Scenarios[i]
 		s.Openings, s.Entries, s.Variables = slices.Clone(s.Openings), slices.Clone(s.Entries), slices.Clone(s.Variables)
@@ -161,7 +161,7 @@ type renamer struct {
 	target  any // the object
 	old, id string
 	word    *regexp.Regexp // the old ID as a word
-	// used reports whether the bundle already has the new ID as a word, as
+	// used reports whether the story already has the new ID as a word, as
 	// it may as a key of a list or "*" variable, where renaming the old ID's
 	// key would merge the two.
 	used bool
@@ -177,32 +177,32 @@ func targets[T any](r *renamer) bool {
 	return ok
 }
 
-// use adds the scenarios each character and world of b is in use in to those
+// use adds the scenarios each character and world of st is in use in to those
 // of c's at the same index.
-func (r *renamer) use(b, c *Bundle) {
+func (r *renamer) use(st, c *Story) {
 	add := func(o any, s *Scenario) {
 		if !slices.Contains(r.inUse[o], s) {
 			r.inUse[o] = append(r.inUse[o], s)
 		}
 	}
-	for i := range b.Scenarios {
-		sc := newScope(b, nil, i)
-		for j := range b.Characters {
-			if sc.characters[b.Characters[j].ID] == &b.Characters[j] {
+	for i := range st.Scenarios {
+		sc := newScope(st, nil, i)
+		for j := range st.Characters {
+			if sc.characters[st.Characters[j].ID] == &st.Characters[j] {
 				add(&c.Characters[j], &c.Scenarios[i])
 			}
 		}
-		for j := range b.Worlds {
-			if sc.worlds[b.Worlds[j].ID] == &b.Worlds[j] {
+		for j := range st.Worlds {
+			if sc.worlds[st.Worlds[j].ID] == &st.Worlds[j] {
 				add(&c.Worlds[j], &c.Scenarios[i])
 			}
 		}
 	}
 }
 
-func (r *renamer) bundle(b *Bundle) {
-	for i := range b.Characters {
-		c, p := &b.Characters[i], ptr("", "characters", i)
+func (r *renamer) story(st *Story) {
+	for i := range st.Characters {
+		c, p := &st.Characters[i], ptr("", "characters", i)
 		in := r.scenarios(c)
 		r.text(ptr(p, "description"), c.Description, in, c.own())
 		r.text(ptr(p, "summary"), c.Summary, in, c.own())
@@ -214,8 +214,8 @@ func (r *renamer) bundle(b *Bundle) {
 		}
 		r.owner(p, c.Entries, in, c.own())
 	}
-	for i := range b.Worlds {
-		w, p := &b.Worlds[i], ptr("", "worlds", i)
+	for i := range st.Worlds {
+		w, p := &st.Worlds[i], ptr("", "worlds", i)
 		in := r.scenarios(w)
 		r.text(ptr(p, "description"), w.Description, in, w.own())
 		for j, l := range w.Locations {
@@ -224,8 +224,8 @@ func (r *renamer) bundle(b *Bundle) {
 		}
 		r.owner(p, w.Entries, in, w.own())
 	}
-	for i := range b.Scenarios {
-		s, p := &b.Scenarios[i], ptr("", "scenarios", i)
+	for i := range st.Scenarios {
+		s, p := &st.Scenarios[i], ptr("", "scenarios", i)
 		in := []*Scenario{s}
 		r.text(ptr(p, "premise"), s.Premise, in, s.own())
 		r.text(ptr(p, "briefing"), s.Briefing, in, s.own())
@@ -286,19 +286,19 @@ func (r *renamer) variable(p jsontext.Pointer, v *Variable, in []*Scenario, own 
 	for _, s := range slices.Sorted(maps.Keys(v.Labels)) {
 		r.value(ptr(p, "labels", s), s)
 	}
-	if targets[Character](r) && slices.Contains(v.Of.List, r.old) {
-		i := slices.Index(v.Of.List, r.old)
-		if slices.Contains(v.Of.List, r.id) {
-			r.leave(ptr(p, "of", i))
+	if targets[Character](r) && slices.Contains(v.Per.List, r.old) {
+		i := slices.Index(v.Per.List, r.old)
+		if slices.Contains(v.Per.List, r.id) {
+			r.leave(ptr(p, "per", i))
 		} else {
-			r.replace(ptr(p, "of", i), r.id)
+			r.replace(ptr(p, "per", i), r.id)
 		}
 	}
 	if v.Initial == nil {
 		return
 	}
 	var members map[string]jsontext.Value
-	if !v.Of.keyed() || json.Unmarshal(v.Initial, &members) != nil {
+	if !v.Per.keyed() || json.Unmarshal(v.Initial, &members) != nil {
 		r.values(ptr(p, "initial"), v.Initial)
 		return
 	}
@@ -306,7 +306,7 @@ func (r *renamer) variable(p jsontext.Pointer, v *Variable, in []*Scenario, own 
 		r.values(ptr(p, "initial", k), members[k])
 		switch {
 		case !targets[Character](r) || k != r.old:
-		case r.used && !v.Of.Cast:
+		case r.used && !v.Per.Cast:
 			r.leave(ptr(p, "initial", k))
 		default:
 			r.move(ptr(p, "initial"), members, k, r.id)
@@ -494,11 +494,12 @@ func opening(s *Scenario, id string) *Opening {
 	return &s.Openings[i]
 }
 
-// path returns a state or own path, as isOwn says, read in a text, condition or
-// key with own the variables own names there, with the names that refer to
-// the object, in any of the scenarios in, as the new ID, or nil when none does. It reports whether
-// that is safe: whether, in every one of the scenarios, each of those names
-// refers to the object, or to nothing as it is and as renamed.
+// path returns a state or own path, as isOwn says, read in a text, condition
+// or key with own the variables own names there, with the names that refer to
+// the object, in any of the scenarios in, as the new ID, or nil when none
+// does. It reports whether that is safe: whether, in every one of the
+// scenarios, each of those names refers to the object, or to nothing as it is
+// and as renamed.
 func (r *renamer) path(in []*Scenario, own ownVars, isOwn bool, path []string) ([]string, bool) {
 	var at []int
 	for _, s := range in {
@@ -522,7 +523,7 @@ func (r *renamer) path(in []*Scenario, own ownVars, isOwn bool, path []string) (
 				return renamed, false
 			}
 		}
-		if _, v, below, ok := r.names.declared(s, own, isOwn, path); ok && r.used && v.Of.keyed() && !v.Of.Cast &&
+		if _, v, below, ok := r.names.declared(s, own, isOwn, path); ok && r.used && v.Per.keyed() && !v.Per.Cast &&
 			len(below) > 0 && slices.Contains(at, len(path)-len(below)) {
 			return renamed, false
 		}
@@ -550,7 +551,7 @@ func (r *renamer) refs(s *Scenario, own ownVars, isOwn bool, path []string) []an
 			refs[0] = r.names.worlds[path[0]]
 		}
 	}
-	if v.Of.keyed() && len(below) > 0 {
+	if v.Per.keyed() && len(below) > 0 {
 		if c := r.names.characters[below[0]]; c != nil {
 			refs[k+1] = c
 		}
@@ -598,7 +599,7 @@ func (r *renamer) value(p jsontext.Pointer, s string) {
 // are the ID of a character or location being renamed.
 func (r *renamer) values(p jsontext.Pointer, raw jsontext.Value) {
 	var x any
-	_ = json.Unmarshal(raw, &x) // it read without PARSE
+	_ = json.Unmarshal(raw, &x) // it read without UNREADABLE
 	switch x := x.(type) {
 	case string:
 		r.value(p, x)

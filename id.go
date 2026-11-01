@@ -7,6 +7,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/TroupesAI/troupe-go/internal/macro"
 )
 
 // The errors CheckID's and RenameID's errors wrap, one for each way they
@@ -29,8 +31,8 @@ var (
 // "/scenarios/0/openings". The error wraps ErrBadPointer for a pointer that
 // names no such list, ErrIDInvalid, or ErrIDTaken when an object the list's
 // objects must be unique among has id.
-func (b *Bundle) CheckID(list, id string) error {
-	sc, ok := b.idScope(jsontext.Pointer(list))
+func (st *Story) CheckID(list, id string) error {
+	sc, ok := st.idScope(jsontext.Pointer(list))
 	if !ok {
 		return fmt.Errorf("troupe: %w: %q names no list of objects with IDs", ErrBadPointer, list)
 	}
@@ -40,11 +42,11 @@ func (b *Bundle) CheckID(list, id string) error {
 // The IDs characters, worlds and scenarios can't have, and those variables
 // can't have, besides CEL's reserved words (Format 2.3).
 var (
-	reservedOwnerIDs    = []string{"char", "user", "narrator", "session", "state", "scene", "players", "own"}
+	reservedOwnerIDs    = []string{"char", "player", "narrator", "session", "state", "scene", "players", "own"}
 	reservedVariableIDs = []string{"scene", "own"}
 )
 
-// idScope is a list of a bundle whose objects have author IDs, and what their
+// idScope is a list of a story whose objects have author IDs, and what their
 // IDs must avoid (Format 2.3).
 type idScope struct {
 	kind string // the kind of object, such as "character"
@@ -60,7 +62,7 @@ type idScope struct {
 
 // idScope returns the scope of the list at p, as CheckID names lists, and
 // reports whether there is one.
-func (b *Bundle) idScope(p jsontext.Pointer) (*idScope, bool) {
+func (st *Story) idScope(p jsontext.Pointer) (*idScope, bool) {
 	if !p.IsValid() {
 		return nil, false
 	}
@@ -76,23 +78,23 @@ func (b *Bundle) idScope(p jsontext.Pointer) (*idScope, bool) {
 	if len(path) == 1 {
 		switch path[0] {
 		case "characters":
-			collect(sc, "character", b.Characters, characterID)
+			collect(sc, "character", st.Characters, characterID)
 		case "worlds":
-			collect(sc, "world", b.Worlds, worldID)
+			collect(sc, "world", st.Worlds, worldID)
 		case "scenarios":
-			collect(sc, "scenario", b.Scenarios, scenarioID)
+			collect(sc, "scenario", st.Scenarios, scenarioID)
 		default:
 			return nil, false
 		}
 		// Characters, worlds and scenarios are unique among them all, and
 		// characters and worlds among scenario variables too.
 		sc.reserved = reservedOwnerIDs
-		take(sc, b.Characters, characterID)
-		take(sc, b.Worlds, worldID)
-		take(sc, b.Scenarios, scenarioID)
+		take(sc, st.Characters, characterID)
+		take(sc, st.Worlds, worldID)
+		take(sc, st.Scenarios, scenarioID)
 		if path[0] != "scenarios" {
-			for i := range b.Scenarios {
-				take(sc, b.Scenarios[i].Variables, variableID)
+			for i := range st.Scenarios {
+				take(sc, st.Scenarios[i].Variables, variableID)
 			}
 		}
 		return sc, true
@@ -111,13 +113,13 @@ func (b *Bundle) idScope(p jsontext.Pointer) (*idScope, bool) {
 	switch {
 	case !ok:
 		return nil, false
-	case path[0] == "characters" && i < len(b.Characters):
-		entries, vars = b.Characters[i].Entries, b.Characters[i].Variables
-	case path[0] == "worlds" && i < len(b.Worlds):
-		w = &b.Worlds[i]
+	case path[0] == "characters" && i < len(st.Characters):
+		entries, vars = st.Characters[i].Entries, st.Characters[i].Variables
+	case path[0] == "worlds" && i < len(st.Worlds):
+		w = &st.Worlds[i]
 		entries, vars = w.Entries, w.Variables
-	case path[0] == "scenarios" && i < len(b.Scenarios):
-		s = &b.Scenarios[i]
+	case path[0] == "scenarios" && i < len(st.Scenarios):
+		s = &st.Scenarios[i]
 		entries, vars = s.Entries, s.Variables
 	default:
 		return nil, false
@@ -133,14 +135,14 @@ func (b *Bundle) idScope(p jsontext.Pointer) (*idScope, bool) {
 		sc.reserved = reservedVariableIDs
 		if s != nil {
 			// A scenario variable's full name would read as an owner's.
-			take(sc, b.Characters, characterID)
-			take(sc, b.Worlds, worldID)
+			take(sc, st.Characters, characterID)
+			take(sc, st.Worlds, worldID)
 		}
 	case path[2] == "locations" && w != nil:
 		collect(sc, "location", w.Locations, locationID)
-		// Locations are unique in the bundle.
-		for i := range b.Worlds {
-			take(sc, b.Worlds[i].Locations, locationID)
+		// Locations are unique in the story.
+		for i := range st.Worlds {
+			take(sc, st.Worlds[i].Locations, locationID)
 		}
 	case path[2] == "openings" && s != nil:
 		openingID := func(o *Opening) *string { return &o.ID }
@@ -172,7 +174,7 @@ func take[T any](sc *idScope, objects []T, id func(*T) *string) {
 // check reports whether an object of the list can take the ID id.
 func (sc *idScope) check(id string) error {
 	switch {
-	case !authorID.MatchString(id) || slices.Contains(celReserved, id) || slices.Contains(sc.reserved, id):
+	case !macro.IsAuthorID(id) || slices.Contains(sc.reserved, id):
 		return fmt.Errorf("troupe: %q: %w for a %s", id, ErrIDInvalid, sc.kind)
 	case len(sc.taken[id]) > 0:
 		return fmt.Errorf("troupe: %q: %w", id, ErrIDTaken)

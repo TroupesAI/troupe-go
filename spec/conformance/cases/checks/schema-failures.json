@@ -1,7 +1,7 @@
 {
-  "description": "Schema failures (Format 8, 15.3): a chance that isn't an integer from 0 to 100, an out-of-range priority, a position other than system or context, an entry with both position and depth, oneWay on a string variable, an entry without text, an empty key, a knownBy item that isn't an ID, an of list item that isn't a key, a duplicate in by, and a max naming a variable are each SCHEMA; every check runs on the document as written, so the knownBy item is also UNKNOWN_CHARACTER (Format 15.3)",
-  "bundle": {
-    "kind": "bundle",
+  "description": "Schema failures (Format 8, 15.3): a chance that isn't an integer from 0 to 100, an out-of-range priority, a position other than system or context, an entry with both position and depth, oneWay on a string variable, an entry without text, an empty keyword, a knownBy item that isn't an ID, a per list item that isn't a key, a duplicate in by, and a max naming a variable are each SCHEMA; every check runs on the document as written, so the knownBy item is also UNKNOWN_CHARACTER (Format 15.3)",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "a",
@@ -35,11 +35,11 @@
             "text": "A secret."
           },
           {
-            "id": "badkey",
-            "keys": [
+            "id": "bad_keyword",
+            "keywords": [
               ""
             ],
-            "text": "An empty key."
+            "text": "An empty keyword."
           },
           {
             "id": "sure",
@@ -74,7 +74,7 @@
           {
             "id": "rep",
             "type": "int",
-            "of": [
+            "per": [
               "Watch",
               "guild"
             ],
@@ -130,7 +130,7 @@
           },
           {
             "code": "SCHEMA",
-            "at": "/scenarios/0/entries/4/keys/0"
+            "at": "/scenarios/0/entries/4/keywords/0"
           },
           {
             "code": "SCHEMA",
@@ -150,7 +150,7 @@
           },
           {
             "code": "SCHEMA",
-            "at": "/scenarios/0/variables/1/of/0"
+            "at": "/scenarios/0/variables/1/per/0"
           },
           {
             "code": "SCHEMA",

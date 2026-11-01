@@ -1,11 +1,11 @@
 {
-  "description": "Numbers (Format 2.2, 15.3): a number within a double's range is I-JSON, and one with more precision than a double holds is rounded to the nearest double, so an integer field written with a tiny fraction reads as an integer; a number beyond a double's range is PARSE. Integer fields are within ±(2^53 − 1), and the schemas reject one outside it as SCHEMA",
+  "description": "Numbers (Format 2.2, 15.3): a number within a double's range is I-JSON, and one with more precision than a double holds is rounded to the nearest double, so an integer field written with a tiny fraction reads as an integer; a number beyond a double's range is UNREADABLE. Integer fields are within ±(2^53 − 1), and the schemas reject one outside it as SCHEMA",
   "tests": [
     {
       "type": "parse",
       "name": "more precision than a double holds",
-      "kind": "bundle",
-      "text": "{\"troupe\":\"0.14\",\"kind\":\"bundle\",\"ext\":{\"a.b\":3.141592653589793238462643383279}}",
+      "kind": "story",
+      "text": "{\"troupe\":\"0.15\",\"kind\":\"story\",\"ext\":{\"a.b\":3.141592653589793238462643383279}}",
       "expect": {
         "codes": []
       }
@@ -14,8 +14,8 @@
       "type": "parse",
       "name": "an integer field that rounds to an integer",
       "note": "50.000000000000001 is nearer to 50 than to any other double.",
-      "kind": "bundle",
-      "text": "{\"troupe\":\"0.14\",\"kind\":\"bundle\",\"scenarios\":[{\"id\":\"s\",\"entries\":[{\"id\":\"e\",\"text\":\"t\",\"priority\":50.000000000000001}]}]}",
+      "kind": "story",
+      "text": "{\"troupe\":\"0.15\",\"kind\":\"story\",\"scenarios\":[{\"id\":\"s\",\"entries\":[{\"id\":\"e\",\"text\":\"t\",\"priority\":50.000000000000001}]}]}",
       "expect": {
         "codes": []
       }
@@ -23,19 +23,19 @@
     {
       "type": "parse",
       "name": "beyond a double's range",
-      "kind": "bundle",
-      "text": "{\"troupe\":\"0.14\",\"kind\":\"bundle\",\"ext\":{\"a.b\":1e400}}",
+      "kind": "story",
+      "text": "{\"troupe\":\"0.15\",\"kind\":\"story\",\"ext\":{\"a.b\":1e400}}",
       "expect": {
         "codes": [
-          "PARSE"
+          "UNREADABLE"
         ]
       }
     },
     {
       "type": "parse",
       "name": "an integer field at 2^53 − 1",
-      "kind": "bundle",
-      "text": "{\"troupe\":\"0.14\",\"kind\":\"bundle\",\"scenarios\":[{\"id\":\"s\",\"variables\":[{\"id\":\"gold\",\"type\":\"int\",\"description\":\"Coins.\",\"min\":-9007199254740991,\"max\":9007199254740991}]}]}",
+      "kind": "story",
+      "text": "{\"troupe\":\"0.15\",\"kind\":\"story\",\"scenarios\":[{\"id\":\"s\",\"variables\":[{\"id\":\"gold\",\"type\":\"int\",\"description\":\"Coins.\",\"min\":-9007199254740991,\"max\":9007199254740991}]}]}",
       "expect": {
         "codes": []
       }
@@ -43,8 +43,8 @@
     {
       "type": "parse",
       "name": "an integer field at 2^53",
-      "kind": "bundle",
-      "text": "{\"troupe\":\"0.14\",\"kind\":\"bundle\",\"scenarios\":[{\"id\":\"s\",\"variables\":[{\"id\":\"gold\",\"type\":\"int\",\"description\":\"Coins.\",\"max\":9007199254740992}]}]}",
+      "kind": "story",
+      "text": "{\"troupe\":\"0.15\",\"kind\":\"story\",\"scenarios\":[{\"id\":\"s\",\"variables\":[{\"id\":\"gold\",\"type\":\"int\",\"description\":\"Coins.\",\"max\":9007199254740992}]}]}",
       "expect": {
         "codes": [
           "SCHEMA"
@@ -54,8 +54,8 @@
     {
       "type": "parse",
       "name": "an integer field at −2^53",
-      "kind": "bundle",
-      "text": "{\"troupe\":\"0.14\",\"kind\":\"bundle\",\"scenarios\":[{\"id\":\"s\",\"variables\":[{\"id\":\"gold\",\"type\":\"int\",\"description\":\"Coins.\",\"min\":-9007199254740992}]}]}",
+      "kind": "story",
+      "text": "{\"troupe\":\"0.15\",\"kind\":\"story\",\"scenarios\":[{\"id\":\"s\",\"variables\":[{\"id\":\"gold\",\"type\":\"int\",\"description\":\"Coins.\",\"min\":-9007199254740992}]}]}",
       "expect": {
         "codes": [
           "SCHEMA"
@@ -66,8 +66,8 @@
       "type": "parse",
       "name": "an integer field of 1e300",
       "note": "1e300 has no fraction, so it is an integer, outside the range.",
-      "kind": "bundle",
-      "text": "{\"troupe\":\"0.14\",\"kind\":\"bundle\",\"scenarios\":[{\"id\":\"s\",\"entries\":[{\"id\":\"e\",\"text\":\"t\",\"depth\":1e300}]}]}",
+      "kind": "story",
+      "text": "{\"troupe\":\"0.15\",\"kind\":\"story\",\"scenarios\":[{\"id\":\"s\",\"entries\":[{\"id\":\"e\",\"text\":\"t\",\"depth\":1e300}]}]}",
       "expect": {
         "codes": [
           "SCHEMA"

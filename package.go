@@ -11,17 +11,17 @@ import (
 	"sync"
 )
 
-// Package is a package: its bundle, its sessions and its other files (Format
+// Package is a package: its story, its sessions and its other files (Format
 // 12.3).
 type Package struct {
-	Bundle *Bundle
-	// BundleJSON is bundle.json as written, which a writer rewrites to keep
+	Story *Story
+	// StoryJSON is story.json as written, which a writer rewrites to keep
 	// every ext unchanged (Format 13).
-	BundleJSON []byte
+	StoryJSON []byte
 	// Sessions are the paths of the package's sessions, sorted, such as
 	// "sessions/a.troupe-session.jsonl". ReadSessions reads them.
 	Sessions []string
-	// Files are the paths of the package's files other than bundle.json and
+	// Files are the paths of the package's files other than story.json and
 	// its sessions, sorted. They include files nothing references, which a
 	// writer keeps (Format 12.3).
 	Files []string
@@ -42,12 +42,12 @@ func (p *Package) Open(path string) (io.ReadCloser, error) {
 }
 
 // ReadPackage reads a package, the ZIP archive of size bytes in r, and its
-// bundle, as a bundle reader does, leaving its sessions to ReadSessions
-// (Format 12.3, 15.2). It reads every entry, so data that can't be read is
-// PARSE wherever it is. Its results are those of ReadBundle, for the package
-// as a bundle reader reads it: the package is nil when the archive fails PARSE, or its
-// bundle.json PARSE or UNSUPPORTED_VERSION, and its diagnostics are then only
-// those. Package.Open and Package.ReadSessions read r again.
+// story, as a story reader does, leaving its sessions to ReadSessions (Format
+// 12.3, 15.2). It reads every entry, so data that can't be read is UNREADABLE
+// wherever it is. Its results are those of ReadStory, for the package as a
+// story reader reads it: the package is nil when the archive fails UNREADABLE,
+// or its story.json UNREADABLE or UNSUPPORTED_VERSION, and its diagnostics are
+// then only those. Package.Open and Package.ReadSessions read r again.
 func ReadPackage(r io.ReaderAt, size int64) (*Package, []Diagnostic, error) {
 	src := &source{r: r}
 	var rd reader
@@ -65,7 +65,7 @@ func ReadPackage(r io.ReaderAt, size int64) (*Package, []Diagnostic, error) {
 // ReadSessions reads the package's sessions, by path, as a session reader
 // does (Format 15.2). Its diagnostics are the package's at that level,
 // ReadPackage's and the sessions', so they replace ReadPackage's. When any
-// session fails PARSE or UNSUPPORTED_VERSION, the package fails whole: the
+// session fails UNREADABLE or UNSUPPORTED_VERSION, the package fails whole: the
 // sessions are nil, and the diagnostics only those (Format 15.3). The error
 // is r's, when reading it fails.
 func (p *Package) ReadSessions() (map[string]*Session, []Diagnostic, error) {
@@ -102,11 +102,11 @@ func (rd *reader) pkg(src *source, size int64) *Package {
 	zr, err := zip.NewReader(src, size)
 	// Format 12.3's rules on names are checked below, whatever GODEBUG says.
 	if err != nil && !errors.Is(err, zip.ErrInsecurePath) {
-		rd.report(Diagnostic{Code: CodeParse})
+		rd.report(Diagnostic{Code: CodeUnreadable})
 		return nil
 	}
 	if len(zr.File) > maxZipEntries {
-		rd.report(Diagnostic{Code: CodeParse})
+		rd.report(Diagnostic{Code: CodeUnreadable})
 		return nil
 	}
 	// archive/zip fails an entry whose data doesn't match the size its
@@ -116,7 +116,7 @@ func (rd *reader) pkg(src *source, size int64) *Package {
 		unpacked += min(f.UncompressedSize64, maxUnpackedSize+1)
 	}
 	if unpacked > maxUnpackedSize {
-		rd.report(Diagnostic{Code: CodeParse})
+		rd.report(Diagnostic{Code: CodeUnreadable})
 		return nil
 	}
 	files := map[string]*zip.File{}
@@ -131,8 +131,8 @@ func (rd *reader) pkg(src *source, size int64) *Package {
 			files[f.Name] = f
 		}
 	}
-	if files["bundle.json"] == nil {
-		rd.report(Diagnostic{Code: CodeParse})
+	if files["story.json"] == nil {
+		rd.report(Diagnostic{Code: CodeUnreadable})
 	}
 	if len(rd.diags) > 0 {
 		return nil
@@ -145,7 +145,7 @@ func (rd *reader) pkg(src *source, size int64) *Package {
 	p := &Package{files: files}
 	for _, f := range zr.File {
 		switch {
-		case files[f.Name] == nil || f.Name == "bundle.json":
+		case files[f.Name] == nil || f.Name == "story.json":
 		case isSession(f.Name):
 			p.Sessions = append(p.Sessions, f.Name)
 		default:
@@ -164,17 +164,17 @@ func (rd *reader) pkg(src *source, size int64) *Package {
 	return p
 }
 
-// entry reads one ZIP entry to its end, as the package's bundle when it is
-// bundle.json. Its error is for data that can't be read.
+// entry reads one ZIP entry to its end, as the package's story when it
+// is story.json. Its error is for data that can't be read.
 func (rd *reader) entry(f *zip.File, p *Package) (err error) {
 	r, err := f.Open()
 	if err != nil {
 		return err
 	}
 	defer func() { err = cmp.Or(err, r.Close()) }()
-	if f.Name == "bundle.json" {
+	if f.Name == "story.json" {
 		rd.file = f.Name
-		if p.Bundle, p.BundleJSON, err = rd.bundle(r); err != nil {
+		if p.Story, p.StoryJSON, err = rd.story(r); err != nil {
 			return err
 		}
 	}
@@ -203,10 +203,10 @@ func validEntry(f *zip.File) bool {
 		(f.Method == zip.Store || f.Method == zip.Deflate)
 }
 
-// reportEntry reports PARSE for a ZIP entry, located by its name only when
+// reportEntry reports UNREADABLE for a ZIP entry, located by its name only when
 // that is a package path, since other names may hold anything.
 func (rd *reader) reportEntry(name string) {
-	d := Diagnostic{Code: CodeParse}
+	d := Diagnostic{Code: CodeUnreadable}
 	if isPackageFile(name) {
 		d.File = name
 	}

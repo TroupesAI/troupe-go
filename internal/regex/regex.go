@@ -1,4 +1,4 @@
-// Package regex compiles regex keys: patterns in the syntax ECMAScript and RE2
+// Package regex compiles regex keywords: patterns in the syntax ECMAScript and RE2
 // share, with ECMAScript's meaning under the u flag (Format 14).
 package regex
 
@@ -18,7 +18,7 @@ const (
 	maxSize  = 1000 // bytes, written out in full
 )
 
-// Regexp is a compiled regex key.
+// Regexp is a compiled regex keyword.
 type Regexp struct {
 	re   *regexp.Regexp
 	fold bool // the i flag
@@ -27,7 +27,7 @@ type Regexp struct {
 // foldWord maps ſ and K (Kelvin) to s and k.
 var foldWord = strings.NewReplacer("\u017f", "s", "\u212a", "k")
 
-// MatchString reports whether the key matches anywhere in s, scanned text
+// MatchString reports whether the keyword matches anywhere in s, scanned text
 // whose every line break is \n (Format 7.2). There RE2 reads ., ^ and $ as
 // ECMAScript does.
 func (r *Regexp) MatchString(s string) bool {
@@ -41,8 +41,8 @@ func (r *Regexp) MatchString(s string) bool {
 	return r.re.MatchString(s)
 }
 
-// Compile compiles a regex key's pattern and flags. It fails when the key
-// isn't valid (Format 14): flags other than i, m and s, or repeated; a form
+// Compile compiles a regex keyword's pattern and flags. It fails when the
+// keyword isn't valid (Format 14): flags other than i, m and s, or repeated; a form
 // outside the grammar; groups nested more than 100 deep; or a pattern longer
 // than 1000 bytes with each counted repetition written out.
 func Compile(pattern, flags string) (*Regexp, error) {

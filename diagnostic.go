@@ -14,7 +14,7 @@ type Code string
 // The codes of Format 15.3. Reading reports the first four, and Check the
 // others.
 const (
-	CodeParse              Code = "PARSE"
+	CodeUnreadable         Code = "UNREADABLE"
 	CodeUnsupportedVersion Code = "UNSUPPORTED_VERSION"
 	CodeSchema             Code = "SCHEMA"
 	CodeUnknownField       Code = "UNKNOWN_FIELD"
@@ -25,7 +25,7 @@ const (
 	CodeUnknownLocation    Code = "UNKNOWN_LOCATION"
 	CodeUnknownOpening     Code = "UNKNOWN_OPENING"
 	CodeUnknownEntry       Code = "UNKNOWN_ENTRY"
-	CodeUnknownVariable    Code = "UNKNOWN_VARIABLE"
+	CodeUnknownStateKey    Code = "UNKNOWN_STATE_KEY"
 	CodeInvalidValue       Code = "INVALID_VALUE"
 	CodeUnknownMessage     Code = "UNKNOWN_MESSAGE"
 	CodeInvalidPlayer      Code = "INVALID_PLAYER"
@@ -51,7 +51,7 @@ type Diagnostic struct {
 	// File is the path within a package; "" outside one, or when the
 	// diagnostic is about a ZIP entry whose name isn't a package path.
 	File string
-	// Line is the line of a session, from 1 for its header; 0 in a bundle and
+	// Line is the line of a session, from 1 for its header; 0 in a story and
 	// from CheckChanges.
 	Line int
 	// Message is the message's ID, when its line has a valid one.
@@ -62,7 +62,7 @@ type Diagnostic struct {
 }
 
 // Location gives where the diagnostic is in the conformance suite's form,
-// without the file: "/scenarios/0/when" in a bundle, "header/players" in a
+// without the file: "/scenarios/0/when" in a story, "header/players" in a
 // session's header, and "message:3/changes/0" in a message. A message line
 // without a valid ID is "line:<n>" instead, and a diagnostic from
 // CheckChanges is its pointer within the message.

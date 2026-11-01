@@ -1,7 +1,7 @@
 {
-  "description": "CEL functions (Format 10.2): only size, has, in, contains, startsWith, endsWith and hit() are available; the comprehension macros, conversions, min, max, abs, matches() and the strings extension are a CEL_ERROR",
-  "bundle": {
-    "kind": "bundle",
+  "description": "CEL functions (Format 10.2): besides CEL's operators, such as in, only size, has, contains, startsWith, endsWith and hit() are available; the comprehension macros, conversions, min, max, abs, matches() and the strings extension are a CEL_ERROR",
+  "story": {
+    "kind": "story",
     "scenarios": [
       {
         "id": "s",
@@ -18,7 +18,7 @@
           {
             "id": "rep",
             "type": "int",
-            "of": [
+            "per": [
               "watch",
               "guild"
             ],

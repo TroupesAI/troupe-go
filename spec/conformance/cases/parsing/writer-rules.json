@@ -1,11 +1,11 @@
 {
-  "description": "Rules in the schemas (Format 2.2, 2.3, 8, 8.1, 8.5, 11, 13): booleans written as false are defaults; empty optional fields, including {}, and null state values are SCHEMA; reserved IDs; bool labels; integers, with a zero fraction allowed (Format 2.2); integer weights of at least 1; state keys start with state. or scene.; a change is by opening, player or model, sets at least one key, and is by opening only on a root made from an opening; an initial object has members; parts of an unknown type are SCHEMA; unknown properties are UNKNOWN_FIELD, not SCHEMA; message shapes",
+  "description": "Rules in the schemas (Format 2.2, 2.3, 8, 8.1, 8.5, 11, 13): booleans written as false are defaults; empty optional fields, including {}, and null in state values, at any depth, are SCHEMA; reserved IDs; bool labels; integers, with a zero fraction allowed (Format 2.2); integer weights of at least 1; state keys start with state. or scene.; a change is by opening, player or model, sets at least one state key, and is by opening only on a root made from an opening; an initial object has members; parts of an unknown type are SCHEMA; unknown properties are UNKNOWN_FIELD, not SCHEMA; message shapes; the troupe. extension prefix is reserved",
   "tests": [
     {
       "type": "parse",
       "name": "booleans written as false are the defaults",
-      "kind": "bundle",
-      "text": "{\"troupe\": \"0.14\", \"kind\": \"bundle\", \"characters\": [{\"id\": \"a\", \"name\": \"Ann\", \"description\": \"Ann.\", \"entries\": [{\"id\": \"e\", \"text\": \"t\", \"pull\": false, \"once\": false}], \"variables\": [{\"id\": \"v\", \"description\": \"d\", \"type\": \"string\", \"oneWay\": false}, {\"id\": \"w\", \"description\": \"d\", \"type\": \"int\", \"oneWay\": false}]}]}",
+      "kind": "story",
+      "text": "{\"troupe\": \"0.15\", \"kind\": \"story\", \"characters\": [{\"id\": \"a\", \"name\": \"Ann\", \"description\": \"Ann.\", \"entries\": [{\"id\": \"e\", \"text\": \"t\", \"retrievable\": false, \"once\": false}], \"variables\": [{\"id\": \"v\", \"description\": \"d\", \"type\": \"string\", \"oneWay\": false}, {\"id\": \"w\", \"description\": \"d\", \"type\": \"int\", \"oneWay\": false}]}]}",
       "expect": {
         "codes": []
       }
@@ -13,8 +13,8 @@
     {
       "type": "parse",
       "name": "an empty object in an optional field",
-      "kind": "bundle",
-      "text": "{\"troupe\": \"0.14\", \"kind\": \"bundle\", \"scenarios\": [{\"id\": \"s\", \"variables\": [{\"id\": \"v\", \"type\": \"bool\", \"labels\": {}, \"description\": \"d\"}]}]}",
+      "kind": "story",
+      "text": "{\"troupe\": \"0.15\", \"kind\": \"story\", \"scenarios\": [{\"id\": \"s\", \"variables\": [{\"id\": \"v\", \"type\": \"bool\", \"labels\": {}, \"description\": \"d\"}]}]}",
       "expect": {
         "codes": [
           "SCHEMA"
@@ -24,8 +24,8 @@
     {
       "type": "parse",
       "name": "scenario.worlds may be empty",
-      "kind": "bundle",
-      "text": "{\"troupe\": \"0.14\", \"kind\": \"bundle\", \"scenarios\": [{\"id\": \"s\", \"worlds\": []}]}",
+      "kind": "story",
+      "text": "{\"troupe\": \"0.15\", \"kind\": \"story\", \"scenarios\": [{\"id\": \"s\", \"worlds\": []}]}",
       "expect": {
         "codes": []
       }
@@ -33,8 +33,8 @@
     {
       "type": "parse",
       "name": "null as a state value",
-      "kind": "bundle",
-      "text": "{\"troupe\": \"0.14\", \"kind\": \"bundle\", \"scenarios\": [{\"id\": \"s\", \"variables\": [{\"id\": \"v\", \"description\": \"d\", \"type\": \"int\"}], \"openings\": [{\"id\": \"o\", \"set\": {\"state.v\": null}}]}]}",
+      "kind": "story",
+      "text": "{\"troupe\": \"0.15\", \"kind\": \"story\", \"scenarios\": [{\"id\": \"s\", \"variables\": [{\"id\": \"v\", \"description\": \"d\", \"type\": \"int\"}], \"openings\": [{\"id\": \"o\", \"set\": {\"state.v\": null}}]}]}",
       "expect": {
         "codes": [
           "SCHEMA"
@@ -44,8 +44,19 @@
     {
       "type": "parse",
       "name": "null as an initial value",
-      "kind": "bundle",
-      "text": "{\"troupe\": \"0.14\", \"kind\": \"bundle\", \"scenarios\": [{\"id\": \"s\", \"variables\": [{\"id\": \"v\", \"description\": \"d\", \"type\": \"int\", \"initial\": null}]}]}",
+      "kind": "story",
+      "text": "{\"troupe\": \"0.15\", \"kind\": \"story\", \"scenarios\": [{\"id\": \"s\", \"variables\": [{\"id\": \"v\", \"description\": \"d\", \"type\": \"int\", \"initial\": null}]}]}",
+      "expect": {
+        "codes": [
+          "SCHEMA"
+        ]
+      }
+    },
+    {
+      "type": "parse",
+      "name": "null inside a state value",
+      "kind": "story",
+      "text": "{\"troupe\": \"0.15\", \"kind\": \"story\", \"scenarios\": [{\"id\": \"s\", \"variables\": [{\"id\": \"v\", \"description\": \"d\", \"type\": \"set\", \"initial\": [\"a\", null]}]}]}",
       "expect": {
         "codes": [
           "SCHEMA"
@@ -55,8 +66,8 @@
     {
       "type": "parse",
       "name": "a variable named own",
-      "kind": "bundle",
-      "text": "{\"troupe\": \"0.14\", \"kind\": \"bundle\", \"scenarios\": [{\"id\": \"s\", \"variables\": [{\"id\": \"own\", \"description\": \"d\", \"type\": \"int\"}]}]}",
+      "kind": "story",
+      "text": "{\"troupe\": \"0.15\", \"kind\": \"story\", \"scenarios\": [{\"id\": \"s\", \"variables\": [{\"id\": \"own\", \"description\": \"d\", \"type\": \"int\"}]}]}",
       "expect": {
         "codes": [
           "SCHEMA"
@@ -66,8 +77,8 @@
     {
       "type": "parse",
       "name": "bool labels name true and false only",
-      "kind": "bundle",
-      "text": "{\"troupe\": \"0.14\", \"kind\": \"bundle\", \"scenarios\": [{\"id\": \"s\", \"variables\": [{\"id\": \"v\", \"description\": \"d\", \"type\": \"bool\", \"labels\": {\"yes\": \"Yes\"}}]}]}",
+      "kind": "story",
+      "text": "{\"troupe\": \"0.15\", \"kind\": \"story\", \"scenarios\": [{\"id\": \"s\", \"variables\": [{\"id\": \"v\", \"description\": \"d\", \"type\": \"bool\", \"labels\": {\"yes\": \"Yes\"}}]}]}",
       "expect": {
         "codes": [
           "SCHEMA"
@@ -77,8 +88,8 @@
     {
       "type": "parse",
       "name": "weight 0",
-      "kind": "bundle",
-      "text": "{\"troupe\": \"0.14\", \"kind\": \"bundle\", \"scenarios\": [{\"id\": \"s\", \"entries\": [{\"id\": \"e\", \"text\": \"t\", \"weight\": 0}]}]}",
+      "kind": "story",
+      "text": "{\"troupe\": \"0.15\", \"kind\": \"story\", \"scenarios\": [{\"id\": \"s\", \"entries\": [{\"id\": \"e\", \"text\": \"t\", \"weight\": 0}]}]}",
       "expect": {
         "codes": [
           "SCHEMA"
@@ -88,8 +99,8 @@
     {
       "type": "parse",
       "name": "a part of an unknown type is SCHEMA",
-      "kind": "bundle",
-      "text": "{\"troupe\": \"0.14\", \"kind\": \"bundle\", \"scenarios\": [{\"id\": \"s\", \"openings\": [{\"id\": \"o\", \"content\": [{\"type\": \"audio\", \"text\": \"x\"}]}]}]}",
+      "kind": "story",
+      "text": "{\"troupe\": \"0.15\", \"kind\": \"story\", \"scenarios\": [{\"id\": \"s\", \"openings\": [{\"id\": \"o\", \"content\": [{\"type\": \"audio\", \"text\": \"x\"}]}]}]}",
       "expect": {
         "codes": [
           "SCHEMA"
@@ -99,8 +110,8 @@
     {
       "type": "parse",
       "name": "an unknown property on an image part is UNKNOWN_FIELD",
-      "kind": "bundle",
-      "text": "{\"troupe\": \"0.14\", \"kind\": \"bundle\", \"scenarios\": [{\"id\": \"s\", \"openings\": [{\"id\": \"o\", \"content\": [{\"type\": \"image\", \"src\": \"https://example.com/a.png\", \"alt\": \"A map.\", \"caption\": \"x\"}]}]}]}",
+      "kind": "story",
+      "text": "{\"troupe\": \"0.15\", \"kind\": \"story\", \"scenarios\": [{\"id\": \"s\", \"openings\": [{\"id\": \"o\", \"content\": [{\"type\": \"image\", \"src\": \"https://example.com/a.png\", \"alt\": \"A map.\", \"caption\": \"x\"}]}]}]}",
       "expect": {
         "codes": [
           "UNKNOWN_FIELD"
@@ -110,8 +121,8 @@
     {
       "type": "parse",
       "name": "an unknown property on an entry or a cast member is UNKNOWN_FIELD",
-      "kind": "bundle",
-      "text": "{\"troupe\": \"0.14\", \"kind\": \"bundle\", \"scenarios\": [{\"id\": \"s\", \"cast\": [{\"mood\": \"x\"}], \"entries\": [{\"id\": \"e\", \"text\": \"t\", \"mood\": \"y\"}]}]}",
+      "kind": "story",
+      "text": "{\"troupe\": \"0.15\", \"kind\": \"story\", \"scenarios\": [{\"id\": \"s\", \"cast\": [{\"mood\": \"x\"}], \"entries\": [{\"id\": \"e\", \"text\": \"t\", \"mood\": \"y\"}]}]}",
       "expect": {
         "codes": [
           "UNKNOWN_FIELD"
@@ -121,8 +132,8 @@
     {
       "type": "parse",
       "name": "a speaker that is a reserved word",
-      "kind": "bundle",
-      "text": "{\"troupe\": \"0.14\", \"kind\": \"bundle\", \"scenarios\": [{\"id\": \"s\", \"openings\": [{\"id\": \"o\", \"content\": [{\"speaker\": \"user\", \"text\": \"x\"}]}]}]}",
+      "kind": "story",
+      "text": "{\"troupe\": \"0.15\", \"kind\": \"story\", \"scenarios\": [{\"id\": \"s\", \"openings\": [{\"id\": \"o\", \"content\": [{\"speaker\": \"player\", \"text\": \"x\"}]}]}]}",
       "expect": {
         "codes": [
           "SCHEMA"
@@ -132,8 +143,8 @@
     {
       "type": "parse",
       "name": "knownBy naming a reserved word",
-      "kind": "bundle",
-      "text": "{\"troupe\": \"0.14\", \"kind\": \"bundle\", \"scenarios\": [{\"id\": \"s\", \"entries\": [{\"id\": \"e\", \"knownBy\": [\"user\"], \"text\": \"x\"}]}]}",
+      "kind": "story",
+      "text": "{\"troupe\": \"0.15\", \"kind\": \"story\", \"scenarios\": [{\"id\": \"s\", \"entries\": [{\"id\": \"e\", \"knownBy\": [\"player\"], \"text\": \"x\"}]}]}",
       "expect": {
         "codes": [
           "SCHEMA"
@@ -144,7 +155,7 @@
       "type": "parse",
       "name": "a player message naming a char",
       "kind": "session",
-      "text": "{\"troupe\": \"0.14\", \"kind\": \"session\", \"scenario\": \"s\"}\n{\"id\": \"1\", \"from\": \"player\", \"char\": \"a\", \"content\": [{\"text\": \"x\"}]}\n",
+      "text": "{\"troupe\": \"0.15\", \"kind\": \"session\", \"scenario\": \"s\"}\n{\"id\": \"1\", \"from\": \"player\", \"char\": \"a\", \"content\": [{\"text\": \"x\"}]}\n",
       "expect": {
         "codes": [
           "SCHEMA"
@@ -155,7 +166,7 @@
       "type": "parse",
       "name": "a records-only message with entries, other than a root",
       "kind": "session",
-      "text": "{\"troupe\": \"0.14\", \"kind\": \"session\", \"scenario\": \"s\"}\n{\"id\": \"1\", \"from\": \"player\", \"content\": [{\"text\": \"x\"}]}\n{\"id\": \"2\", \"parent\": \"1\", \"from\": \"system\", \"content\": [], \"changes\": [{\"by\": \"player\", \"set\": {\"state.v\": true}}], \"entries\": [{\"id\": \"e\", \"text\": \"t\"}]}\n",
+      "text": "{\"troupe\": \"0.15\", \"kind\": \"session\", \"scenario\": \"s\"}\n{\"id\": \"1\", \"from\": \"player\", \"content\": [{\"text\": \"x\"}]}\n{\"id\": \"2\", \"parent\": \"1\", \"from\": \"system\", \"content\": [], \"changes\": [{\"by\": \"player\", \"set\": {\"state.v\": true}}], \"entries\": [{\"id\": \"e\", \"text\": \"t\"}]}\n",
       "expect": {
         "codes": [
           "SCHEMA"
@@ -166,7 +177,7 @@
       "type": "parse",
       "name": "a records-only root may hold entries",
       "kind": "session",
-      "text": "{\"troupe\": \"0.14\", \"kind\": \"session\", \"scenario\": \"s\"}\n{\"id\": \"1\", \"opening\": \"o\", \"from\": \"system\", \"content\": [], \"changes\": [{\"by\": \"opening\", \"set\": {\"scene.present\": []}}], \"entries\": [{\"id\": \"e\", \"text\": \"t\"}]}\n",
+      "text": "{\"troupe\": \"0.15\", \"kind\": \"session\", \"scenario\": \"s\"}\n{\"id\": \"1\", \"opening\": \"o\", \"from\": \"system\", \"content\": [], \"changes\": [{\"by\": \"opening\", \"set\": {\"scene.present\": []}}], \"entries\": [{\"id\": \"e\", \"text\": \"t\"}]}\n",
       "expect": {
         "codes": []
       }
@@ -175,7 +186,7 @@
       "type": "parse",
       "name": "an opening root is a system message",
       "kind": "session",
-      "text": "{\"troupe\": \"0.14\", \"kind\": \"session\", \"scenario\": \"s\"}\n{\"id\": \"1\", \"opening\": \"o\", \"from\": \"player\", \"content\": [{\"text\": \"x\"}]}\n",
+      "text": "{\"troupe\": \"0.15\", \"kind\": \"session\", \"scenario\": \"s\"}\n{\"id\": \"1\", \"opening\": \"o\", \"from\": \"player\", \"content\": [{\"text\": \"x\"}]}\n",
       "expect": {
         "codes": [
           "SCHEMA"
@@ -184,9 +195,9 @@
     },
     {
       "type": "parse",
-      "name": "a key without state.",
-      "kind": "bundle",
-      "text": "{\"troupe\": \"0.14\", \"kind\": \"bundle\", \"scenarios\": [{\"id\": \"s\", \"variables\": [{\"id\": \"v\", \"description\": \"d\", \"type\": \"int\"}], \"openings\": [{\"id\": \"o\", \"set\": {\"v\": 1}}]}]}",
+      "name": "a state key without state.",
+      "kind": "story",
+      "text": "{\"troupe\": \"0.15\", \"kind\": \"story\", \"scenarios\": [{\"id\": \"s\", \"variables\": [{\"id\": \"v\", \"description\": \"d\", \"type\": \"int\"}], \"openings\": [{\"id\": \"o\", \"set\": {\"v\": 1}}]}]}",
       "expect": {
         "codes": [
           "SCHEMA"
@@ -195,9 +206,9 @@
     },
     {
       "type": "parse",
-      "name": "an own. key",
-      "kind": "bundle",
-      "text": "{\"troupe\": \"0.14\", \"kind\": \"bundle\", \"scenarios\": [{\"id\": \"s\", \"variables\": [{\"id\": \"v\", \"description\": \"d\", \"type\": \"int\"}], \"openings\": [{\"id\": \"o\", \"set\": {\"own.v\": 1}}]}]}",
+      "name": "an own. state key",
+      "kind": "story",
+      "text": "{\"troupe\": \"0.15\", \"kind\": \"story\", \"scenarios\": [{\"id\": \"s\", \"variables\": [{\"id\": \"v\", \"description\": \"d\", \"type\": \"int\"}], \"openings\": [{\"id\": \"o\", \"set\": {\"own.v\": 1}}]}]}",
       "expect": {
         "codes": [
           "SCHEMA"
@@ -207,8 +218,8 @@
     {
       "type": "parse",
       "name": "a number variable",
-      "kind": "bundle",
-      "text": "{\"troupe\": \"0.14\", \"kind\": \"bundle\", \"scenarios\": [{\"id\": \"s\", \"variables\": [{\"id\": \"v\", \"description\": \"d\", \"type\": \"number\"}]}]}",
+      "kind": "story",
+      "text": "{\"troupe\": \"0.15\", \"kind\": \"story\", \"scenarios\": [{\"id\": \"s\", \"variables\": [{\"id\": \"v\", \"description\": \"d\", \"type\": \"number\"}]}]}",
       "expect": {
         "codes": [
           "SCHEMA"
@@ -218,8 +229,8 @@
     {
       "type": "parse",
       "name": "a decimal int value",
-      "kind": "bundle",
-      "text": "{\"troupe\": \"0.14\", \"kind\": \"bundle\", \"scenarios\": [{\"id\": \"s\", \"variables\": [{\"id\": \"v\", \"description\": \"d\", \"type\": \"int\", \"min\": 0.5}]}]}",
+      "kind": "story",
+      "text": "{\"troupe\": \"0.15\", \"kind\": \"story\", \"scenarios\": [{\"id\": \"s\", \"variables\": [{\"id\": \"v\", \"description\": \"d\", \"type\": \"int\", \"min\": 0.5}]}]}",
       "expect": {
         "codes": [
           "SCHEMA"
@@ -229,17 +240,17 @@
     {
       "type": "parse",
       "name": "an integer written with a zero fraction",
-      "kind": "bundle",
-      "text": "{\"troupe\": \"0.14\", \"kind\": \"bundle\", \"scenarios\": [{\"id\": \"s\", \"variables\": [{\"id\": \"v\", \"description\": \"d\", \"type\": \"int\", \"min\": 0.0, \"maxStep\": 2.0}]}]}",
+      "kind": "story",
+      "text": "{\"troupe\": \"0.15\", \"kind\": \"story\", \"scenarios\": [{\"id\": \"s\", \"variables\": [{\"id\": \"v\", \"description\": \"d\", \"type\": \"int\", \"min\": 0.0, \"maxStep\": 2.0}]}]}",
       "expect": {
         "codes": []
       }
     },
     {
       "type": "parse",
-      "name": "of characters",
-      "kind": "bundle",
-      "text": "{\"troupe\": \"0.14\", \"kind\": \"bundle\", \"scenarios\": [{\"id\": \"s\", \"variables\": [{\"id\": \"v\", \"description\": \"d\", \"type\": \"int\", \"of\": \"characters\"}]}]}",
+      "name": "per: \"characters\"",
+      "kind": "story",
+      "text": "{\"troupe\": \"0.15\", \"kind\": \"story\", \"scenarios\": [{\"id\": \"s\", \"variables\": [{\"id\": \"v\", \"description\": \"d\", \"type\": \"int\", \"per\": \"characters\"}]}]}",
       "expect": {
         "codes": [
           "SCHEMA"
@@ -250,7 +261,7 @@
       "type": "parse",
       "name": "a change by system",
       "kind": "session",
-      "text": "{\"troupe\": \"0.14\", \"kind\": \"session\", \"scenario\": \"s\"}\n{\"id\": \"1\", \"from\": \"player\", \"content\": [{\"text\": \"Hi.\"}], \"changes\": [{\"by\": \"system\", \"set\": {\"state.v\": true}}]}\n",
+      "text": "{\"troupe\": \"0.15\", \"kind\": \"session\", \"scenario\": \"s\"}\n{\"id\": \"1\", \"from\": \"player\", \"content\": [{\"text\": \"Hi.\"}], \"changes\": [{\"by\": \"system\", \"set\": {\"state.v\": true}}]}\n",
       "expect": {
         "codes": [
           "SCHEMA"
@@ -261,7 +272,7 @@
       "type": "parse",
       "name": "a change that sets nothing",
       "kind": "session",
-      "text": "{\"troupe\": \"0.14\", \"kind\": \"session\", \"scenario\": \"s\"}\n{\"id\": \"1\", \"from\": \"player\", \"content\": [{\"text\": \"Hi.\"}], \"changes\": [{\"by\": \"player\", \"set\": {}}]}\n",
+      "text": "{\"troupe\": \"0.15\", \"kind\": \"session\", \"scenario\": \"s\"}\n{\"id\": \"1\", \"from\": \"player\", \"content\": [{\"text\": \"Hi.\"}], \"changes\": [{\"by\": \"player\", \"set\": {}}]}\n",
       "expect": {
         "codes": [
           "SCHEMA"
@@ -272,7 +283,7 @@
       "type": "parse",
       "name": "a change by opening outside a root made from an opening",
       "kind": "session",
-      "text": "{\"troupe\": \"0.14\", \"kind\": \"session\", \"scenario\": \"s\"}\n{\"id\": \"1\", \"from\": \"player\", \"content\": [{\"text\": \"Hi.\"}], \"changes\": [{\"by\": \"opening\", \"set\": {\"state.v\": true}}]}\n",
+      "text": "{\"troupe\": \"0.15\", \"kind\": \"session\", \"scenario\": \"s\"}\n{\"id\": \"1\", \"from\": \"player\", \"content\": [{\"text\": \"Hi.\"}], \"changes\": [{\"by\": \"opening\", \"set\": {\"state.v\": true}}]}\n",
       "expect": {
         "codes": [
           "SCHEMA"
@@ -282,8 +293,8 @@
     {
       "type": "parse",
       "name": "an initial object without members",
-      "kind": "bundle",
-      "text": "{\"troupe\": \"0.14\", \"kind\": \"bundle\", \"scenarios\": [{\"id\": \"s\", \"variables\": [{\"id\": \"v\", \"type\": \"int\", \"of\": \"cast\", \"initial\": {}, \"description\": \"d\"}]}]}",
+      "kind": "story",
+      "text": "{\"troupe\": \"0.15\", \"kind\": \"story\", \"scenarios\": [{\"id\": \"s\", \"variables\": [{\"id\": \"v\", \"type\": \"int\", \"per\": \"cast\", \"initial\": {}, \"description\": \"d\"}]}]}",
       "expect": {
         "codes": [
           "SCHEMA"
@@ -293,8 +304,8 @@
     {
       "type": "parse",
       "name": "an ID that is a CEL reserved word",
-      "kind": "bundle",
-      "text": "{\"troupe\": \"0.14\", \"kind\": \"bundle\", \"scenarios\": [{\"id\": \"s\", \"entries\": [{\"id\": \"loop\", \"text\": \"x\"}]}]}",
+      "kind": "story",
+      "text": "{\"troupe\": \"0.15\", \"kind\": \"story\", \"scenarios\": [{\"id\": \"s\", \"entries\": [{\"id\": \"loop\", \"text\": \"x\"}]}]}",
       "expect": {
         "codes": [
           "SCHEMA"
@@ -305,7 +316,18 @@
       "type": "parse",
       "name": "a player listed twice",
       "kind": "session",
-      "text": "{\"troupe\": \"0.14\", \"kind\": \"session\", \"scenario\": \"s\", \"players\": [\"p\", \"p\"]}\n",
+      "text": "{\"troupe\": \"0.15\", \"kind\": \"session\", \"scenario\": \"s\", \"players\": [\"p\", \"p\"]}\n",
+      "expect": {
+        "codes": [
+          "SCHEMA"
+        ]
+      }
+    },
+    {
+      "type": "parse",
+      "name": "an extension name with the reserved troupe. prefix",
+      "kind": "story",
+      "text": "{\"troupe\": \"0.15\", \"kind\": \"story\", \"ext\": {\"troupe.x\": 1}}",
       "expect": {
         "codes": [
           "SCHEMA"

@@ -9,10 +9,10 @@ import (
 )
 
 // FileFields yields every field that holds a file, with its pointer and its
-// form, and leaves out values of no form, which a bundle that fails the
+// form, and leaves out values of no form, which a story that fails the
 // schema can hold.
 func TestFileFields(t *testing.T) {
-	b := &troupe.Bundle{
+	st := &troupe.Story{
 		Cover:      "https://x.test/cover.png",
 		Characters: []troupe.Character{{}, {Avatar: "images/kai.png"}},
 		Worlds: []troupe.World{{Locations: []troupe.Location{
@@ -29,7 +29,7 @@ func TestFileFields(t *testing.T) {
 		{Pointer: "/worlds/0/locations/0/image", MediaType: "image/gif", Data: []byte("GIF")},
 		{Pointer: "/scenarios/0/openings/0/content/1/src", Path: "map.webp"},
 	}
-	if got := slices.Collect(b.FileFields()); !reflect.DeepEqual(got, want) {
+	if got := slices.Collect(st.FileFields()); !reflect.DeepEqual(got, want) {
 		t.Errorf("got  %+v\nwant %+v", got, want)
 	}
 }

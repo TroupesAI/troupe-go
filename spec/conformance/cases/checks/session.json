@@ -1,7 +1,7 @@
 {
   "description": "Reference checks on a session (Format 11, 15.3): openings on roots, the message forest, players, recorded values and activations",
-  "bundle": {
-    "kind": "bundle",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "a",
@@ -166,7 +166,7 @@
           "UNKNOWN_ENTRY",
           "UNKNOWN_MESSAGE",
           "UNKNOWN_OPENING",
-          "UNKNOWN_VARIABLE"
+          "UNKNOWN_STATE_KEY"
         ],
         "includes": [
           {
@@ -190,7 +190,7 @@
             "at": "message:1/changes/0/set/state.hp"
           },
           {
-            "code": "UNKNOWN_VARIABLE",
+            "code": "UNKNOWN_STATE_KEY",
             "at": "message:1/changes/0/set/state.mp"
           },
           {

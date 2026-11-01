@@ -11,7 +11,7 @@ import (
 // The limits of Format 14, other than the value limits, which are checks of
 // their own (Format 8.5).
 const (
-	maxBundleSize     = 32 << 20
+	maxStorySize      = 32 << 20
 	maxSessionSize    = 256 << 20
 	maxMessages       = 100_000
 	maxZipEntries     = 10_000
@@ -45,7 +45,7 @@ func isPackageFile(name string) bool {
 // so no other check walks what a limit bounds (Format 14). It reads the
 // document leniently: values of the wrong type are the schema's to report.
 type scan struct {
-	report func(jsontext.Pointer) // reports PARSE
+	report func(jsontext.Pointer) // reports UNREADABLE
 	failed bool                   // whether it reported any
 	// files are the paths of a package's files; nil outside a package,
 	// where package paths aren't allowed (Format 12.2).
@@ -55,7 +55,7 @@ type scan struct {
 	characters int
 }
 
-func (s *scan) bundle(doc map[string]any) {
+func (s *scan) story(doc map[string]any) {
 	s.image("", doc, "cover")
 	for p, c := range each(doc, "", "characters") {
 		s.character(p, c)

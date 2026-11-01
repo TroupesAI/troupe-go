@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://docs.troupes.ai/schema/0.14/message.schema.json",
+  "$id": "https://docs.troupes.ai/schema/0.15/message.schema.json",
   "title": "Troupe message",
-  "description": "Every line after the first in a Troupe session file: a message.",
+  "description": "Every line after the first in a Troupe session: a message.",
   "type": "object",
   "required": [
     "id",
@@ -12,13 +12,13 @@
   "additionalProperties": false,
   "properties": {
     "id": {
-      "$ref": "bundle.schema.json#/$defs/opaqueId"
+      "$ref": "story.schema.json#/$defs/opaqueId"
     },
     "parent": {
-      "$ref": "bundle.schema.json#/$defs/opaqueId"
+      "$ref": "story.schema.json#/$defs/opaqueId"
     },
     "opening": {
-      "$ref": "bundle.schema.json#/$defs/id"
+      "$ref": "story.schema.json#/$defs/id"
     },
     "from": {
       "enum": [
@@ -28,16 +28,16 @@
       ]
     },
     "char": {
-      "$ref": "bundle.schema.json#/$defs/characterId"
+      "$ref": "story.schema.json#/$defs/characterId"
     },
     "content": {
       "type": "array",
       "items": {
-        "$ref": "bundle.schema.json#/$defs/part"
+        "$ref": "story.schema.json#/$defs/part"
       }
     },
     "at": {
-      "$ref": "bundle.schema.json#/$defs/timestamp"
+      "$ref": "story.schema.json#/$defs/timestamp"
     },
     "changes": {
       "type": "array",
@@ -51,14 +51,14 @@
       "type": "array",
       "uniqueItems": true,
       "items": {
-        "$ref": "bundle.schema.json#/$defs/entryRef"
+        "$ref": "story.schema.json#/$defs/entryRef"
       },
       "minItems": 1
     },
     "entries": {
       "type": "array",
       "items": {
-        "$ref": "bundle.schema.json#/$defs/entry"
+        "$ref": "story.schema.json#/$defs/entry"
       },
       "minItems": 1
     },
@@ -66,7 +66,7 @@
       "type": "boolean"
     },
     "ext": {
-      "$ref": "bundle.schema.json#/$defs/ext"
+      "$ref": "story.schema.json#/$defs/ext"
     }
   },
   "allOf": [
@@ -188,12 +188,7 @@
           {
             "required": [
               "opening"
-            ],
-            "properties": {
-              "from": {
-                "const": "system"
-              }
-            }
+            ]
           },
           {
             "properties": {
@@ -267,10 +262,10 @@
           ]
         },
         "set": {
-          "$ref": "bundle.schema.json#/$defs/stateValues"
+          "$ref": "story.schema.json#/$defs/stateValues"
         },
         "ext": {
-          "$ref": "bundle.schema.json#/$defs/ext"
+          "$ref": "story.schema.json#/$defs/ext"
         }
       }
     }

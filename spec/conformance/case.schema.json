@@ -15,10 +15,10 @@
     "note": {
       "type": "string"
     },
-    "bundle": {
+    "story": {
       "type": "object"
     },
-    "bundleFile": {
+    "storyFile": {
       "type": "string"
     },
     "session": {
@@ -364,7 +364,7 @@
                 },
                 "kind": {
                   "enum": [
-                    "bundle",
+                    "story",
                     "session",
                     "package"
                   ]
@@ -443,8 +443,8 @@
     "anyOf": [
       {
         "required": [
-          "bundle",
-          "bundleFile"
+          "story",
+          "storyFile"
         ]
       },
       {

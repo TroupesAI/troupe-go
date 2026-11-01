@@ -1,7 +1,7 @@
 {
   "description": "{{scene.location}} always renders as its location's name, even when a character has the same ID, while a string state value that is a character ID renders as that character's name (Format 9)",
-  "bundle": {
-    "kind": "bundle",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "b",

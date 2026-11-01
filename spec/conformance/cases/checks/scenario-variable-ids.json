@@ -1,7 +1,7 @@
 {
   "description": "A scenario variable can't take a character's or world's ID (Format 2.3): DUPLICATE_ID",
-  "bundle": {
-    "kind": "bundle",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "a",

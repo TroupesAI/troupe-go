@@ -1,7 +1,7 @@
 {
-  "description": "Macro parsing and context (Format 9): \\\\ and \\{{ escapes, a { before a macro kept, one at a time, comments removed, own in a scenario's text, {{user}} from the first speaking part of the latest player message, and a location ID rendered as the location's name",
-  "bundle": {
-    "kind": "bundle",
+  "description": "Macro parsing and context (Format 9): \\\\ and \\{{ escapes, a { before a macro kept, one at a time, comments removed, own in a scenario's text, {{player}} from the first speaking part of the latest player message, and a location ID rendered as the location's name",
+  "story": {
+    "kind": "story",
     "worlds": [
       {
         "id": "w",
@@ -128,8 +128,8 @@
       "type": "macro",
       "name": "\\\\ is a backslash, \\{{ a literal {{",
       "at": "1",
-      "text": "C:\\\\{{user}} and \\{{user}}",
-      "expect": "C:\\Pat and {{user}}"
+      "text": "C:\\\\{{player}} and \\{{player}}",
+      "expect": "C:\\Pat and {{player}}"
     },
     {
       "type": "macro",
@@ -142,7 +142,7 @@
       "type": "macro",
       "name": "{{{char}}: not a macro at the first {{, so one { is kept and scanning resumes",
       "char": "a",
-      "text": "{{{char}} and {{{{user}}}}",
+      "text": "{{{char}} and {{{{player}}}}",
       "expect": "{Ann and {{Pat}}",
       "at": "1"
     },
@@ -161,9 +161,9 @@
     },
     {
       "type": "macro",
-      "name": "{{user}}: the first part with a speaker in the latest player message",
+      "name": "{{player}}: the first part with a speaker in the latest player message",
       "at": "4",
-      "text": "{{user}}",
+      "text": "{{player}}",
       "expect": "Quin"
     },
     {

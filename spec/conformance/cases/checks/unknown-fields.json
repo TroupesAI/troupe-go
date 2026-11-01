@@ -1,7 +1,7 @@
 {
   "description": "Fields the format doesn't define are UNKNOWN_FIELD, located at the field, not SCHEMA; a part's fields are those of the interface its type selects, and SCHEMA is judged with unknown fields removed (Format 13, 15.3)",
-  "bundle": {
-    "kind": "bundle",
+  "story": {
+    "kind": "story",
     "futureField": true,
     "characters": [
       {
@@ -93,9 +93,9 @@
     },
     {
       "type": "parse",
-      "name": "limits left empty once its unknown field is removed",
+      "name": "boundaries left empty once its unknown field is removed",
       "kind": "session",
-      "text": "{\"troupe\": \"0.14\", \"kind\": \"session\", \"scenario\": \"s\", \"limits\": {\"mystery\": 1}}\n{\"id\": \"1\", \"from\": \"player\", \"content\": [{\"text\": \"x\"}]}\n",
+      "text": "{\"troupe\": \"0.15\", \"kind\": \"session\", \"scenario\": \"s\", \"boundaries\": {\"mystery\": 1}}\n{\"id\": \"1\", \"from\": \"player\", \"content\": [{\"text\": \"x\"}]}\n",
       "expect": {
         "codes": [
           "SCHEMA",

@@ -1,7 +1,7 @@
 {
   "description": "A change that takes a \"*\" map past 256 keys is INVALID_VALUE, judged on the state of its path (Format 8.5, 8.6, 14): the siblings before and after it that each remove a key don't make room",
-  "bundle": {
-    "kind": "bundle",
+  "story": {
+    "kind": "story",
     "scenarios": [
       {
         "id": "s",
@@ -9,7 +9,7 @@
           {
             "id": "inv",
             "type": "int",
-            "of": "*",
+            "per": "*",
             "by": [
               "player"
             ],

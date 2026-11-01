@@ -1,16 +1,15 @@
 package troupe
 
-// StateKey is a key a story's changes can write (Format 8.5).
+// StateKey is a state key a play's changes can write (Format 8.5).
 type StateKey struct {
-	// Name is the key as a change writes it: "scene.location",
-	// "scene.present", a variable's full name (Format 8.2), or a keyed
-	// variable's full name and one of its keys, such as "state.trust.kai".
-	// For a "*" map, whose keys can't be listed, it is the variable's full
-	// name.
+	// Name is the state key: "scene.location", "scene.present", a
+	// variable's full name (Format 8.2), or a keyed variable's full name and
+	// one of its keys, such as "state.trust.kai". For a "*" map, whose keys
+	// can't be listed, it is the variable's full name.
 	Name string
 	// Key is a keyed variable's key: a cast character's ID for "cast", or one
 	// of its list, and "*" for a "*" map, where any author ID other than char
-	// and user is a key, written after Name and a dot (Format 8.3). It is ""
+	// and player is a key, written after Name and a dot (Format 8.3). It is ""
 	// for the scene and for a variable that isn't keyed.
 	Key string
 	// Variable is the variable the key writes, which gives its type and
@@ -22,8 +21,8 @@ type StateKey struct {
 	Owner string
 }
 
-// StateKeys returns the keys the story's changes and its openings' set can
-// write (Format 6.3, 8.5): scene.location and scene.present, then each
+// StateKeys returns the state keys the play's changes and its openings' set
+// can write (Format 6.3, 8.5): scene.location and scene.present, then each
 // variable in use, the scenario's, its worlds' and its characters', with a
 // keyed variable's keys in their order, as State.All yields them. In a
 // scenario played on its own, a "cast" variable's keys also include the
@@ -33,21 +32,21 @@ type StateKey struct {
 //
 // It offers what is valid, and Check still judges what is written: for a
 // draft that fails Check, it gives the keys of what reads, each once.
-func (st *Story) StateKeys() []StateKey {
-	sc := st.scope
+func (pl *Play) StateKeys() []StateKey {
+	sc := pl.scope
 	out := []StateKey{{Name: "scene.location"}, {Name: "scene.present"}}
 	for _, b := range sc.bindings {
 		switch {
-		case !b.v.Of.keyed():
+		case !b.v.Per.keyed():
 			out = append(out, StateKey{Name: b.name, Variable: b.v, Owner: b.owner})
-		case b.v.Of.Any:
+		case b.v.Per.Any:
 			out = append(out, StateKey{Name: b.name, Key: "*", Variable: b.v, Owner: b.owner})
 		default:
 			// A draft's cast or list may hold a key twice (DUPLICATE_ID,
 			// SCHEMA).
 			seen := map[string]bool{}
-			keys := b.v.Of.List
-			if b.v.Of.Cast {
+			keys := b.v.Per.List
+			if b.v.Per.Cast {
 				keys = sc.openingCast
 			}
 			for _, k := range keys {

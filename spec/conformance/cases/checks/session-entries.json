@@ -1,7 +1,7 @@
 {
   "description": "Session entries (Format 6.4, 11.3, 11.4, 15.3): activated names entries in use at the message's evaluation point. An entry disabled by an earlier message is no longer in use, so a message after that can't list it (UNKNOWN_ENTRY); a reply can't list an entry its own entries add (UNKNOWN_ENTRY); one message can't add two entries with one ID (DUPLICATE_ID)",
-  "bundle": {
-    "kind": "bundle",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "a",

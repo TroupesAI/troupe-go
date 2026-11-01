@@ -1,7 +1,7 @@
 {
   "description": "Presence on roots made from openings (Format 6.3, 8.6, 11.1, 11.4): an opening's set that names scene.present is recorded with the players' characters added; an opening without content or set makes a records-only root without changes, where the whole cast but the joiners is present",
-  "bundle": {
-    "kind": "bundle",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "a",
@@ -43,7 +43,7 @@
           },
           {
             "id": "quiet",
-            "title": "A quiet start"
+            "name": "A quiet start"
           }
         ]
       }
@@ -139,7 +139,7 @@
     {
       "type": "cel",
       "at": "2",
-      "expr": "opening == 'quiet' && turn == 0",
+      "expr": "opening == 'quiet' && round == 0",
       "expect": true
     }
   ]

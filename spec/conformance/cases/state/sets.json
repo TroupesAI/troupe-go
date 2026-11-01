@@ -1,7 +1,7 @@
 {
   "description": "Sets and the scene (Format 8.4, 8.6, 9): initial and recorded sets lose duplicates, and a set with values orders its members as declared; a free-form set keeps its members' order; scene.present loses duplicates and IDs that name no cast character, and is ordered by cast order; sets render with their labels, joined by \", \", and scene.present as the names of those present",
-  "bundle": {
-    "kind": "bundle",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "a",

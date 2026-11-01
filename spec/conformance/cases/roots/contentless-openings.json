@@ -1,7 +1,7 @@
 {
   "description": "An opening without content (Format 6.3, 11.1, 11.4): its root is a records-only system message that records the opening's set as a change by the opening; the set leaves scene.present alone, so the whole cast stays present; conditions there see the root's opening",
-  "bundle": {
-    "kind": "bundle",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "ann",
@@ -49,7 +49,7 @@
         "openings": [
           {
             "id": "tavern",
-            "title": "At the tavern",
+            "name": "At the tavern",
             "set": {
               "scene.location": "tavern",
               "state.mood": "festive"
@@ -129,14 +129,14 @@
       "type": "cel",
       "name": "opening is the root's opening; no player message yet",
       "at": "1",
-      "expr": "opening == 'tavern' && turn == 0",
+      "expr": "opening == 'tavern' && round == 0",
       "expect": true
     },
     {
       "type": "cel",
       "name": "and at a later message on its path",
       "at": "2",
-      "expr": "opening == 'tavern' && turn == 0",
+      "expr": "opening == 'tavern' && round == 0",
       "expect": true
     }
   ]

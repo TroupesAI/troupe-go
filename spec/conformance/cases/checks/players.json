@@ -1,7 +1,7 @@
 {
   "description": "A cast member marked player that players doesn't list is a seat no player fills, left out of the cast (Format 6.1, 8.6, 11.2): here a person plays b instead, which is valid",
-  "bundle": {
-    "kind": "bundle",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "a",
@@ -68,7 +68,7 @@
     },
     {
       "type": "cel",
-      "expr": "players == ['b'] && user == 'b'",
+      "expr": "players == ['b'] && player == 'b'",
       "expect": true
     }
   ]

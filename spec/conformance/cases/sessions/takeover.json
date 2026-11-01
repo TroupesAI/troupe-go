@@ -1,7 +1,7 @@
 {
   "description": "A takeover (Format 8.3, 11.2): a cast character listed in players is played by a person, and stays a key of cast maps, so recorded values stay valid",
-  "bundle": {
-    "kind": "bundle",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "a",
@@ -30,7 +30,7 @@
           {
             "id": "trust",
             "type": "int",
-            "of": "cast",
+            "per": "cast",
             "initial": 50,
             "by": [
               "model"

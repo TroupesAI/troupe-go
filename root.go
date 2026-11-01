@@ -24,8 +24,8 @@ import (
 // its at.
 //
 // It fails when the scenario has no such opening.
-func (st *Story) Root(opening string, r *rand.Rand) (Message, error) {
-	sc := st.scope
+func (pl *Play) Root(opening string, r *rand.Rand) (Message, error) {
+	sc := pl.scope
 	i := slices.IndexFunc(sc.scenario.Openings, func(o Opening) bool { return o.ID == opening })
 	if i < 0 {
 		return Message{}, errors.New("troupe: the scenario has no opening " + opening)
@@ -65,7 +65,7 @@ func (sc *scope) seatKey(key, id string) bool {
 		return false
 	}
 	b, ok := sc.byName[key[:i]]
-	return ok && b.v.Of.Cast
+	return ok && b.v.Per.Cast
 }
 
 // choosePicks returns text with each pick replaced by the option r chooses,

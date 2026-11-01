@@ -1,7 +1,7 @@
 {
   "description": "Characters who join during the session (Format 8.3, 8.6, 11.2): in the cast after the scenario cast, keys of cast maps, not present until a change adds them",
-  "bundle": {
-    "kind": "bundle",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "a",
@@ -22,7 +22,7 @@
           {
             "id": "trust",
             "type": "int",
-            "of": "cast",
+            "per": "cast",
             "initial": 50,
             "description": "d"
           }

@@ -1,9 +1,8 @@
 {
-  "description": "Reference checks on a bundle (Format 15.3): each broken reference reports its code; invalid initial and opening values and values beyond the value limits, a set member over 4 KiB included, are INVALID_VALUE (Format 8.5, 14); comprehensions, double literals and selecting char from a keyed variable are CEL_ERROR (Format 10.2); a tagline isn't text where macros resolve, so {{dark}} in it is no UNKNOWN_MACRO (Format 9)",
+  "description": "Reference checks on a story (Format 15.3): each broken reference reports its code; invalid initial and opening values and values beyond the value limits, a set member over 4 KiB included, are INVALID_VALUE (Format 8.5, 14); comprehensions, double literals and selecting char from a keyed variable are CEL_ERROR (Format 10.2)",
   "note": "The opening's set holds a set of 257 distinct members and a string of 4097 bytes, one past each value limit.",
-  "bundle": {
-    "kind": "bundle",
-    "tagline": "Into the {{dark}}.",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "a",
@@ -27,7 +26,7 @@
           },
           {
             "id": "e2",
-            "keys": [
+            "keywords": [
               "/[/"
             ],
             "text": "bad regex"
@@ -45,14 +44,6 @@
           {
             "id": "e1",
             "text": "duplicate entry"
-          },
-          {
-            "id": "e5",
-            "knownBy": [
-              "narrator",
-              "a"
-            ],
-            "text": "narrator is a valid knownBy ID"
           },
           {
             "id": "e6",
@@ -118,7 +109,7 @@
           {
             "id": "trust",
             "type": "int",
-            "of": "cast",
+            "per": "cast",
             "min": 0,
             "max": 100,
             "initial": {
@@ -465,7 +456,7 @@
           "UNKNOWN_CHARACTER",
           "UNKNOWN_LOCATION",
           "UNKNOWN_MACRO",
-          "UNKNOWN_VARIABLE",
+          "UNKNOWN_STATE_KEY",
           "UNKNOWN_WORLD"
         ],
         "includes": [
@@ -523,7 +514,7 @@
           },
           {
             "code": "REGEX_ERROR",
-            "at": "/characters/0/entries/1/keys/0"
+            "at": "/characters/0/entries/1/keywords/0"
           },
           {
             "code": "CEL_ERROR",
@@ -535,11 +526,11 @@
           },
           {
             "code": "CEL_ERROR",
-            "at": "/characters/0/entries/6/when"
+            "at": "/characters/0/entries/5/when"
           },
           {
             "code": "CEL_ERROR",
-            "at": "/characters/0/entries/7/when"
+            "at": "/characters/0/entries/6/when"
           },
           {
             "code": "INVALID_VALUE",
@@ -566,7 +557,7 @@
             "at": "/scenarios/0/openings/0/set/state.tags"
           },
           {
-            "code": "UNKNOWN_VARIABLE",
+            "code": "UNKNOWN_STATE_KEY",
             "at": "/scenarios/0/openings/0/set/state.nope"
           },
           {

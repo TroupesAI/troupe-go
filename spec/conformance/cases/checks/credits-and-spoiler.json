@@ -1,7 +1,7 @@
 {
-  "description": "Credits and spoilers (Format 3, 6.1): bundle credits and a spoiler cast member are valid, and a spoiler cast member is an ordinary cast member in the state, offstage while the opening's set leaves it out of scene.present and present once a change adds it (Format 8.6)",
-  "bundle": {
-    "kind": "bundle",
+  "description": "Credits and spoilers (Format 3, 6.1): story credits and a spoiler cast member are valid, and a spoiler cast member is an ordinary cast member in the state, present from the start, offstage while the opening's set leaves it out, and present once a change adds it (Format 8.6)",
+  "story": {
+    "kind": "story",
     "name": "The Cellar",
     "authors": [
       "Sakura"
@@ -137,7 +137,18 @@
     },
     {
       "type": "state",
-      "name": "a spoiler cast member the opening leaves out is offstage",
+      "name": "a spoiler cast member starts present like any other",
+      "expect": {
+        "scene.present": [
+          "p",
+          "ann",
+          "ghost"
+        ]
+      }
+    },
+    {
+      "type": "state",
+      "name": "offstage while the opening's set leaves it out",
       "at": "1",
       "expect": {
         "scene.present": [

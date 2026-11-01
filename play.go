@@ -8,10 +8,10 @@ import (
 	"strings"
 )
 
-// Story is a bundle's scenario as a session plays it, or played on its own.
+// Play is a story's scenario as a session plays it, or played on its own.
 // The states it gives are its own: a method that takes a State takes one this
-// story gave.
-type Story struct {
+// play gave.
+type Play struct {
 	scope    *scope
 	messages []Message
 	index    map[string]int // each message ID's first line, as an index into messages
@@ -19,80 +19,80 @@ type Story struct {
 	conditions
 }
 
-// NewStory returns the story of session s, played with bundle b. Without s, it
-// returns the story of b's first scenario played on its own, as
-// NewScenarioStory does. A session without messages, such as one read from
-// its header alone, serves to compute states with Apply.
+// NewPlay returns the play of session s, played with story st. Without s, it
+// returns the play of st's first scenario on its own, as NewScenarioPlay
+// does. A session without messages, such as one read from its header alone,
+// serves to compute states with Apply.
 //
-// It fails when b has no scenario, or s's scenario isn't one of b's. b and s
-// are documents that pass Check; the results for others are only bounded,
+// It fails when st has no scenario, or s's scenario isn't one of st's. st and
+// s are documents that pass Check; the results for others are only bounded,
 // since the spec gives them no meaning (Format 15.1).
-func NewStory(b *Bundle, s *Session) (*Story, error) {
+func NewPlay(st *Story, s *Session) (*Play, error) {
 	if s == nil {
-		if len(b.Scenarios) == 0 {
-			return nil, errors.New("troupe: the bundle has no scenario")
+		if len(st.Scenarios) == 0 {
+			return nil, errors.New("troupe: the story has no scenario")
 		}
-		return newStory(newScope(b, nil, 0), nil), nil
+		return newPlay(newScope(st, nil, 0), nil), nil
 	}
-	i := scenarioIndex(b, s.Header.Scenario)
+	i := scenarioIndex(st, s.Header.Scenario)
 	if i < 0 {
-		return nil, errors.New("troupe: the session's scenario isn't in the bundle")
+		return nil, errors.New("troupe: the session's scenario isn't in the story")
 	}
-	return newStory(newScope(b, s, i), s.Messages), nil
+	return newPlay(newScope(st, s, i), s.Messages), nil
 }
 
-// NewScenarioStory returns the story of b's scenario with the ID scenario,
+// NewScenarioPlay returns the play of st's scenario with the ID scenario,
 // played on its own: its seats are unfilled, so it has no players
 // (conformance README section 2). It is the scenario as a person starting a
 // session sees it, before choosing whom to play.
 //
-// It fails when b has no such scenario.
-func NewScenarioStory(b *Bundle, scenario string) (*Story, error) {
-	i := scenarioIndex(b, scenario)
+// It fails when st has no such scenario.
+func NewScenarioPlay(st *Story, scenario string) (*Play, error) {
+	i := scenarioIndex(st, scenario)
 	if i < 0 {
-		return nil, errors.New("troupe: the bundle has no scenario " + scenario)
+		return nil, errors.New("troupe: the story has no scenario " + scenario)
 	}
-	return newStory(newScope(b, nil, i), nil), nil
+	return newPlay(newScope(st, nil, i), nil), nil
 }
 
-// newStory returns the story of sc, with a session's messages.
-func newStory(sc *scope, messages []Message) *Story {
-	st := &Story{scope: sc, messages: messages, index: map[string]int{}, initial: sc.initial()}
+// newPlay returns the play of sc, with a session's messages.
+func newPlay(sc *scope, messages []Message) *Play {
+	pl := &Play{scope: sc, messages: messages, index: map[string]int{}, initial: sc.initial()}
 	for j, m := range messages {
-		if _, ok := st.index[m.ID]; !ok {
-			st.index[m.ID] = j
+		if _, ok := pl.index[m.ID]; !ok {
+			pl.index[m.ID] = j
 		}
 	}
-	return st
+	return pl
 }
 
 // Initial returns the state before any message (Format 8.6).
-func (st *Story) Initial() State {
-	return State{st.scope, st.initial}
+func (pl *Play) Initial() State {
+	return State{pl.scope, pl.initial}
 }
 
-// Apply returns the state after a message, given the state of this story
+// Apply returns the state after a message, given the state of this play
 // before it: its parent's, or the initial state for a root. That is the state
 // after the message's changes (Format 8.6), with what else depends on the
-// path, such as the rounds so far, the player's character {{user}} means, the
-// session entries in use, the rounds entries were recorded as activated in
-// and who has been present (Format 6.1, 7.2, 9, 10.1, 11.3). Applying the
+// path, such as the rounds so far, the player's character {{player}} means,
+// the session entries in use, the rounds entries were recorded as activated
+// in and who has been present (Format 6.1, 7.2, 9, 10.1, 11.3). Applying the
 // messages of a path in turn gives the state at its last, so a caller that
 // keeps each message's state never replays a path.
-func (st *Story) Apply(before State, m *Message) State {
+func (pl *Play) Apply(before State, m *Message) State {
 	s := before.s.clone()
-	st.apply(s, m, map[string]bool{})
-	return State{st.scope, s}
+	pl.apply(s, m, map[string]bool{})
+	return State{pl.scope, s}
 }
 
 // apply applies m to s: its changes, in order, and who they leave present;
 // for a player message, a round, and with a speaking part, the first such
-// part's speaker as {{user}} (Format 9, 11.1); for a root, its opening; m's
+// part's speaker as {{player}} (Format 9, 11.1); for a root, its opening; m's
 // at; its entries, then its activated, which its own entries may be in
 // (Format 11.3). owned is as scope.apply takes it.
-func (st *Story) apply(s *state, m *Message, owned map[string]bool) {
+func (pl *Play) apply(s *state, m *Message, owned map[string]bool) {
 	for _, c := range m.Changes {
-		st.scope.apply(s, c.Set, nil, owned)
+		pl.scope.apply(s, c.Set, nil, owned)
 	}
 	for _, id := range s.present {
 		if !slices.Contains(s.appeared, id) {
@@ -105,9 +105,9 @@ func (st *Story) apply(s *state, m *Message, owned map[string]bool) {
 	}
 	s.parentAt, s.at = s.at, m.At
 	if m.From == "player" {
-		s.turn++
+		s.round++
 		if i := slices.IndexFunc(m.Content, func(p Part) bool { return p.Speaker != "" }); i >= 0 {
-			s.user = m.Content[i].Speaker
+			s.player = m.Content[i].Speaker
 		}
 	}
 	if len(m.Entries) > 0 {
@@ -121,7 +121,7 @@ func (st *Story) apply(s *state, m *Message, owned map[string]bool) {
 		activated := make(map[string]int, len(s.activated)+len(m.Activated))
 		maps.Copy(activated, s.activated)
 		for _, ref := range m.Activated {
-			activated[ref] = s.turn
+			activated[ref] = s.round
 		}
 		s.activated = activated
 	}
@@ -144,15 +144,15 @@ func (s *state) addEntry(e Entry) {
 // StateAt returns the state at the session's message with the ID id, after
 // its changes: those of every message on the path from its root, in order
 // (Format 8.6).
-func (st *Story) StateAt(id string) (State, error) {
-	i, ok := st.index[id]
+func (pl *Play) StateAt(id string) (State, error) {
+	i, ok := pl.index[id]
 	if !ok {
 		return State{}, errors.New("troupe: no message " + id)
 	}
 	var path []int
 	for {
 		path = append(path, i)
-		parent, ok := st.index[st.messages[i].Parent]
+		parent, ok := pl.index[pl.messages[i].Parent]
 		// A parent is on an earlier line (Format 11.1); any other makes a
 		// root.
 		if !ok || parent >= i {
@@ -160,24 +160,23 @@ func (st *Story) StateAt(id string) (State, error) {
 		}
 		i = parent
 	}
-	s, owned := st.initial.clone(), map[string]bool{}
+	s, owned := pl.initial.clone(), map[string]bool{}
 	for _, i := range slices.Backward(path) {
-		st.apply(s, &st.messages[i], owned)
+		pl.apply(s, &pl.messages[i], owned)
 	}
-	return State{st.scope, s}, nil
+	return State{pl.scope, s}, nil
 }
 
-// State is the state at a point of a story (Format 8.6). The zero State holds
+// State is the state at a point of a play (Format 8.6). The zero State holds
 // nothing.
 type State struct {
 	scope *scope
 	s     *state
 }
 
-// Get returns the value at key, a key as a change writes it (Format 8.5):
-// "scene.location", "scene.present", a variable's full name, or a keyed
-// variable's full name and one of its keys, such as "state.trust.kai". The
-// value is a bool, an int64, a string, or a []string for a set and for
+// Get returns the value at key, a state key (Format 8.5): "scene.location",
+// "scene.present", a variable's full name, or a keyed variable's full name
+// and one of its keys, such as "state.trust.kai". The value is a bool, an int64, a string, or a []string for a set and for
 // scene.present. It reports false when the state holds nothing at key, as for
 // a key a "*" map doesn't have.
 func (s State) Get(key string) (any, bool) {
@@ -208,10 +207,10 @@ func (s State) Get(key string) (any, bool) {
 	return copyValue(x), ok
 }
 
-// All yields every key the state holds with its value, as Get gives them:
-// scene.location and scene.present, then each variable in use, the
-// scenario's, its worlds' and its characters', with a keyed variable's keys in
-// their order: the cast's, the list's, or for a "*" map, code point order
+// All yields every state key the state holds with its value, as Get gives
+// them: scene.location and scene.present, then each variable in use, the
+// scenario's, its worlds' and its characters', with a keyed variable's keys
+// in their order: the cast's, the list's, or for a "*" map, code point order
 // (Format 8.3).
 func (s State) All() iter.Seq2[string, any] {
 	return func(yield func(string, any) bool) {
@@ -231,7 +230,7 @@ func (s State) All() iter.Seq2[string, any] {
 				continue
 			}
 			keys := s.scope.keys(b.v)
-			if b.v.Of.Any {
+			if b.v.Per.Any {
 				keys = slices.Sorted(maps.Keys(m))
 			}
 			for _, k := range keys {

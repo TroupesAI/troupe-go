@@ -1,7 +1,7 @@
 {
   "description": "Session worlds (Format 6.4, 11): a world added to the session is in use with the scenario's worlds; its locations are valid scene locations",
-  "bundle": {
-    "kind": "bundle",
+  "story": {
+    "kind": "story",
     "worlds": [
       {
         "id": "w",

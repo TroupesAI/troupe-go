@@ -26,23 +26,23 @@ The order of cases doesn't matter. A case file is one JSON object, described by 
 | --- | --- | --- |
 | `description` | string | What the case covers, with spec sections. Informative. |
 | `note` | string | Optional. How an expected value was derived, such as how a value is clamped. Informative. |
-| `bundle` | object | The bundle, as a JSON document. |
-| `bundleFile` | string | Instead of `bundle`: a path to a bundle JSON file, relative to the case file. A `bundle.json` is a package's (Format 12.3), and a `sessionFile` beside it in `sessions/` is one of that package's sessions. |
+| `story` | object | The story, as a JSON document. |
+| `storyFile` | string | Instead of `story`: a path to a story JSON file, relative to the case file. A `story.json` is a package's (Format 12.3), and a `sessionFile` beside it in `sessions/` is one of that package's sessions. |
 | `session` | object | Optional. `{"header": SessionHeader, "messages": [Message, …]}`. `messages` lists the session's lines after the header, in file order (Format 11). |
 | `sessionFile` | string | Instead of `session`: a path to a `.jsonl` session file, relative to the case file. |
 | `tests` | array | The tests (section 3). |
 
-`bundleFile` and `sessionFile` may point into the repository's `examples/` folder, outside `conformance/`, so a library that copies the suite copies `examples/` with it, under its [CC BY 4.0](https://github.com/TroupesAI/troupe/blob/main/spec/LICENSE) license.
+`storyFile` and `sessionFile` may point into the repository's `examples/` folder, outside `conformance/`, so a library that copies the suite copies `examples/` with it, under its [CC BY 4.0](https://github.com/TroupesAI/troupe/blob/main/spec/LICENSE) license.
 
-Bundles and session headers given as objects leave out `troupe`: before anything else, `check` validation included, the runner sets it to the spec version. If no bundle is given, the bundle is `{"troupe": <the spec version>, "kind": "bundle"}`. Cases that test raw input instead use `parse` tests (section 3.6), which take their input inline.
+Stories and session headers given as objects leave out `troupe`: before anything else, `check` validation included, the runner sets it to the spec version. If no story is given, the story is `{"troupe": <the spec version>, "kind": "story"}`. Cases that test raw input instead use `parse` tests (section 3.6), which take their input inline.
 
 ## 2. Setup for each test
 
 Every test starts from a fresh copy of the case's inputs. Tests don't affect each other.
 
-- **Levels.** An implementation that reads only bundles (Format 15.2) skips the tests of reading sessions: `parse` tests of `kind: "session"`, `check` tests of cases with a `session` or `sessionFile`, and `parse` tests marked `"level": "session"`. Other tests use a case's session only as the chat they run on.
+- **Levels.** An implementation that reads only stories (Format 15.2) skips the tests of reading sessions: `parse` tests of `kind: "session"`, `check` tests of cases with a `session` or `sessionFile`, and `parse` tests marked `"level": "session"`. Other tests use a case's session only as the session they run on.
 - **Conforming inputs.** `state`, `macro`, `cel` and `knows` tests run only on inputs that conform (Format 15.1), since the spec gives files that fail a check no meaning to test. Every case with such tests also has a `check` test that expects no codes, which a runner that doesn't skip it uses to confirm them.
-- **The story.** The session's `scenario` names the scenario, and its header's `players` lists every player (Format 11.2). Without a session, use the bundle's first scenario, whose seats, those marked `player` included, are then unfilled and left out of the cast (Format 6.1), so there are no players. A `check` test checks the bundle once for each scenario (Format 6.4, 10.2), with a session as without one, and then checks the session against its scenario, or as Format 15.3 says when it names none.
+- **The scenario.** The session's `scenario` names the scenario, and its header's `players` lists every player (Format 11.2). Without a session, use the story's first scenario, whose seats, those marked `player` included, are then unfilled and left out of the cast (Format 6.1), so there are no players. A `check` test checks the story once for each scenario (Format 6.4, 10.2), with a session as without one, and then checks the session against its scenario, or as Format 15.3 says when it names none.
 
 ## 3. Tests
 
@@ -57,13 +57,13 @@ Each test has `type`, an optional `name` and `note` (informative), the inputs be
 | Input | Meaning |
 | --- | --- |
 | `at` | A message ID. Omit it for the initial state, before any message. |
-| `absent` | Optional. Flattened keys that must not be present. |
+| `absent` | Optional. State keys that must not be present. |
 
-The state is flattened to an object with these keys:
+The state is flattened to an object keyed by state key (Format 8.5):
 
 - `scene.location` and `scene.present`
 - every variable in use by its full name (Format 8.2): `state.bell`, `state.kai.nerve`
-- one key per map key for keyed variables, such as `state.trust.kai` or `state.kai.feelings.elena`. Absent keys of `"*"` maps aren't listed.
+- one state key per map key for keyed variables, such as `state.trust.kai` or `state.kai.feelings.elena`. Absent keys of `"*"` maps aren't listed.
 
 `expect` is a subset of the flattened state.
 
@@ -73,10 +73,10 @@ The state is flattened to an object with these keys:
 | --- | --- |
 | `text` | Author text. |
 | `part` | Instead of `text` and `at`: `{message, index}`, the `text` of that part of that message as it is shown: resolved at that message in a root made from an opening, and as written in a player or model message (Format 9). |
-| `at` | The message whose state the macros read. Omit it for the initial state, where `{{user}}` is the first player's character. `{{user}}` follows the path to `at`. |
+| `at` | The message whose state the macros read. Omit it for the initial state, where `{{player}}` is the first player's character. `{{player}}` follows the path to `at`. |
 | `char` | What `{{char}}` and a `char` path segment mean. Omit it for none: `{{char}}` is then left as written, and a `char` segment names no key (Format 9). |
 | `owner` | What `own` means. Omit it for none. |
-| `narrator` | Optional boolean: the text is used for a message written for the narrator, so `{{char}}` without `char` renders as the scenario's `narrator`. |
+| `narrator` | Optional boolean: the text is used for a message written for the narrator, so `{{char}}` without `char` renders as the scenario's `narratorName`. |
 
 `expect` is the rendered string (Format 9).
 
@@ -85,7 +85,7 @@ The state is flattened to an object with these keys:
 | Input | Meaning |
 | --- | --- |
 | `expr` | A CEL expression. |
-| `at` | The evaluation point (Format 10.1). Omit it for none: `turn` 0, the initial state, `opening` `""`, `elapsed` 0, `hour` and `weekday` −1, and `user` the first player's character, or `""`. |
+| `at` | The evaluation point (Format 10.1). Omit it for none: `round` 0, the initial state, `opening` `""`, `elapsed` 0, `hour` and `weekday` −1, and `player` the first player's character, or `""`. |
 | `char` | The value of `char`; `""` by default. |
 | `self` | The expression's owner, a character, world or scenario ID or `session`, which also types `own`; the scenario by default. |
 | `scanDepth` | The `scanDepth` of the entry `hit()` scans for; 4 by default. |
@@ -94,27 +94,27 @@ The state is flattened to an object with these keys:
 
 ### 3.4 `check`: checks (Format 15.3)
 
-The runner validates the bundle and the session's lines against the schemas, then runs every other check (Format 15.3).
+The runner validates the story and the session's lines against the schemas, then runs every other check (Format 15.3).
 
 - `expect.codes` is the sorted list of distinct diagnostic codes reported. It is compared exactly.
 - Each session line after the header is validated against `message.schema.json`. Validators assert `format`, so a malformed timestamp is `SCHEMA`.
 - `SCHEMA` covers schema failures, such as `null`, `""` or `[]` in most optional fields (Format 2.2).
-- `check` tests don't use `PARSE` or `UNSUPPORTED_VERSION`; `parse` tests (section 3.6) cover them.
+- `check` tests don't use `UNREADABLE` or `UNSUPPORTED_VERSION`; `parse` tests (section 3.6) cover them.
 - `expect.includes` lists `{code, at}` pairs that must each appear, compared on both fields.
 
 Locations:
 
 | Location | Form | Example |
 | --- | --- | --- |
-| In the bundle | A JSON Pointer, with array indices | `/scenarios/0/entries/1/when` |
+| In the story | A JSON Pointer, with array indices | `/scenarios/0/entries/1/when` |
 | In a session header | `header/<pointer>` | `header/players` |
 | In a message (its schema failures included) | `message:<id>/<pointer within the message>` | `message:3/changes/0/set/state.hp` |
 
 The header itself is at `header`, and a message itself at `message:<id>`.
 
-A diagnostic about one value points at that value: a list item at its index (`/scenarios/0/worlds/1`), a reference at the field holding it (`/scenarios/0/cast/2/character`), an unknown property at the property (`/characters/0/mystery`), and a location cycle at the `parent` of each location on it. For keys inside `set`, the pointer segment is the key as written (`/set/scene.present`). A schema failure is at the instance location of the keyword that fails: a missing property, or a combination forbidden with `not`, at its object (`/scenarios/0/entries/1`); a property forbidden for its type at the property; a duplicate list item at the list; and a value that no branch of an `anyOf` accepts at the deepest location where a branch fails, so an `of` list item that isn't a key is at its index.
+A diagnostic about one value points at that value: a list item at its index (`/scenarios/0/worlds/1`), a reference at the field holding it (`/scenarios/0/cast/2/character`), an unknown property at the property (`/characters/0/mystery`), and a location cycle at the `parent` of each location on it. For state keys inside `set`, the pointer segment is the state key as written (`/set/scene.present`). A schema failure is at the instance location of the schema keyword that fails: a missing property, or a combination forbidden with `not`, at its object (`/scenarios/0/entries/1`); a property forbidden for its type at the property; a duplicate list item at the list; and a value that no branch of an `anyOf` accepts at the deepest location where a branch fails, so a `per` list item that isn't a key is at its index.
 
-A duplicate ID is at the `id` of each one after the first (`/characters/1/id`), in this order: the bundle's characters, worlds and scenarios, then the session's characters and worlds; locations in world order, the bundle's before the session's. A scenario variable with the ID of a bundle character or world is at the variable's `id`, and a session character or world with a scenario variable's ID at its own `id`, and a character or world a scenario names twice is at its later `character` or list item.
+A duplicate ID is at the `id` of each one after the first (`/characters/1/id`), in this order: the story's characters, worlds and scenarios, then the session's characters and worlds; locations in world order, the story's before the session's. A scenario variable with the ID of a story character or world is at the variable's `id`, and a session character or world with a scenario variable's ID at its own `id`, and a character or world a scenario names twice is at its later `character` or list item.
 
 ### 3.5 `knows`: who knows a part (Format 7.4, 11.5)
 
@@ -129,12 +129,12 @@ A duplicate ID is at the `id` of each one after the first (`/characters/1/id`), 
 
 | Input | Meaning |
 | --- | --- |
-| `kind` | What the input is: `bundle` (a `.troupe.json` file), `session` or `package` (a `.troupe` ZIP archive). |
+| `kind` | What the input is: `story` (a `.troupe.json` file), `session` (a `.troupe-session.jsonl` file) or `package` (a `.troupe` ZIP archive). |
 | `text` | The input as a string, encoded as UTF-8 to get its bytes. |
 | `base64` | Instead of `text`: the input's bytes, in base64. Used for bytes that aren't valid UTF-8 text and for binary formats. |
-| `level` | Optional. `"session"` when `expect` depends on a package's sessions, which a bundle reader may leave unread (Format 15.2). |
+| `level` | Optional. `"session"` when `expect` depends on a package's sessions, which a story reader may leave unread (Format 15.2). |
 
-The runner parses the bytes, checks the version and, unless the input is `PARSE` or `UNSUPPORTED_VERSION` (Format 15.3), validates against the schema, with unknown properties as `UNKNOWN_FIELD` (Format 13). For a package it checks the archive and its `bundle.json` and, for a session reader, every session in it (Format 12.3, 15.2). It runs no other checks; `check` tests cover them.
+The runner parses the bytes, a session only up to its header when that names another version, checks the version and, unless the input is `UNREADABLE` or `UNSUPPORTED_VERSION` (Format 15.3), validates against the schema, with unknown properties as `UNKNOWN_FIELD` (Format 13). For a package it checks the archive and its `story.json` and, for a session reader, every session in it (Format 12.3, 15.2). It runs no other checks; `check` tests cover them.
 
 `expect.codes` is the sorted list of distinct codes reported, compared exactly. A conforming input has none.
 
@@ -147,7 +147,7 @@ The runner parses the bytes, checks the version and, unless the input is `PARSE`
 ## 5. Adding cases
 
 - Put a case in the folder for its area, named after its topic: `state/clamping.json`.
-- Prefer small inline bundles.
+- Prefer small inline stories.
 - Test failed checks in separate cases, with `check` and `parse` tests; other tests need conforming inputs (section 2).
 - Keep inputs to what the tests read.
 - When an expectation depends on ambiguous spec text, fix the spec text.

@@ -1,7 +1,7 @@
 {
   "description": "UNKNOWN_SCENARIO (Format 15.3): the header's scenario must name a scenario; a character's ID doesn't name one. The session is then reported with UNKNOWN_SCENARIO, SCHEMA and UNKNOWN_FIELD only: its unknown property is reported, but not its opening, its change to a variable or its activated entry, which no scenario defines",
-  "bundle": {
-    "kind": "bundle",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "a",

@@ -18,8 +18,8 @@ import (
 var schemaFiles embed.FS
 
 type schemaSet struct {
-	bundle, header, message *jsonschema.Schema
-	image                   *jsonschema.Schema // a field that holds a file
+	story, header, message *jsonschema.Schema
+	image                  *jsonschema.Schema // a field that holds a file
 }
 
 // schemas compiles the embedded schemas on first use. Each is registered under
@@ -28,7 +28,7 @@ var schemas = sync.OnceValue(func() schemaSet {
 	c := jsonschema.NewCompiler()
 	c.AssertFormat()
 	ids := map[string]string{}
-	for _, name := range []string{"bundle", "session-header", "message"} {
+	for _, name := range []string{"story", "session-header", "message"} {
 		f, err := schemaFiles.Open("spec/schemas/" + name + ".schema.json")
 		if err != nil {
 			panic(err)
@@ -43,10 +43,10 @@ var schemas = sync.OnceValue(func() schemaSet {
 		}
 	}
 	return schemaSet{
-		bundle:  c.MustCompile(ids["bundle"]),
+		story:   c.MustCompile(ids["story"]),
 		header:  c.MustCompile(ids["session-header"]),
 		message: c.MustCompile(ids["message"]),
-		image:   c.MustCompile(ids["bundle"] + "#/$defs/image"),
+		image:   c.MustCompile(ids["story"] + "#/$defs/image"),
 	}
 })
 

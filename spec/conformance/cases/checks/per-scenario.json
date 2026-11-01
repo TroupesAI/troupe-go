@@ -1,7 +1,7 @@
 {
   "description": "Expressions type-check once for each scenario, against its variables and with the expressions in use in it, and an expression in use in no scenario against no scenario variables (Format 6.4, 10.2): a character's condition reading a variable only one of the scenarios that cast her declares is CEL_ERROR, as is a world's that no scenario uses, while the scenario's own condition is valid",
-  "bundle": {
-    "kind": "bundle",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "a",

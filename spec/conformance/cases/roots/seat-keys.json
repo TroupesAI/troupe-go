@@ -1,7 +1,7 @@
 {
-  "description": "An opening that sets the keys of a cast member marked player (Format 6.3, 8.5, 11.1): its variables and its key of a \"cast\" variable are valid in the opening, since a session may fill its seat; here no player does, so the character is left out of the cast, and the root leaves those keys out",
-  "bundle": {
-    "kind": "bundle",
+  "description": "An opening that sets the state keys of a cast member marked player (Format 6.3, 8.5, 11.1): its variables and its key of a \"cast\" variable are valid in the opening, since a session may fill its seat; here no player does, so the character is left out of the cast, and the root leaves those state keys out",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "kai",
@@ -38,7 +38,7 @@
           {
             "id": "trust",
             "type": "int",
-            "of": "cast",
+            "per": "cast",
             "description": "Trust in the crew."
           }
         ],
@@ -107,7 +107,7 @@
     },
     {
       "type": "state",
-      "name": "the opening's keys the session has apply; the seat's are left out",
+      "name": "the opening's state keys the session has apply; the seat's are left out",
       "at": "1",
       "expect": {
         "scene.present": [

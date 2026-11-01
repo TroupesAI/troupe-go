@@ -1,7 +1,7 @@
 {
-  "description": "Checks on messages (Format 11.1, 15.3): a message's char and a part's knownBy name characters (UNKNOWN_CHARACTER); a parent names a message on an earlier line (UNKNOWN_MESSAGE); a recorded value has its variable's type (INVALID_VALUE)",
-  "bundle": {
-    "kind": "bundle",
+  "description": "Checks on messages (Format 11.1, 15.3): a message's char and a part's knownBy name characters (UNKNOWN_CHARACTER); a parent names a message on an earlier line (UNKNOWN_MESSAGE)",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "a",
@@ -16,16 +16,6 @@
           {},
           {
             "character": "a"
-          }
-        ],
-        "variables": [
-          {
-            "id": "n",
-            "type": "int",
-            "by": [
-              "player"
-            ],
-            "description": "d"
           }
         ]
       }
@@ -92,14 +82,6 @@
             "speaker": "p",
             "text": "Count."
           }
-        ],
-        "changes": [
-          {
-            "by": "player",
-            "set": {
-              "state.n": "x"
-            }
-          }
         ]
       }
     ]
@@ -109,7 +91,6 @@
       "type": "check",
       "expect": {
         "codes": [
-          "INVALID_VALUE",
           "UNKNOWN_CHARACTER",
           "UNKNOWN_MESSAGE"
         ],
@@ -125,10 +106,6 @@
           {
             "code": "UNKNOWN_MESSAGE",
             "at": "message:3/parent"
-          },
-          {
-            "code": "INVALID_VALUE",
-            "at": "message:4/changes/0/set/state.n"
           }
         ]
       }

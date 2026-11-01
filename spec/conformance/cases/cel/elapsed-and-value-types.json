@@ -1,7 +1,7 @@
 {
   "description": "elapsed is whole seconds, rounded down, and 0 for a negative gap (Format 10.1); expressions use only bool, int, string, list and map values, so double, bytes, uint and null literals and timestamps fail to check (Format 10.2)",
-  "bundle": {
-    "kind": "bundle",
+  "story": {
+    "kind": "story",
     "scenarios": [
       {
         "id": "s",

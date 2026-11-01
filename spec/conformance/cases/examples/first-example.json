@@ -1,6 +1,6 @@
 {
-  "description": "Format 1.4's card: valid, without mechanics; the scenario's default cast is one seat and every bundle character (Format 1.4, 6.1)",
-  "bundleFile": "../../../examples/elena-card.troupe.json",
+  "description": "Format 1.4's story: valid, without mechanics; the scenario's default cast is one seat and every story character (Format 1.4, 6.1)",
+  "storyFile": "../../../examples/elena.troupe.json",
   "tests": [
     {
       "type": "check",

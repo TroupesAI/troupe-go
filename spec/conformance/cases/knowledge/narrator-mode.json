@@ -1,7 +1,7 @@
 {
   "description": "In narrator mode the narrator writes every character's lines and knows everything (Format 6.2, 7.2, 7.4, 11.4, 11.5): it knows a part whose knownBy leaves it out, so hit() scans that part for it, but nobody knows a hidden message's parts",
-  "bundle": {
-    "kind": "bundle",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "a",

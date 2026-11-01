@@ -5,8 +5,8 @@ import (
 	"encoding/json/v2"
 )
 
-// Bundle is a bundle (Format 3).
-type Bundle struct {
+// Story is a story (Format 3).
+type Story struct {
 	Schema   string   `json:"$schema,omitempty"`
 	Troupe   string   `json:"troupe"`
 	ID       string   `json:"id,omitempty"`
@@ -44,7 +44,7 @@ type Character struct {
 
 // Line is a line of a character's example exchange (Format 4).
 type Line struct {
-	Speaker string         `json:"speaker,omitempty"` // "char", "user" or a character ID; "" for narration
+	Speaker string         `json:"speaker,omitempty"` // "char", "player" or a character ID; "" for narration
 	Text    string         `json:"text"`
 	Ext     jsontext.Value `json:"ext,omitzero"`
 }
@@ -72,15 +72,15 @@ type Location struct {
 
 // Scenario is a scenario (Format 6).
 type Scenario struct {
-	ID       string       `json:"id"`
-	Name     string       `json:"name,omitempty"`
-	Tagline  string       `json:"tagline,omitempty"`
-	Premise  string       `json:"premise,omitempty"`
-	Briefing string       `json:"briefing,omitempty"`
-	Mode     string       `json:"mode,omitempty"`     // "characters" or "narrator"; "" for characters
-	Narrator string       `json:"narrator,omitempty"` // "" for "the narrator"
-	Cast     []CastMember `json:"cast,omitempty"`
-	// Worlds is nil when absent, which means every bundle world, and points to
+	ID           string       `json:"id"`
+	Name         string       `json:"name,omitempty"`
+	Tagline      string       `json:"tagline,omitempty"`
+	Premise      string       `json:"premise,omitempty"`
+	Briefing     string       `json:"briefing,omitempty"`
+	Mode         string       `json:"mode,omitempty"`         // "characters" or "narrator"; "" for characters
+	NarratorName string       `json:"narratorName,omitempty"` // "" for "the narrator"
+	Cast         []CastMember `json:"cast,omitempty"`
+	// Worlds is nil when absent, which means every story world, and points to
 	// an empty list for none.
 	Worlds    *[]string      `json:"worlds,omitzero"`
 	Openings  []Opening      `json:"openings,omitempty"`
@@ -101,7 +101,7 @@ type CastMember struct {
 // Opening is a way a scenario starts (Format 6.3).
 type Opening struct {
 	ID      string                    `json:"id"`
-	Title   string                    `json:"title,omitempty"`
+	Name    string                    `json:"name,omitempty"`
 	Set     map[string]jsontext.Value `json:"set,omitempty"`
 	Content []Part                    `json:"content,omitempty"`
 	Ext     jsontext.Value            `json:"ext,omitzero"`
@@ -109,25 +109,25 @@ type Opening struct {
 
 // Entry is an entry (Format 7).
 type Entry struct {
-	ID        string         `json:"id"`
-	Text      string         `json:"text"`
-	Title     string         `json:"title,omitempty"`
-	Keys      []string       `json:"keys,omitempty"`
-	Pull      bool           `json:"pull,omitzero"`
-	When      string         `json:"when,omitempty"`
-	ScanDepth *int           `json:"scanDepth,omitzero"` // nil for 4
-	Once      bool           `json:"once,omitzero"`
-	Sticky    int64          `json:"sticky,omitzero"`   // 0 for none
-	Cooldown  int64          `json:"cooldown,omitzero"` // 0 for none
-	Chance    *int           `json:"chance,omitzero"`   // a percent; nil for 100
-	Group     string         `json:"group,omitempty"`
-	Weight    int            `json:"weight,omitzero"`    // 0 for 1
-	Priority  *int           `json:"priority,omitzero"`  // nil for 50
-	Position  string         `json:"position,omitempty"` // "system" or "context"; "" for context, unless Depth is set
-	Depth     *int64         `json:"depth,omitzero"`
-	KnownBy   []string       `json:"knownBy,omitempty"` // nil for everyone
-	Disabled  bool           `json:"disabled,omitzero"`
-	Ext       jsontext.Value `json:"ext,omitzero"`
+	ID          string         `json:"id"`
+	Text        string         `json:"text"`
+	Title       string         `json:"title,omitempty"`
+	Keywords    []string       `json:"keywords,omitempty"`
+	Retrievable bool           `json:"retrievable,omitzero"`
+	When        string         `json:"when,omitempty"`
+	ScanDepth   *int           `json:"scanDepth,omitzero"` // nil for 4
+	Once        bool           `json:"once,omitzero"`
+	Sticky      int64          `json:"sticky,omitzero"`   // 0 for none
+	Cooldown    int64          `json:"cooldown,omitzero"` // 0 for none
+	Chance      *int           `json:"chance,omitzero"`   // a percent; nil for 100
+	Group       string         `json:"group,omitempty"`
+	Weight      int            `json:"weight,omitzero"`    // 0 for 1
+	Priority    *int           `json:"priority,omitzero"`  // nil for 50
+	Position    string         `json:"position,omitempty"` // "system" or "context"; "" for context, unless Depth is set
+	Depth       *int64         `json:"depth,omitzero"`
+	KnownBy     []string       `json:"knownBy,omitempty"` // nil for everyone
+	Disabled    bool           `json:"disabled,omitzero"`
+	Ext         jsontext.Value `json:"ext,omitzero"`
 }
 
 // Variable is a variable's declaration (Format 8).
@@ -139,7 +139,7 @@ type Variable struct {
 	Min         *int64            `json:"min,omitzero"`
 	Max         *int64            `json:"max,omitzero"`
 	Initial     jsontext.Value    `json:"initial,omitzero"` // nil for the type's default
-	Of          Keys              `json:"of,omitzero"`
+	Per         Keys              `json:"per,omitzero"`
 	Description string            `json:"description"`
 	By          []string          `json:"by,omitempty"` // "player" and "model"
 	MaxStep     int64             `json:"maxStep,omitzero"`
@@ -156,7 +156,7 @@ type Keys struct {
 	List []string // the keys listed
 }
 
-// MarshalJSON writes k as of is written: "cast", "*" or the list.
+// MarshalJSON writes k as per is written: "cast", "*" or the list.
 func (k Keys) MarshalJSON() ([]byte, error) {
 	switch {
 	case k.Cast:
@@ -167,7 +167,7 @@ func (k Keys) MarshalJSON() ([]byte, error) {
 	return json.Marshal(k.List)
 }
 
-// UnmarshalJSON reads k as of is written.
+// UnmarshalJSON reads k as per is written.
 func (k *Keys) UnmarshalJSON(data []byte) error {
 	var s string
 	if json.Unmarshal(data, &s) == nil {
@@ -189,8 +189,8 @@ type SessionHeader struct {
 	Schema     string         `json:"$schema,omitempty"`
 	Troupe     string         `json:"troupe"`
 	Name       string         `json:"name,omitempty"`
-	Bundle     string         `json:"bundle,omitempty"`
-	Limits     Limits         `json:"limits,omitzero"`
+	Story      string         `json:"story,omitempty"`
+	Boundaries Boundaries     `json:"boundaries,omitzero"`
 	Scenario   string         `json:"scenario"`
 	Characters []Character    `json:"characters,omitempty"`
 	Players    []string       `json:"players,omitempty"`
@@ -199,8 +199,8 @@ type SessionHeader struct {
 	Ext        jsontext.Value `json:"ext,omitzero"`
 }
 
-// Limits are the players' lines and veils (Format 11).
-type Limits struct {
+// Boundaries are the players' lines and veils (Format 11).
+type Boundaries struct {
 	Lines []string       `json:"lines,omitempty"`
 	Veils []string       `json:"veils,omitempty"`
 	Ext   jsontext.Value `json:"ext,omitzero"`
@@ -241,19 +241,19 @@ type Change struct {
 	Ext jsontext.Value            `json:"ext,omitzero"`
 }
 
-// MarshalJSON writes b as a bundle document, its kind included, with the
-// members of maps such as an opening's set sorted, so the same bundle always
+// MarshalJSON writes st as a story document, its kind included, with the
+// members of maps such as an opening's set sorted, so the same story always
 // gives the same bytes.
-func (b Bundle) MarshalJSON() ([]byte, error) {
-	type fields Bundle
+func (st Story) MarshalJSON() ([]byte, error) {
+	type fields Story
 	return json.Marshal(struct {
 		Kind string `json:"kind"`
 		fields
-	}{"bundle", fields(b)}, json.Deterministic(true))
+	}{"story", fields(st)}, json.Deterministic(true))
 }
 
 // MarshalJSON writes h as a session's header line, its kind included, with
-// the members of maps sorted, as Bundle.MarshalJSON does.
+// the members of maps sorted, as Story.MarshalJSON does.
 func (h SessionHeader) MarshalJSON() ([]byte, error) {
 	type fields SessionHeader
 	return json.Marshal(struct {

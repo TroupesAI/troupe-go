@@ -1,7 +1,7 @@
 {
   "description": "Who knows a message part (Format 7.4, 11.5): its speaker and the characters present after its message's changes and, except on a root, before them; a part's knownBy replaces the witness rule with exactly the listed characters; the narrator knows a part unless its knownBy leaves the narrator out",
-  "bundle": {
-    "kind": "bundle",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "a",

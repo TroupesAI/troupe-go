@@ -1,7 +1,7 @@
 {
-  "description": "A check with a session (Format 6.4, 15.3; conformance README section 2) checks the bundle once for each scenario, as without a session, so an invalid key in an opening of a scenario the session doesn't play is UNKNOWN_VARIABLE",
-  "bundle": {
-    "kind": "bundle",
+  "description": "A check with a session (Format 6.4, 15.3; conformance README section 2) checks the story once for each scenario, as without a session, so an invalid state key in an opening of a scenario the session doesn't play is UNKNOWN_STATE_KEY",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "a",
@@ -65,11 +65,11 @@
       "type": "check",
       "expect": {
         "codes": [
-          "UNKNOWN_VARIABLE"
+          "UNKNOWN_STATE_KEY"
         ],
         "includes": [
           {
-            "code": "UNKNOWN_VARIABLE",
+            "code": "UNKNOWN_STATE_KEY",
             "at": "/scenarios/1/openings/0/set/state.missing"
           }
         ]

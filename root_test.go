@@ -17,7 +17,7 @@ import (
 // a session's root, it conforms; an opening without content or set makes a
 // root with neither.
 func TestRoot(t *testing.T) {
-	b, diags, err := troupe.ReadBundle(strings.NewReader(`{"troupe":"0.14","kind":"bundle",
+	st, diags, err := troupe.ReadStory(strings.NewReader(`{"troupe":"0.15","kind":"story",
 		"characters":[{"id":"a","name":"Ann","description":"Ann."}],
 		"scenarios":[{"id":"s","cast":[{},{"character":"a"}],
 			"variables":[{"id":"bell","type":"int","description":"d"}],
@@ -29,12 +29,12 @@ func TestRoot(t *testing.T) {
 	if err != nil || diags != nil {
 		t.Fatal(err, diags)
 	}
-	header := `{"troupe":"0.14","kind":"session","scenario":"s","characters":[{"id":"p","name":"Pat","description":"Pat."}],"players":["p"]}`
+	header := `{"troupe":"0.15","kind":"session","scenario":"s","characters":[{"id":"p","name":"Pat","description":"Pat."}],"players":["p"]}`
 	s, diags, err := troupe.ReadSession(strings.NewReader(header))
 	if err != nil || diags != nil {
 		t.Fatal(err, diags)
 	}
-	story, err := troupe.NewStory(b, s)
+	play, err := troupe.NewPlay(st, s)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,7 +42,7 @@ func TestRoot(t *testing.T) {
 
 	shown := map[string]bool{}
 	for range 20 {
-		root, err := story.Root("o", r)
+		root, err := play.Root("o", r)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -50,7 +50,7 @@ func TestRoot(t *testing.T) {
 		if text != `{{char}} says \\.` && text != `{{char}} says \{{x.` {
 			t.Fatalf("the root's text is %q", text)
 		}
-		parts := story.RenderParts(story.Initial(), &root, r)
+		parts := play.RenderParts(play.Initial(), &root, r)
 		shown[parts[0].Text] = true
 		if alt := root.Content[1].Alt; alt != "one" && alt != "two" {
 			t.Errorf("the root's alt is %q", alt)
@@ -64,7 +64,7 @@ func TestRoot(t *testing.T) {
 		t.Errorf("the roots show %v", shown)
 	}
 
-	bare, err := story.Root("bare", r)
+	bare, err := play.Root("bare", r)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,7 +74,7 @@ func TestRoot(t *testing.T) {
 
 	lines := []string{header}
 	for i, id := range []string{"o", "bare"} {
-		root, _ := story.Root(id, r)
+		root, _ := play.Root(id, r)
 		root.ID = string(rune('1' + i))
 		line, err := json.Marshal(root)
 		if err != nil {
@@ -86,11 +86,11 @@ func TestRoot(t *testing.T) {
 	if err != nil || diags != nil {
 		t.Fatal(err, diags)
 	}
-	if diags := troupe.Check(b, s); diags != nil {
+	if diags := troupe.Check(st, s); diags != nil {
 		t.Errorf("the roots, written, are %v", diags)
 	}
 
-	if _, err := story.Root("missing", r); err == nil {
+	if _, err := play.Root("missing", r); err == nil {
 		t.Error("a root from an opening the scenario doesn't have")
 	}
 }
@@ -100,11 +100,11 @@ func TestRoot(t *testing.T) {
 // them. A seat a player fills keeps them, and a set left without keys makes
 // no change.
 func TestRootSeatKeys(t *testing.T) {
-	bundle := `{"troupe":"0.14","kind":"bundle",
+	story := `{"troupe":"0.15","kind":"story",
 		"characters":[{"id":"k","name":"Kai","description":"Kai.","variables":[{"id":"nerve","type":"int","description":"N."}]},
-			{"id":"a","name":"Ann","description":"Ann.","variables":[{"id":"likes","type":"bool","of":"cast","description":"L."}]}],
+			{"id":"a","name":"Ann","description":"Ann.","variables":[{"id":"likes","type":"bool","per":"cast","description":"L."}]}],
 		"scenarios":[{"id":"s","cast":[{"character":"k","player":true},{"character":"a"}],
-			"variables":[{"id":"trust","type":"int","of":"cast","description":"T."}],
+			"variables":[{"id":"trust","type":"int","per":"cast","description":"T."}],
 			"openings":[{"id":"o","set":{"state.k.nerve":1,"state.trust.k":2,"state.trust.a":3,"state.a.likes.k":true}},
 				{"id":"seat","set":{"state.k.nerve":1}}]}]}`
 	for _, tc := range []struct {
@@ -114,9 +114,9 @@ func TestRootSeatKeys(t *testing.T) {
 		{`["p"]`, []string{"state.trust.a"}},
 		{`["p","k"]`, []string{"state.a.likes.k", "state.k.nerve", "state.trust.a", "state.trust.k"}},
 	} {
-		header := `{"troupe":"0.14","kind":"session","scenario":"s","characters":[{"id":"p","name":"Pat","description":"Pat."}],"players":` + tc.players + `}`
-		story, _ := readStory(t, bundle, header)
-		root, err := story.Root("o", nil)
+		header := `{"troupe":"0.15","kind":"session","scenario":"s","characters":[{"id":"p","name":"Pat","description":"Pat."}],"players":` + tc.players + `}`
+		play, _ := readPlay(t, story, header)
+		root, err := play.Root("o", nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -128,11 +128,11 @@ func TestRootSeatKeys(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		readStory(t, bundle, header, string(line))
+		readPlay(t, story, header, string(line))
 	}
 
-	story, _ := readStory(t, bundle, `{"troupe":"0.14","kind":"session","scenario":"s","characters":[{"id":"p","name":"Pat","description":"Pat."}],"players":["p"]}`)
-	if root, _ := story.Root("seat", nil); root.Changes != nil {
+	play, _ := readPlay(t, story, `{"troupe":"0.15","kind":"session","scenario":"s","characters":[{"id":"p","name":"Pat","description":"Pat."}],"players":["p"]}`)
+	if root, _ := play.Root("seat", nil); root.Changes != nil {
 		t.Errorf("a root whose set has only a seat's keys records %v", root.Changes)
 	}
 }

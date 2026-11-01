@@ -1,7 +1,7 @@
 {
-  "description": "Rounds (Format 11.1): turn counts player messages on the path, so a group chat counts like a one-on-one",
-  "bundle": {
-    "kind": "bundle",
+  "description": "Rounds (Format 11.1): round counts player messages on the path, so a round in which several characters reply counts as one",
+  "story": {
+    "kind": "story",
     "characters": [
       {
         "id": "a",
@@ -97,20 +97,20 @@
       "type": "cel",
       "name": "a player message counts itself",
       "at": "1",
-      "expr": "turn == 1",
+      "expr": "round == 1",
       "expect": true
     },
     {
       "type": "cel",
       "name": "two model replies in one round",
       "at": "3",
-      "expr": "turn == 1",
+      "expr": "round == 1",
       "expect": true
     },
     {
       "type": "cel",
       "at": "4",
-      "expr": "turn == 2",
+      "expr": "round == 2",
       "expect": true
     },
     {
