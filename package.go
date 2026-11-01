@@ -43,11 +43,12 @@ func (p *Package) Open(path string) (io.ReadCloser, error) {
 
 // ReadPackage reads a package, the ZIP archive of size bytes in r, and its
 // story, as a story reader does, leaving its sessions to ReadSessions (Format
-// 12.3, 15.2). It reads every entry, so data that can't be read is UNREADABLE
-// wherever it is. Its results are those of ReadStory, for the package as a
-// story reader reads it: the package is nil when the archive fails UNREADABLE,
-// or its story.json UNREADABLE or UNSUPPORTED_VERSION, and its diagnostics are
-// then only those. Package.Open and Package.ReadSessions read r again.
+// 12.3, 15.2). It reads every entry section 12.3 allows, so data that can't be
+// read is UNREADABLE wherever it is. Its results are those of ReadStory, for
+// the package as a story reader reads it: the package is nil when the archive
+// fails UNREADABLE, or its story.json UNREADABLE or UNSUPPORTED_VERSION, and
+// its diagnostics are then only those. Package.Open and Package.ReadSessions
+// read r again.
 func ReadPackage(r io.ReaderAt, size int64) (*Package, []Diagnostic, error) {
 	src := &source{r: r}
 	var rd reader
@@ -97,7 +98,10 @@ func (p *Package) ReadSessions() (map[string]*Session, []Diagnostic, error) {
 	return sessions, rd.diagnostics(), nil
 }
 
-// pkg reads the package in src, stopping when src fails.
+// pkg reads the package in src, stopping when src fails. Once the archive
+// opens within the ZIP limits, it reads every entry and judges story.json
+// whatever else fails, so what it reports doesn't depend on the entries'
+// order (Format 15.3).
 func (rd *reader) pkg(src *source, size int64) *Package {
 	zr, err := zip.NewReader(src, size)
 	// Format 12.3's rules on names are checked below, whatever GODEBUG says.
@@ -119,23 +123,28 @@ func (rd *reader) pkg(src *source, size int64) *Package {
 		rd.report(Diagnostic{Code: CodeUnreadable})
 		return nil
 	}
-	files := map[string]*zip.File{}
-	names := map[string]bool{}
+	names := map[string]int{}
+	for _, f := range zr.File {
+		names[asciiLower(f.Name)]++
+	}
+	// An entry that breaks section 12.3, every entry of a name another
+	// shares included, isn't read as a document: its data is a link, is
+	// encrypted, or may not be the file its name gives.
+	files, broken := map[string]*zip.File{}, map[*zip.File]bool{}
+	seen := map[string]bool{}
 	for _, f := range zr.File {
 		folded := asciiLower(f.Name)
-		if !validEntry(f) || names[folded] {
+		if !validEntry(f) || seen[folded] {
 			rd.reportEntry(f.Name)
 		}
-		names[folded] = true
+		seen[folded] = true
+		broken[f] = !validEntry(f) || names[folded] > 1
 		if isPackageFile(f.Name) {
 			files[f.Name] = f
 		}
 	}
 	if files["story.json"] == nil {
 		rd.report(Diagnostic{Code: CodeUnreadable})
-	}
-	if len(rd.diags) > 0 {
-		return nil
 	}
 	rd.files = map[string]bool{}
 	for name := range files {
@@ -144,6 +153,9 @@ func (rd *reader) pkg(src *source, size int64) *Package {
 
 	p := &Package{files: files}
 	for _, f := range zr.File {
+		if broken[f] {
+			continue
+		}
 		switch {
 		case files[f.Name] == nil || f.Name == "story.json":
 		case isSession(f.Name):
@@ -152,8 +164,10 @@ func (rd *reader) pkg(src *source, size int64) *Package {
 			p.Files = append(p.Files, f.Name)
 		}
 		if err := rd.entry(f, p); err != nil {
+			if src.err != nil {
+				return nil
+			}
 			rd.reportEntry(f.Name)
-			return nil
 		}
 	}
 	if rd.unread() {
