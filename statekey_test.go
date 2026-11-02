@@ -8,11 +8,11 @@ import (
 	"github.com/TroupesAI/troupe-go"
 )
 
-// A session's keys follow its cast and what it adds: a "cast" variable has a
-// key for each character the session's cast holds, players and joiners
+// A session's state keys follow its cast and what it adds: a "cast" variable
+// has a key for each character the session's cast holds, players and joiners
 // included, and the session's worlds and characters bring their variables.
-// Played on its own, the scenario's "cast" variables also have the keys of
-// its seats marked player, which its openings may set.
+// Played on its own, the scenario's "cast" variables also have the keys of its
+// seats marked player, which its openings may set.
 func TestStateKeysSession(t *testing.T) {
 	story := `{"troupe":"0.15","kind":"story",
 		"characters":[{"id":"k","name":"Kai","description":"Kai."},{"id":"a","name":"Ann","description":"Ann."}],
@@ -22,7 +22,7 @@ func TestStateKeysSession(t *testing.T) {
 	play, _ := readPlay(t, story)
 	want := []string{"scene.location", "scene.present", "state.trust.k trust s", "state.trust.a trust s", "state.side.watch side s", "state.side.guild side s"}
 	if got := keys(play); !slices.Equal(got, want) {
-		t.Errorf("on its own, the keys are %q, want %q", got, want)
+		t.Errorf("on its own, the state keys are %q, want %q", got, want)
 	}
 
 	play, _ = readPlay(t, story,
@@ -37,7 +37,7 @@ func TestStateKeysSession(t *testing.T) {
 		"state.h.rain rain h", "state.p.luck luck p",
 	}
 	if got := keys(play); !slices.Equal(got, want) {
-		t.Errorf("in the session, the keys are %q, want %q", got, want)
+		t.Errorf("in the session, the state keys are %q, want %q", got, want)
 	}
 }
 
@@ -57,7 +57,7 @@ func TestStateKeysDraft(t *testing.T) {
 	}
 	want := []string{"scene.location", "scene.present", "state.trust.k trust s", "state.side.watch side s"}
 	if got := keys(play); !slices.Equal(got, want) {
-		t.Errorf("the keys are %q, want %q", got, want)
+		t.Errorf("the state keys are %q, want %q", got, want)
 	}
 }
 

@@ -1,5 +1,5 @@
-// Package regex compiles regex keywords: patterns in the syntax ECMAScript and RE2
-// share, with ECMAScript's meaning under the u flag (Format 14).
+// Package regex compiles regex keywords: patterns in the syntax ECMAScript and
+// RE2 share, with ECMAScript's meaning under the u flag (Format 14).
 package regex
 
 import (
@@ -42,9 +42,9 @@ func (r *Regexp) MatchString(s string) bool {
 }
 
 // Compile compiles a regex keyword's pattern and flags. It fails when the
-// keyword isn't valid (Format 14): flags other than i, m and s, or repeated; a form
-// outside the grammar; groups nested more than 100 deep; or a pattern longer
-// than 1000 bytes with each counted repetition written out.
+// keyword isn't valid (Format 14): flags other than i, m and s, or repeated; a
+// form outside the grammar; groups nested more than 100 deep; or a pattern
+// longer than 1000 bytes with each counted repetition written out.
 func Compile(pattern, flags string) (*Regexp, error) {
 	p := &parser{src: pattern}
 	for _, f := range flags {

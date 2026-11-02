@@ -18,9 +18,9 @@ type scope struct {
 	// section 2).
 	cast []string
 	// openingCast is the characters a "cast" variable has as keys in an
-	// opening's set (Format 8.5): every character the cast members name,
-	// seats marked player included. In a session, it is the cast, since a
-	// root leaves out the keys of the seats no player fills (Format 11.1).
+	// opening's set (Format 8.5): every character the cast members name, seats
+	// marked player included. In a session, it is the cast, since a root
+	// leaves out the state keys of the seats no player fills (Format 11.1).
 	openingCast []string
 	// members are the cast's members, in cast order. Without a session,
 	// they are the scenario's as written, seats included.
@@ -235,8 +235,8 @@ func (sc *scope) variable(key string) (*binding, string, bool) {
 	return sc.lookup(key, sc.cast)
 }
 
-// openingVariable is variable for a key of an opening's set, where a "cast"
-// variable has the keys of openingCast (Format 8.5).
+// openingVariable is variable for a state key of an opening's set, where a
+// "cast" variable has the keys of openingCast (Format 8.5).
 func (sc *scope) openingVariable(key string) (*binding, string, bool) {
 	return sc.lookup(key, sc.openingCast)
 }

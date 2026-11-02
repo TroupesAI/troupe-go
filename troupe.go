@@ -13,20 +13,19 @@
 // Story.RenameID makes the JSON Patch that renames one with every reference
 // to it.
 //
-// NewPlay makes the play of a session: a story's scenario as the session
-// plays it. NewScenarioPlay makes a scenario's play on its own. A play gives
-// its cast, the worlds in use, its mode, what it calls the narrator, the
-// state keys its changes can write, and its states:
-// Initial, StateAt for a message, and Apply, which gives a message's state
-// from its parent's, so a caller that keeps each message's state never
-// replays a path. CheckChanges judges a message's changes before they are
-// recorded. A State marshals to JSON, and UnmarshalState restores it.
-// From a message's parent's state, KnownBy tells who knows each of its parts
-// and RenderParts shows them. Render resolves the macros in author text, and
-// PointAt builds the point where the next message is written, where
-// Point.Eval evaluates conditions and Point.Active gives the entries active.
-// Root makes the root a session starts with from an opening, and Escape
-// writes a player's or a model's words where macros resolve.
+// NewPlay makes the play of a session: a story's scenario as the session plays
+// it. NewScenarioPlay makes a scenario's play on its own. A play gives its
+// cast, the worlds in use, its mode, what it calls the narrator, the state
+// keys its changes can write, and its states: Initial, StateAt for a message,
+// and Apply, which gives a message's state from its parent's, so a caller that
+// keeps each message's state never replays a path. CheckChanges judges a
+// message's changes before they are recorded. A State marshals to JSON, and
+// UnmarshalState restores it. From a message's parent's state, KnownBy tells
+// who knows each of its parts and RenderParts shows them. Render resolves the
+// macros in author text, and PointAt builds the point where the next message
+// is written, where Point.Eval evaluates conditions and Point.Active gives the
+// entries active. Root makes the root a session starts with from an opening,
+// and Escape writes a player's or a model's words where macros resolve.
 //
 // The typed model mirrors documents as written (Format 2.2). An absent field
 // is its zero value, or nil where the zero value means something, and the

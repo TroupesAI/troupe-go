@@ -2,17 +2,17 @@ package troupe
 
 // StateKey is a state key a play's changes can write (Format 8.5).
 type StateKey struct {
-	// Name is the state key: "scene.location", "scene.present", a
-	// variable's full name (Format 8.2), or a keyed variable's full name and
-	// one of its keys, such as "state.trust.kai". For a "*" map, whose keys
-	// can't be listed, it is the variable's full name.
+	// Name is the state key: "scene.location", "scene.present", a variable's
+	// full name (Format 8.2), or a keyed variable's full name and one of its
+	// keys, such as "state.trust.kai". For a "*" map, whose keys can't be
+	// listed, it is the variable's full name.
 	Name string
 	// Key is a keyed variable's key: a cast character's ID for "cast", or one
 	// of its list, and "*" for a "*" map, where any author ID other than char
 	// and player is a key, written after Name and a dot (Format 8.3). It is ""
 	// for the scene and for a variable that isn't keyed.
 	Key string
-	// Variable is the variable the key writes, which gives its type and
+	// Variable is the variable the state key writes, which gives its type and
 	// values; nil for the scene: scene.location, a location ID or "", and
 	// scene.present, the characters present (Format 8.4).
 	Variable *Variable
@@ -31,7 +31,7 @@ type StateKey struct {
 // where no player fills the seat (Format 11.1).
 //
 // It offers what is valid, and Check still judges what is written: for a
-// draft that fails Check, it gives the keys of what reads, each once.
+// draft that fails Check, it gives the state keys of what reads, each once.
 func (pl *Play) StateKeys() []StateKey {
 	sc := pl.scope
 	out := []StateKey{{Name: "scene.location"}, {Name: "scene.present"}}

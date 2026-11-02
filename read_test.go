@@ -58,9 +58,9 @@ func TestReadStoryModel(t *testing.T) {
 // A package's sessions are its files anywhere under sessions/, by path, read
 // only by ReadSessions, and every diagnostic names the file it is in. Its
 // other files, which aren't documents, are listed and open by path, and
-// story.json is kept as written. A session that fails UNREADABLE fails the
-// whole package as ReadSessions reads it, which is then reported with that
-// code only (Format 15.2, 15.3).
+// story.json is kept as written. A session that is UNREADABLE fails the whole
+// package as ReadSessions reads it, which is then reported with that code only
+// (Format 15.2, 15.3).
 func TestReadPackage(t *testing.T) {
 	header := `{"troupe":"0.15","kind":"session","scenario":"s"}` + "\n"
 	message := `{"id":"1","from":"player","content":[{"text":"Hi."}]}`
@@ -183,17 +183,17 @@ func TestReadPackageStory(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		var pb *troupe.Story
+		var fromPackage *troupe.Story
 		if p != nil {
-			pb = p.Story
+			fromPackage = p.Story
 		}
 
 		st, diags, err := troupe.ReadPackageStory(strings.NewReader(c.doc), []string{"images/cover.png"})
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !reflect.DeepEqual(st, pb) {
-			t.Errorf("%s: got  %+v\nReadPackage %+v", c.doc, st, pb)
+		if !reflect.DeepEqual(st, fromPackage) {
+			t.Errorf("%s: got  %+v\nReadPackage %+v", c.doc, st, fromPackage)
 		}
 		if !reflect.DeepEqual(diags, pdiags) {
 			t.Errorf("%s: diagnostics %+v\nReadPackage %+v", c.doc, diags, pdiags)
@@ -308,6 +308,11 @@ func TestReadLimits(t *testing.T) {
 		}, true},
 		// Past its header, a session of another version is judged only by
 		// its size, and one over it is UNREADABLE alone (Format 15.3).
+		{"100,001 lines, one empty, after a header of another version", func() ([]troupe.Diagnostic, error) {
+			lines := append([]string{`{"troupe":"0.16","kind":"session"}`, ""}, messages[1:]...)
+			_, d, err := troupe.ReadSession(strings.NewReader(strings.Join(lines, "\n")))
+			return d, err
+		}, false},
 		{"a session of another version over 256 MiB", func() ([]troupe.Diagnostic, error) {
 			_, d, err := troupe.ReadSession(io.MultiReader(strings.NewReader(`{"troupe":"0.16","kind":"session"}`+"\n"), blankLines{}))
 			return d, err

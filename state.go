@@ -96,15 +96,15 @@ func initialValue(b *binding, raw jsontext.Value) any {
 }
 
 // apply applies an opening's set or a recorded change to s (Format 8.6),
-// adding what it replaces to undo when undo isn't nil. It skips keys and
-// values that aren't valid, which a session that passes Check doesn't have.
+// adding what it replaces to undo when undo isn't nil. It skips state keys
+// and values that aren't valid, which a session that passes Check doesn't have.
 // It returns the full names of the "*" maps the change leaves with more than
 // maxSetMembers keys.
 //
 // owned holds the full names of s's keyed maps that no other state shares,
 // which apply changes in place, and apply adds each map it copies. Copying a
-// map once, rather than for each key, keeps applying a change, or a path's
-// changes to one state, linear in their keys.
+// map once, rather than for each state key, keeps applying a change, or a
+// path's changes to one state, linear in their state keys.
 func (sc *scope) apply(s *state, set map[string]jsontext.Value, undo *[]edit, owned map[string]bool) map[string]bool {
 	open := map[*binding]bool{} // the "*" maps the change writes to
 	for key, raw := range set {

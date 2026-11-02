@@ -95,10 +95,10 @@ func TestRoot(t *testing.T) {
 	}
 }
 
-// A root leaves out the keys of a seat marked player that no player fills:
-// its character's variables and its key of "cast" variables, whoever owns
-// them. A seat a player fills keeps them, and a set left without keys makes
-// no change.
+// A root leaves out the state keys of a seat marked player that no player
+// fills: its character's variables and its key of "cast" variables, whoever
+// owns them. A seat a player fills keeps them, and a set left without state
+// keys makes no change.
 func TestRootSeatKeys(t *testing.T) {
 	story := `{"troupe":"0.15","kind":"story",
 		"characters":[{"id":"k","name":"Kai","description":"Kai.","variables":[{"id":"nerve","type":"int","description":"N."}]},

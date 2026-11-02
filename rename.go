@@ -276,7 +276,7 @@ func (r *renamer) owner(p jsontext.Pointer, entries []Entry, in []*Scenario, own
 	}
 }
 
-// variable rewrites the references in a variable's description, of and
+// variable rewrites the references in a variable's description, per and
 // initial value, and leaves its values that are the old ID.
 func (r *renamer) variable(p jsontext.Pointer, v *Variable, in []*Scenario, own ownVars) {
 	r.text(ptr(p, "description"), v.Description, in, own)
@@ -314,9 +314,9 @@ func (r *renamer) variable(p jsontext.Pointer, v *Variable, in []*Scenario, own 
 	}
 }
 
-// set rewrites the references in an opening's set, in scenario s: its keys
-// and the scene values it writes, and leaves its other values that are the
-// old ID.
+// set rewrites the references in an opening's set, in scenario s: its state
+// keys and the scene values it writes, and leaves its other values that are
+// the old ID.
 func (r *renamer) set(p jsontext.Pointer, s *Scenario, set map[string]jsontext.Value) {
 	for _, key := range slices.Sorted(maps.Keys(set)) {
 		switch key {
@@ -495,9 +495,9 @@ func opening(s *Scenario, id string) *Opening {
 }
 
 // path returns a state or own path, as isOwn says, read in a text, condition
-// or key with own the variables own names there, with the names that refer to
-// the object, in any of the scenarios in, as the new ID, or nil when none
-// does. It reports whether that is safe: whether, in every one of the
+// or state key with own the variables own names there, with the names that
+// refer to the object, in any of the scenarios in, as the new ID, or nil when
+// none does. It reports whether that is safe: whether, in every one of the
 // scenarios, each of those names refers to the object, or to nothing as it is
 // and as renamed.
 func (r *renamer) path(in []*Scenario, own ownVars, isOwn bool, path []string) ([]string, bool) {

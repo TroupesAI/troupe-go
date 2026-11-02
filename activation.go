@@ -36,16 +36,16 @@ func (a *ActiveEntry) group() string {
 // whoever the message is for knows (Format 7.4).
 //
 // An entry with keywords activates when one matches its scanned text, a
-// retrievable one when retrieved names its reference, one with both by either, and
-// one with neither always, while its when holds. retrieved are the references
-// of the entries the caller retrieved, of those Retrievable gives; any other
-// reference changes nothing. The rounds of the messages that record an entry
-// in activated time it: sticky keeps it active, and once and cooldown keep it
-// from activating again. Of the entries that would activate, group keeps one
-// of each owner's group, of the highest priority, chosen by weight among
-// equals, where an entry sticky keeps wins against equals that aren't kept,
-// and then chance lets each through, so a chosen entry that fails it leaves
-// its group empty. r draws for weight and chance, so activation is
+// retrievable one when retrieved names its reference, one with both by either,
+// and one with neither always, while its when holds. retrieved are the
+// references of the entries the caller retrieved, of those Retrievable gives;
+// any other reference changes nothing. The rounds of the messages that record
+// an entry in activated time it: sticky keeps it active, and once and cooldown
+// keep it from activating again. Of the entries that would activate, group
+// keeps one of each owner's group, of the highest priority, chosen by weight
+// among equals, where an entry sticky keeps wins against equals that aren't
+// kept, and then chance lets each through, so a chosen entry that fails it
+// leaves its group empty. r draws for weight and chance, so activation is
 // reproducible from the caller's source.
 //
 // Which active entries reach the model is the caller's to choose, by their

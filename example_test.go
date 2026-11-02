@@ -67,9 +67,9 @@ func ExamplePlay() {
 	// true <nil>
 }
 
-// A session starts from an opening's root. Each turn, the caller restores the
-// stored state before the messages a scan reaches, builds the point after
-// them, and gets the entries active for the message being written.
+// A session starts from an opening's root. For each message, the caller
+// restores the stored state before the messages a scan reaches, builds the
+// point after them, and gets the entries active for the message being written.
 func ExamplePoint_Active() {
 	st, _, err := troupe.ReadStory(strings.NewReader(`{"troupe": "0.15", "kind": "story",
 		"characters": [{"id": "kai", "name": "Kai", "description": "A thief.",

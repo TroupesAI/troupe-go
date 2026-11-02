@@ -113,7 +113,7 @@ func failures(sch *jsonschema.Schema, doc any) []failure {
 			if len(e.InstanceLocation) > len(parent) {
 				loc = append(loc, path.Base(path.Dir(e.SchemaURL)))
 			}
-			// A name that fails is at its property, as a key in set is
+			// A name that fails is at its property, as a state key in set is
 			// (section 3.4).
 			out = append(out, failure{k, e.SchemaURL, append(loc, k.Property)})
 			return

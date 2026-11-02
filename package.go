@@ -46,9 +46,9 @@ func (p *Package) Open(path string) (io.ReadCloser, error) {
 // 12.3, 15.2). It reads every entry section 12.3 allows, so data that can't be
 // read is UNREADABLE wherever it is. Its results are those of ReadStory, for
 // the package as a story reader reads it: the package is nil when the archive
-// fails UNREADABLE, or its story.json UNREADABLE or UNSUPPORTED_VERSION, and
-// its diagnostics are then only those. Package.Open and Package.ReadSessions
-// read r again.
+// is UNREADABLE, or its story.json UNREADABLE or UNSUPPORTED_VERSION, and its
+// diagnostics are then only those. Package.Open and Package.ReadSessions read
+// r again.
 func ReadPackage(r io.ReaderAt, size int64) (*Package, []Diagnostic, error) {
 	src := &source{r: r}
 	var rd reader
@@ -63,12 +63,12 @@ func ReadPackage(r io.ReaderAt, size int64) (*Package, []Diagnostic, error) {
 	return p, diags, nil
 }
 
-// ReadSessions reads the package's sessions, by path, as a session reader
-// does (Format 15.2). Its diagnostics are the package's at that level,
+// ReadSessions reads the package's sessions, by path, as a session reader does
+// (Format 15.2). Its diagnostics are the package's at that level,
 // ReadPackage's and the sessions', so they replace ReadPackage's. When any
-// session fails UNREADABLE or UNSUPPORTED_VERSION, the package fails whole: the
-// sessions are nil, and the diagnostics only those (Format 15.3). The error
-// is r's, when reading it fails.
+// session is UNREADABLE or UNSUPPORTED_VERSION, the package fails whole: the
+// sessions are nil, and the diagnostics only those (Format 15.3). The error is
+// r's, when reading it fails.
 func (p *Package) ReadSessions() (map[string]*Session, []Diagnostic, error) {
 	rd := reader{files: map[string]bool{}, diags: slices.Clone(p.diags)}
 	for name := range p.files {
@@ -178,8 +178,8 @@ func (rd *reader) pkg(src *source, size int64) *Package {
 	return p
 }
 
-// entry reads one ZIP entry to its end, as the package's story when it
-// is story.json. Its error is for data that can't be read.
+// entry reads one ZIP entry to its end, as the package's story when it is
+// story.json. Its error is for data that can't be read.
 func (rd *reader) entry(f *zip.File, p *Package) (err error) {
 	r, err := f.Open()
 	if err != nil {

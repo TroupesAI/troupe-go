@@ -48,20 +48,20 @@ func Check(st *Story, s *Session) []Diagnostic {
 	return sortDiagnostics(c.diags)
 }
 
-// CheckChanges judges the changes of a message not yet recorded, given
-// before, the state at its parent. Each state key is judged as Check judges
-// a recorded change's (Format 8.5), and against its variable's by, maxStep
-// and oneWay, which Format 8.1 leaves to whoever records a change: the scene
-// has no by, and an opening's change is held to none of them. Each change is
-// judged against the state the ones before it leave. oneWay compares a key's
-// value there with the one the change gives it. maxStep bounds the sum of
-// the moves of the message's changes by "model", either way, each from the
-// key's value before the change to the one it gives it, and is reported at
-// the last that sets the key validly. Values are compared normalized, an
+// CheckChanges judges the changes of a message not yet recorded, given before,
+// the state at its parent. Each state key is judged as Check judges a recorded
+// change's (Format 8.5), and against its variable's by, maxStep and oneWay,
+// which Format 8.1 leaves to whoever records a change: the scene has no by,
+// and an opening's change is held to none of them. Each change is judged
+// against the state the ones before it leave. oneWay compares a state key's
+// value there with the one the change gives it. maxStep bounds the sum of the
+// moves of the message's changes by "model", either way, each from the state
+// key's value before the change to the one it gives it, and is reported at the
+// last that sets the state key validly. Values are compared normalized, an
 // absent key of a "*" map counting as the default (Format 8.3, 8.6).
 //
-// It returns a Diagnostic for each rule a key breaks, sorted as Check's are,
-// with Line 0 and the key's Pointer within the message, such as
+// It returns a Diagnostic for each rule a state key breaks, sorted as Check's
+// are, with Line 0 and the state key's Pointer within the message, such as
 // "/changes/0/set/state.bell". Changes it accepts get none from Check once
 // recorded as given; a caller that drops a refused change judges the rest
 // again. Each change's by and set are as the schema requires, and only a
@@ -86,7 +86,7 @@ func (pl *Play) CheckChanges(before State, changes []Change) []Diagnostic {
 	return sortDiagnostics(c.diags)
 }
 
-// step is how far a message's changes by "model" move a key of a variable
+// step is how far a message's changes by "model" move a state key of a variable
 // with maxStep, and the last of them that sets it. The sum is a big.Int
 // since changes by others between them bound it only by the number of
 // changes.
@@ -190,9 +190,9 @@ func (c *checker) owners(at place, characters []Character, worlds []World) {
 
 // scenarios checks the story's scenarios: their IDs and those of their
 // entries, variables and openings, what they name, their variables' initial
-// values, and the keys and values of their openings as each is written. It
-// checks the macros of each scenario and of the characters and worlds it has
-// in use against its variables, and those of characters and worlds no
+// values, and the state keys and values of their openings as each is written.
+// It checks the macros of each scenario and of the characters and worlds it
+// has in use against its variables, and those of characters and worlds no
 // scenario uses against none (Format 10.2).
 func (c *checker) scenarios() {
 	usedCharacters, usedWorlds := make([]bool, len(c.st.Characters)), make([]bool, len(c.st.Worlds))
@@ -617,7 +617,7 @@ func (c *checker) initial(at place, p jsontext.Pointer, v *Variable) {
 	}
 }
 
-// openings checks the keys and values of the openings of sc's scenario.
+// openings checks the state keys and values of the openings of sc's scenario.
 func (c *checker) openings(sc *scope) {
 	initial := sc.initial()
 	for j, o := range sc.scenario.Openings {
@@ -627,8 +627,8 @@ func (c *checker) openings(sc *scope) {
 	}
 }
 
-// mapLimit reports the keys of set that write to a "*" map in over, which a
-// change left with more than maxSetMembers keys (Format 8.5, 14).
+// mapLimit reports the state keys of set that write to a "*" map in over,
+// which a change left with more than maxSetMembers keys (Format 8.5, 14).
 func (c *checker) mapLimit(sc *scope, at place, p jsontext.Pointer, set map[string]jsontext.Value, over map[string]bool) {
 	for key := range set {
 		if b, _, ok := sc.variable(key); ok && over[b.name] {
@@ -638,8 +638,8 @@ func (c *checker) mapLimit(sc *scope, at place, p jsontext.Pointer, set map[stri
 }
 
 // messages runs the checks of a session's messages that depend on what its
-// scenario has in use, sc: the keys and values of changes, the openings roots
-// name, and the entries messages record as activated.
+// scenario has in use, sc: the state keys and values of changes, the openings
+// roots name, and the entries messages record as activated.
 func (c *checker) messages(sc *scope) {
 	msgs := c.s.Messages
 	for i := range msgs {
@@ -653,7 +653,7 @@ func (c *checker) messages(sc *scope) {
 	}
 	// The state along each path, for the "*" map limit. Each message's
 	// changes are undone on the way back up.
-	st, owned := sc.initial(), map[string]bool{}
+	s, owned := sc.initial(), map[string]bool{}
 	undo := make([][]edit, len(msgs))
 	// Session entries apply from the message that adds them onward on its
 	// path, the latest per ID, and disabled removes one (Format 11.3).
@@ -661,7 +661,7 @@ func (c *checker) messages(sc *scope) {
 	walkPaths(msgs, func(i int) {
 		m := &msgs[i]
 		for j, ch := range m.Changes {
-			over := sc.apply(st, ch.Set, &undo[i], owned)
+			over := sc.apply(s, ch.Set, &undo[i], owned)
 			c.mapLimit(sc, inMessage(i, m), ptr("", "changes", j, "set"), ch.Set, over)
 		}
 		// activated names the entries in use at the message's evaluation
@@ -681,7 +681,7 @@ func (c *checker) messages(sc *scope) {
 			disabled[e.ID] = append(disabled[e.ID], e.Disabled)
 		}
 	}, func(i int) {
-		st.revert(undo[i])
+		s.revert(undo[i])
 		undo[i] = nil
 		for _, e := range msgs[i].Entries {
 			disabled[e.ID] = disabled[e.ID][:len(disabled[e.ID])-1]
@@ -689,10 +689,10 @@ func (c *checker) messages(sc *scope) {
 	})
 }
 
-// set checks the keys and values of an opening's set or a recorded change, at
-// p, with variable resolving its keys (Format 8.5). Unknown locations and
-// characters in values are only UNKNOWN_LOCATION and UNKNOWN_CHARACTER
-// (Format 15.3).
+// set checks the state keys and values of an opening's set or a recorded
+// change, at p, with variable resolving its state keys (Format 8.5). Unknown
+// locations and characters in values are only UNKNOWN_LOCATION and
+// UNKNOWN_CHARACTER (Format 15.3).
 func (c *checker) set(sc *scope, at place, p jsontext.Pointer, set map[string]jsontext.Value, variable func(string) (*binding, string, bool)) {
 	for key, val := range set {
 		kp := ptr(p, key)
@@ -727,7 +727,7 @@ func (c *checker) set(sc *scope, at place, p jsontext.Pointer, set map[string]js
 	}
 }
 
-// rules reports the keys of ch that break their variable's by or oneWay,
+// rules reports the state keys of ch that break their variable's by or oneWay,
 // judged against s, the state before ch, and adds the moves of a change by
 // "model" to steps (Format 8.1).
 func (c *checker) rules(sc *scope, s *state, p jsontext.Pointer, ch *Change, steps map[string]*step) {
@@ -752,13 +752,13 @@ func (c *checker) rules(sc *scope, s *state, p jsontext.Pointer, ch *Change, ste
 			c.report(CodeOneWay, place{}, ptr(p, key))
 		}
 		if v.Type == "int" && v.MaxStep > 0 && ch.By == "model" {
-			st := steps[key]
-			if st == nil {
-				st = &step{max: v.MaxStep}
-				steps[key] = st
+			sp := steps[key]
+			if sp == nil {
+				sp = &step{max: v.MaxStep}
+				steps[key] = sp
 			}
-			st.moved.Add(&st.moved, big.NewInt(x.(int64)-old.(int64)))
-			st.at = p
+			sp.moved.Add(&sp.moved, big.NewInt(x.(int64)-old.(int64)))
+			sp.at = p
 		}
 	}
 }

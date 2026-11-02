@@ -14,9 +14,9 @@ import (
 )
 
 // Every occurrence of each ID in references is a reference to it: in cast
-// members, worlds, parents, knownBy, speakers, set keys and scene values,
-// keyed variables' of and initial, macros, and the names and literals of
-// conditions.
+// members, worlds, parents, knownBy, speakers, the state keys and scene
+// values of sets, keyed variables' per and initial, macros, and the names and
+// literals of conditions.
 const references = `{"troupe": "0.15", "kind": "story",
 	"characters": [
 		{"id": "kai", "name": "Kai", "description": "{{state.kai.nerve}}, {{state.trust.kai}}, {{own.nerve}}.",

@@ -22,7 +22,7 @@ const activationStory = `{"troupe":"0.15","kind":"story",
 			{"id":"trust","type":"int","per":"cast","initial":5,"description":"d"}],
 		"entries":[
 			{"id":"always","text":"t"},
-			{"id":"keyed","text":"t","keywords":["rope"],"scanDepth":1},
+			{"id":"keyword","text":"t","keywords":["rope"],"scanDepth":1},
 			{"id":"cond","text":"t","when":"state.n >= 2"},
 			{"id":"retrieved","text":"t","title":"T","retrievable":true},
 			{"id":"off","text":"t","disabled":true},
@@ -55,8 +55,8 @@ func TestActive(t *testing.T) {
 		at, char string
 		want     []string
 	}{
-		{"1", "a", []string{"s/always", "s/keyed", "s/once", "s/sticky", "s/cool", "s/high", "w/lore", "a/own", "b/own"}},
-		{"1", "b", []string{"s/always", "s/keyed", "s/secret", "s/once", "s/sticky", "s/cool", "s/high", "w/lore", "a/own", "b/own"}},
+		{"1", "a", []string{"s/always", "s/keyword", "s/once", "s/sticky", "s/cool", "s/high", "w/lore", "a/own", "b/own"}},
+		{"1", "b", []string{"s/always", "s/keyword", "s/secret", "s/once", "s/sticky", "s/cool", "s/high", "w/lore", "a/own", "b/own"}},
 		// Message 2 is for a, in round 1: sticky keeps its entry, and cooldown
 		// blocks its own for the rest of the round.
 		{"2", "a", []string{"s/always", "s/sticky kept", "s/high", "w/lore", "a/own", "b/own"}},
@@ -126,13 +126,13 @@ func TestActiveStickyInGroup(t *testing.T) {
 	}
 }
 
-// A retrieved entry activates under every rule of activation, so it can push
-// a keyed entry of lower priority out of its group, and only an entry that
+// A retrieved entry activates under every rule of activation, so it can push a
+// lower-priority entry with keywords out of its group, and only an entry that
 // retrieving would activate and that can win its group is offered (Format
 // 7.2).
 func TestActiveRetrieved(t *testing.T) {
 	play, s := readPlay(t, `{"troupe":"0.15","kind":"story","scenarios":[{"id":"s","entries":[
-		{"id":"keyed","text":"t","keywords":["rope"],"group":"g","priority":40},
+		{"id":"keyword","text":"t","keywords":["rope"],"group":"g","priority":40},
 		{"id":"retrieved","text":"t","title":"T","retrievable":true,"group":"g","priority":60},
 		{"id":"equal","text":"t","title":"T","retrievable":true,"group":"g","priority":40},
 		{"id":"weak","text":"t","title":"T","retrievable":true,"group":"g","priority":30},
@@ -145,8 +145,8 @@ func TestActiveRetrieved(t *testing.T) {
 	if got := refs(p.Retrievable()); !slices.Equal(got, []string{"s/retrieved", "s/equal"}) {
 		t.Errorf("retrievable: %v, want s/retrieved and s/equal", got)
 	}
-	if got := refs(p.Active(nil, r)); !slices.Equal(got, []string{"s/keyed", "s/both"}) {
-		t.Errorf("without retrieval: %v, want s/keyed and s/both", got)
+	if got := refs(p.Active(nil, r)); !slices.Equal(got, []string{"s/keyword", "s/both"}) {
+		t.Errorf("without retrieval: %v, want s/keyword and s/both", got)
 	}
 	if got := refs(p.Active([]string{"s/retrieved", "s/equal", "s/weak", "s/barred", "s/unmatched"}, r)); !slices.Equal(got, []string{"s/retrieved", "s/both"}) {
 		t.Errorf("retrieved: %v, want s/retrieved and s/both", got)

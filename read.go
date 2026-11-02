@@ -15,11 +15,11 @@ import (
 	"github.com/TroupesAI/troupe-go/internal/ijson"
 )
 
-// ReadStory reads a story file (Format 3, 12.1). It returns the diagnostics
-// of UNREADABLE, UNSUPPORTED_VERSION, SCHEMA and UNKNOWN_FIELD, sorted by
-// location. The story is nil when it fails UNREADABLE or UNSUPPORTED_VERSION;
-// with other diagnostics it serves only to report them. The error is r's,
-// when reading it fails.
+// ReadStory reads a story file (Format 3, 12.1). It returns the diagnostics of
+// UNREADABLE, UNSUPPORTED_VERSION, SCHEMA and UNKNOWN_FIELD, sorted by
+// location. The story is nil when it is UNREADABLE or UNSUPPORTED_VERSION;
+// with other diagnostics it serves only to report them. The error is r's, when
+// reading it fails.
 func ReadStory(r io.Reader) (*Story, []Diagnostic, error) {
 	var rd reader
 	st, _, err := rd.story(r)
@@ -47,9 +47,9 @@ func ReadPackageStory(r io.Reader, files []string) (*Story, []Diagnostic, error)
 }
 
 // ReadSession reads a session file, line by line (Format 11). Its results are
-// those of ReadStory, for the whole file: the session is nil when any line
-// fails UNREADABLE, or its header UNSUPPORTED_VERSION, and its diagnostics are
-// then only those.
+// those of ReadStory, for the whole file: the session is nil when any line is
+// UNREADABLE, or its header UNSUPPORTED_VERSION, and its diagnostics are then
+// only those.
 func ReadSession(r io.Reader) (*Session, []Diagnostic, error) {
 	var rd reader
 	s, err := rd.session(r)
@@ -218,8 +218,8 @@ func (rd *reader) parse(data []byte, line int) (any, bool) {
 }
 
 // otherVersion reports whether a story or a session header names a version
-// other than this one; nothing else in it is then judged (Format 13, 15.3). A missing troupe, or one that isn't a version, is the
-// schema's to report.
+// other than this one; nothing else in it is then judged (Format 13, 15.3). A
+// missing troupe, or one that isn't a version, is the schema's to report.
 func otherVersion(tree any) bool {
 	doc, _ := tree.(map[string]any)
 	t, ok := doc["troupe"].(string)
@@ -228,7 +228,7 @@ func otherVersion(tree any) bool {
 
 // document judges a parsed document of this version, at its line of a
 // session or 0 for a story, and decodes it into v. It reports false when the
-// document fails UNREADABLE.
+// document is UNREADABLE.
 func (rd *reader) document(tree any, data []byte, line int, k docKind, v any) bool {
 	at := Diagnostic{Line: line}
 	doc, _ := tree.(map[string]any)
@@ -262,8 +262,8 @@ func (rd *reader) report(d Diagnostic) {
 }
 
 // diagnostics returns the input's diagnostics, sorted. An input, a whole file
-// or package, that fails UNREADABLE or UNSUPPORTED_VERSION is reported with
-// those codes only (Format 15.3).
+// or package, that is UNREADABLE or UNSUPPORTED_VERSION is reported with those
+// codes only (Format 15.3).
 func (rd *reader) diagnostics() []Diagnostic {
 	if rd.unread() {
 		rd.diags = slices.DeleteFunc(rd.diags, func(d Diagnostic) bool { return !unread(d) })
@@ -271,7 +271,7 @@ func (rd *reader) diagnostics() []Diagnostic {
 	return sortDiagnostics(rd.diags)
 }
 
-// unread reports whether the input fails UNREADABLE or UNSUPPORTED_VERSION.
+// unread reports whether the input is UNREADABLE or UNSUPPORTED_VERSION.
 func (rd *reader) unread() bool {
 	return slices.ContainsFunc(rd.diags, unread)
 }

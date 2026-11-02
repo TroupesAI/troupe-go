@@ -227,7 +227,7 @@ func runCheck(c *testCase, expect *checkExpect) error {
 }
 
 // runState compares the state at a message, flattened, with expect, a
-// subset of it, and checks that the keys absent lists aren't in it
+// subset of it, and checks that the state keys absent lists aren't in it
 // (conformance README section 3.1).
 func runState(c *testCase, tc test, expect map[string]jsontext.Value) error {
 	play, _, err := c.play()

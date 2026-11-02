@@ -87,5 +87,5 @@ func (pl *Play) Mode() string {
 // NarratorName returns what text calls the narrator: the scenario's
 // narratorName, or "the narrator" (Format 6).
 func (pl *Play) NarratorName() string {
-	return pl.scope.narrator()
+	return pl.scope.narratorName()
 }

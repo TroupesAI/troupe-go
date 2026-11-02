@@ -14,14 +14,14 @@ import (
 
 // Root returns the root a session starts with when it plays the scenario's
 // opening with the ID opening (Format 11.1): a system message naming the
-// opening. Its content is the opening's as written, with each pick replaced
-// by the option r chooses, escaped, or empty when the opening has none. When
-// the opening has a set, the root records it as its first change, by
-// "opening", without the keys of each cast member marked player that players
-// doesn't list, its character's variables and its key of "cast" variables,
-// and with the players' characters added to the scene.present it sets. When
-// no key is left, it records no change. The caller gives the root its ID, and
-// its at.
+// opening. Its content is the opening's as written, with each pick replaced by
+// the option r chooses, escaped, or empty when the opening has none. When the
+// opening has a set, the root records it as its first change, by "opening",
+// without the state keys of each cast member marked player that players
+// doesn't list, its character's variables and its key of "cast" variables, and
+// with the players' characters added to the scene.present it sets. When no
+// state key is left, it records no change. The caller gives the root its ID,
+// and its at.
 //
 // It fails when the scenario has no such opening.
 func (pl *Play) Root(opening string, r *rand.Rand) (Message, error) {

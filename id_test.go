@@ -36,6 +36,7 @@ func TestCheckID(t *testing.T) {
 		{"/worlds/1/locations", "vault", troupe.ErrIDTaken},
 		{"/scenarios/0/openings", "o", troupe.ErrIDTaken},
 		{"/characters", "narrator", troupe.ErrIDInvalid},
+		{"/characters", "player", troupe.ErrIDInvalid},
 		{"/worlds", "true", troupe.ErrIDInvalid},
 		{"/characters/0/variables", "scene", troupe.ErrIDInvalid},
 		{"/characters", "Kai", troupe.ErrIDInvalid},

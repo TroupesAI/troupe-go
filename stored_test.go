@@ -14,7 +14,7 @@ import (
 	"github.com/TroupesAI/troupe-go"
 )
 
-// A state stored and restored is the state it was: it holds the same keys
+// A state stored and restored is the state it was: it holds the same state keys
 // and values, and the next message's point evaluates and activates the same.
 // Stored, it holds no U+0000, though a value and a session entry do.
 func TestStoreState(t *testing.T) {
@@ -65,8 +65,8 @@ func TestStoreState(t *testing.T) {
 		t.Errorf("state.note is %q", got)
 	}
 
-	// A play whose header has gained a joiner restores the state, with the
-	// joiner's keys at their initial values.
+	// A play whose session's header has gained a joiner restores the state,
+	// with the joiner's state keys at their initial values.
 	header := `{"troupe":"0.15","kind":"session","scenario":"s","characters":[{"id":"p","name":"Pat","description":"Pat."},{"id":"j","name":"Jo","description":"Jo."}],"players":["p"]}`
 	joined, _ := readPlay(t, activationStory, header)
 	data, err := json.Marshal(before)

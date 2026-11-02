@@ -13,7 +13,7 @@ import (
 // stored is a State as MarshalJSON writes it.
 type stored struct {
 	Troupe string `json:"troupe"`
-	// Values holds every key the state holds, as All yields it, with its
+	// Values holds every state key the state holds, as All yields it, with its
 	// value.
 	Values    map[string]jsontext.Value `json:"values"`
 	Player    string                    `json:"player,omitempty"`
@@ -33,12 +33,12 @@ type stored struct {
 // release's may be. Apply computes it again.
 var ErrStateFormat = errors.New("the stored state is in a format this release doesn't read")
 
-// MarshalJSON returns s as JSON that UnmarshalState reads back: every key and
-// value s holds, and what else it keeps that depends on the path, such as
-// the rounds, the session entries in use, when entries were recorded as
+// MarshalJSON returns s as JSON that UnmarshalState reads back: every state
+// key and value s holds, and what else it keeps that depends on the path, such
+// as the rounds, the session entries in use, when entries were recorded as
 // activated and who has been present. The JSON names this module's Troupe
-// version; a later release reads it back or wraps ErrStateFormat. No string
-// in it holds U+0000, so a database's JSON type that refuses it, such as
+// version; a later release reads it back or wraps ErrStateFormat. No string in
+// it holds U+0000, so a database's JSON type that refuses it, such as
 // PostgreSQL's jsonb, can hold it.
 //
 // It fails for the zero State.
@@ -78,12 +78,12 @@ func (s State) MarshalJSON() ([]byte, error) {
 
 // UnmarshalState returns the state that State.MarshalJSON wrote as data. It
 // is this play's state as it was stored, but for what the play has added
-// since: a key the stored state doesn't hold, such as one of a joiner the
+// since: a state key the stored state doesn't hold, such as one of a joiner the
 // session's header has added, holds its initial value (Format 8.3).
 //
-// It fails when data isn't a stored state, or holds a key or value that isn't
-// valid in this play (Format 8.5), and wraps ErrStateFormat when the state is
-// stored in a format this release doesn't read.
+// It fails when data isn't a stored state, or holds a state key or value that
+// isn't valid in this play (Format 8.5), and wraps ErrStateFormat when the
+// state is stored in a format this release doesn't read.
 func (pl *Play) UnmarshalState(data []byte) (State, error) {
 	if bytes.Contains(data, []byte(`\u0001`)) {
 		var err error
@@ -104,7 +104,7 @@ func (pl *Play) UnmarshalState(data []byte) (State, error) {
 	sc := pl.scope
 	for key, raw := range v.Values {
 		if !sc.valid(key, raw) {
-			return State{}, errors.New("troupe: the stored state holds a key or value that isn't valid in this play")
+			return State{}, errors.New("troupe: the stored state holds a state key or value that isn't valid in this play")
 		}
 	}
 	s := pl.initial.clone()

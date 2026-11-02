@@ -54,7 +54,7 @@ func (pl *Play) Render(text string, c RenderContext, r *rand.Rand) string {
 			case c.Char != "":
 				b.WriteString(sc.characterName(c.Char))
 			case c.Narrator:
-				b.WriteString(sc.narrator())
+				b.WriteString(sc.narratorName())
 			default:
 				b.WriteString(t.Text)
 			}
@@ -227,8 +227,8 @@ func (sc *scope) characterNames(ids []string) string {
 	return strings.Join(names, ", ")
 }
 
-// narrator returns what text calls the narrator (Format 6).
-func (sc *scope) narrator() string {
+// narratorName returns what text calls the narrator (Format 6).
+func (sc *scope) narratorName() string {
 	if sc.scenario.NarratorName != "" {
 		return sc.scenario.NarratorName
 	}

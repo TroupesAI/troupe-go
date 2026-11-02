@@ -39,7 +39,7 @@ func TestCheckOwnSharedID(t *testing.T) {
 	}
 }
 
-// CheckChanges judges each key of a message's changes, in order, from the
+// CheckChanges judges each state key of a message's changes, in order, from the
 // state before the message, and its diagnostics with the spec's codes are
 // those Check gives the message once it is recorded.
 func TestCheckChanges(t *testing.T) {
@@ -102,7 +102,7 @@ func TestCheckChanges(t *testing.T) {
 		// maxStep bounds the sum of a message's changes by "model", each
 		// moving from the value before it, by the normalized value: trust.a
 		// falls 8 and rises 10, since 104 is 100. It is reported at the last
-		// that sets the key, and a player's changes aren't bounded.
+		// that sets the state key, and a player's changes aren't bounded.
 		{"maxStep", `[{"by":"model","set":{"state.bell":12,"state.trust.a":90}},{"by":"player","set":{"state.trust.p":50}},{"by":"model","set":{"state.bell":14,"state.trust.a":104}},
 			{"by":"model","set":{"state.lit":true}}]`, []troupe.Diagnostic{
 			at(troupe.CodeMaxStep, "/changes/2/set/state.bell"),

@@ -175,10 +175,10 @@ type State struct {
 }
 
 // Get returns the value at key, a state key (Format 8.5): "scene.location",
-// "scene.present", a variable's full name, or a keyed variable's full name
-// and one of its keys, such as "state.trust.kai". The value is a bool, an int64, a string, or a []string for a set and for
-// scene.present. It reports false when the state holds nothing at key, as for
-// a key a "*" map doesn't have.
+// "scene.present", a variable's full name, or a keyed variable's full name and
+// one of its keys, such as "state.trust.kai". The value is a bool, an int64, a
+// string, or a []string for a set and for scene.present. It reports false when
+// the state holds nothing at key, as for a key a "*" map doesn't have.
 func (s State) Get(key string) (any, bool) {
 	if s.s == nil {
 		return nil, false

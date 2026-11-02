@@ -51,7 +51,7 @@ func TestCast(t *testing.T) {
 	}
 }
 
-func check(t *testing.T, name string, play *troupe.Play, cast, worlds []string, mode, narrator string) {
+func check(t *testing.T, name string, play *troupe.Play, cast, worlds []string, mode, narratorName string) {
 	t.Helper()
 	var got []string
 	for _, m := range play.Cast() {
@@ -79,7 +79,7 @@ func check(t *testing.T, name string, play *troupe.Play, cast, worlds []string, 
 	if !slices.Equal(ids, worlds) {
 		t.Errorf("%s: the worlds are %v, want %v", name, ids, worlds)
 	}
-	if got := fmt.Sprint(play.Mode(), play.NarratorName()); got != fmt.Sprint(mode, narrator) {
+	if got := fmt.Sprint(play.Mode(), play.NarratorName()); got != fmt.Sprint(mode, narratorName) {
 		t.Errorf("%s: the mode and narrator are %s", name, got)
 	}
 }
@@ -110,8 +110,8 @@ func TestSpoilers(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		for name, st := range map[string]troupe.State{"applied": states[m.ID], "restored": restored} {
-			if got := st.Spoilers(); !slices.Equal(got, want[m.ID]) {
+		for name, state := range map[string]troupe.State{"applied": states[m.ID], "restored": restored} {
+			if got := state.Spoilers(); !slices.Equal(got, want[m.ID]) {
 				t.Errorf("at message %s, %s, the spoilers are %v, want %v", m.ID, name, got, want[m.ID])
 			}
 		}
