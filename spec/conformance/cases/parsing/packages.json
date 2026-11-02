@@ -1,5 +1,5 @@
 {
-  "description": "Packages (Format 12.3, 15.2, 15.3): story.json at the root, sessions anywhere under sessions/, subfolders included, which a story reader may leave unread, and a story.json or session of another version makes the package UNSUPPORTED_VERSION, without this version's checks of what it references; absolute paths, .. segments, backslashes, names equal when compared case-insensitively, encryption and symbolic links are UNREADABLE, and an entry that breaks Format 12.3 is no document, so its version isn't judged; a directory entry (a name ending in /) and an unreferenced file outside the path grammar aren't part of the package",
+  "description": "Packages (Format 12.3, 15.2, 15.3): story.json at the root, sessions anywhere under sessions/, subfolders included, which a story reader may leave unread, and a story.json or session of another version makes the package UNSUPPORTED_VERSION, without this version's checks of what it references; absolute paths, .. segments, backslashes, names equal when compared case-insensitively, encryption, symbolic links and data that fails its CRC-32 are UNREADABLE, and an entry that breaks Format 12.3 is no document, so its version isn't judged, though the other documents' versions still are; a directory entry (a name ending in /) and an unreferenced file outside the path grammar aren't part of the package",
   "tests": [
     {
       "type": "parse",
@@ -143,6 +143,19 @@
         ]
       },
       "note": "The entry's data is a plain 0.16 story, but an encrypted entry is no document, so the package is UNREADABLE only."
+    },
+    {
+      "type": "parse",
+      "name": "an entry whose data fails its CRC-32, before a story.json of another version",
+      "note": "notes.txt is stored, and its data no longer matches its recorded CRC-32, though nothing references it. The package is UNREADABLE for it, and still UNSUPPORTED_VERSION for story.json, a document stored after it.",
+      "kind": "package",
+      "base64": "UEsDBBQAAAAAAAAAYl2GphA2BQAAAAUAAAAJAAAAbm90ZXMudHh0amVsbG9QSwMEFAAAAAgAAABiXfJNV2oiAAAAIAAAAAoAAABzdG9yeS5qc29uq1YqKcovLUhVslIy0DM0U9JRys7MS1GyUiouyS+qVKoFAFBLAQIUAxQAAAAAAAAAYl2GphA2BQAAAAUAAAAJAAAAAAAAAAAAAACAgQAAAABub3Rlcy50eHRQSwECFAMUAAAACAAAAGJd8k1XaiIAAAAgAAAACgAAAAAAAAAAAAAAgIEsAAAAc3RvcnkuanNvblBLBQYAAAAAAgACAG8AAAB2AAAAAAA=",
+      "expect": {
+        "codes": [
+          "UNREADABLE",
+          "UNSUPPORTED_VERSION"
+        ]
+      }
     },
     {
       "type": "parse",

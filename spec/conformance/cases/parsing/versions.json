@@ -49,9 +49,9 @@
     },
     {
       "type": "parse",
-      "name": "a session of another minor, not read past its header",
+      "name": "a session of another minor, not read past its header, so neither its empty line nor its line that isn't JSON is judged",
       "kind": "session",
-      "text": "{\"troupe\":\"0.16\",\"kind\":\"session\",\"scenario\":\"s\"}\nnot json\n",
+      "text": "{\"troupe\":\"0.16\",\"kind\":\"session\",\"scenario\":\"s\"}\n\nnot json\n",
       "expect": {
         "codes": [
           "UNSUPPORTED_VERSION"

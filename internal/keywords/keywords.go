@@ -10,8 +10,9 @@ import (
 )
 
 // regexKeyword is the form of a regex keyword, /pattern/flags: its pattern is
-// the text between the first and the last /, and its flags the letters after.
-var regexKeyword = regexp.MustCompile(`^/(.+)/([a-z]*)$`)
+// the text between the first and the last /, line breaks included, and its
+// flags the letters after (Format 7.2).
+var regexKeyword = regexp.MustCompile(`(?s)^/(.+)/([a-z]*)$`)
 
 // anywhere are the scripts whose keywords match anywhere, not only as words.
 var anywhere = []*unicode.RangeTable{

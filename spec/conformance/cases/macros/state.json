@@ -200,9 +200,9 @@
     },
     {
       "type": "macro",
-      "name": "a whole map renders as Name: value pairs; an absent key renders as nothing; an undeclared variable is left as written; a char segment without a character names no key",
-      "text": "{{state.trust}} {{state.trust.zed}} {{state.nope}} {{state.trust.char}}",
-      "expect": "Ann: 70, Bea: 50  {{state.nope}} "
+      "name": "a whole map renders as Name: value pairs; an absent key renders as nothing; an undeclared variable, and a path segment that isn't an author ID, such as the reserved word in, are left as written; a char segment without a character names no key",
+      "text": "{{state.trust}} {{state.trust.zed}} {{state.nope}} {{state.trust.char}} {{state.trust.in}}",
+      "expect": "Ann: 70, Bea: 50  {{state.nope}}  {{state.trust.in}}"
     },
     {
       "type": "macro",

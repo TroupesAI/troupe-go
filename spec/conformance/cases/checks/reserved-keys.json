@@ -1,5 +1,5 @@
 {
-  "description": "Variable keys can't be char or player (Format 2.3, 8.3): a list naming one is SCHEMA, and a \"*\" key named char is no valid key (Format 8.5), so UNKNOWN_STATE_KEY",
+  "description": "Variable keys can't be char or player (Format 2.3, 8.3): a list naming one is SCHEMA, and a \"*\" key named char or player is no valid key (Format 8.5), so UNKNOWN_STATE_KEY",
   "story": {
     "kind": "story",
     "scenarios": [
@@ -26,7 +26,8 @@
           {
             "id": "o",
             "set": {
-              "state.inv.char": 1
+              "state.inv.char": 1,
+              "state.inv.player": 1
             }
           }
         ]
@@ -49,6 +50,10 @@
           {
             "code": "UNKNOWN_STATE_KEY",
             "at": "/scenarios/0/openings/0/set/state.inv.char"
+          },
+          {
+            "code": "UNKNOWN_STATE_KEY",
+            "at": "/scenarios/0/openings/0/set/state.inv.player"
           }
         ]
       }

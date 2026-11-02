@@ -1,5 +1,5 @@
 {
-  "description": "A regex keyword that isn't valid is REGEX_ERROR (Format 7.2, 14, 15.3): one that doesn't compile; one with a form outside the shared syntax, such as an inline flag, a lookahead, a backreference, an unescaped bracket, an empty class, a range out of order, a quantifier after a boundary, a zero count or the category Cn; one with a flag other than i, m and s or a repeated flag; one nesting groups more than 100 deep; and one longer than 1000 bytes written out in full. checks/valid-regex-keywords.json has the valid keywords next to these limits",
+  "description": "A regex keyword that isn't valid is REGEX_ERROR (Format 7.2, 14, 15.3): one that doesn't compile, even when its pattern holds a line break; one with a form outside the shared syntax, such as an inline flag, a lookahead, a backreference, an unescaped bracket, an empty class, a range out of order, a quantifier after a boundary, a zero count or the category Cn; one with a flag other than i, m and s or a repeated flag; one nesting groups more than 100 deep; and one longer than 1000 bytes written out in full. checks/valid-regex-keywords.json has the valid keywords next to these limits",
   "note": "Written out, (a{10}){n} is (aaaaaaaaaa) n times, 12n bytes: 1008 for n = 84 and 2400 for 200. a{999,} is 999 copies of a then a*, 1001 bytes. The slashes around a keyword aren't part of its pattern.",
   "story": {
     "kind": "story",
@@ -133,6 +133,13 @@
               "/lamp/ii"
             ],
             "text": "a repeated flag"
+          },
+          {
+            "id": "line_break",
+            "keywords": [
+              "/(\n/"
+            ],
+            "text": "an unclosed group across a line break"
           }
         ]
       }
@@ -217,6 +224,10 @@
           {
             "code": "REGEX_ERROR",
             "at": "/scenarios/0/entries/17/keywords/0"
+          },
+          {
+            "code": "REGEX_ERROR",
+            "at": "/scenarios/0/entries/18/keywords/0"
           }
         ]
       }

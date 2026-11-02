@@ -79,14 +79,14 @@
       "scenario": "s",
       "characters": [
         {
-          "id": "r",
-          "name": "Rae",
-          "description": "Rae."
-        },
-        {
           "id": "j",
           "name": "Jo",
           "description": "A stranger."
+        },
+        {
+          "id": "r",
+          "name": "Rae",
+          "description": "Rae."
         },
         {
           "id": "q",
@@ -132,7 +132,11 @@
           {
             "by": "player",
             "set": {
-              "scene.location": "moon"
+              "scene.location": "moon",
+              "scene.present": [
+                "j",
+                "r"
+              ]
             }
           }
         ]
@@ -165,10 +169,14 @@
     },
     {
       "type": "state",
-      "name": "a location of a world the scenario doesn't use",
+      "name": "a location of a world the scenario doesn't use; the joiner j, though listed before r in the header, comes after r's new seat in cast order",
       "at": "2",
       "expect": {
-        "scene.location": "moon"
+        "scene.location": "moon",
+        "scene.present": [
+          "r",
+          "j"
+        ]
       }
     },
     {

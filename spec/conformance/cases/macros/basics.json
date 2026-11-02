@@ -1,5 +1,5 @@
 {
-  "description": "Macro parsing (Format 9): {{char}}, {{player}}, no spaces outside comments and options, comments, escapes, picks, which end at the first }}; unknown forms, such as {{foo}}, are left as written and rescanned from the next character",
+  "description": "Macro parsing (Format 9): {{char}}, {{player}}, no spaces outside comments and options, comments, escapes, picks, which end at the first }} and split at each :: from the left; unknown forms, such as {{foo}}, are left as written and rescanned from the next character",
   "story": {
     "kind": "story",
     "characters": [
@@ -81,9 +81,9 @@
     },
     {
       "type": "macro",
-      "name": "a pick whose options are all the same resolves to it",
-      "text": "{{pick::x::x}}",
-      "expect": "x"
+      "name": "a pick whose options are all the same resolves to it; options split at each :: from the left, so {{pick:::x:::x}} has the options :x and :x",
+      "text": "{{pick::x::x}} {{pick:::x:::x}}",
+      "expect": "x :x"
     },
     {
       "type": "macro",

@@ -208,54 +208,33 @@ func TestReadPackageStory(t *testing.T) {
 	}
 }
 
-// A package's story.json is judged whatever other entries break, so its
-// codes don't depend on the order of its entries (Format 15.3).
+// A package's story.json is judged whatever other entries break, so another
+// entry's failure of section 12.3, here two names equal but for case, doesn't
+// hide its version (Format 15.3).
 func TestReadPackageWhole(t *testing.T) {
-	story := func(w *zip.Writer) {
-		f, err := w.Create("story.json")
-		if err != nil {
-			panic(err)
-		}
-		if _, err := f.Write([]byte(`{"troupe":"0.16","kind":"story"}`)); err != nil {
-			panic(err)
-		}
-	}
-	corrupt := func(w *zip.Writer) {
-		h := &zip.FileHeader{Name: "a.png", Method: zip.Store, CRC32: 1, CompressedSize64: 3, UncompressedSize64: 3}
-		f, err := w.CreateRaw(h)
-		if err != nil {
-			panic(err)
-		}
-		if _, err := f.Write([]byte("PNG")); err != nil {
-			panic(err)
-		}
-	}
-	twins := func(w *zip.Writer) {
-		for _, name := range []string{"a.txt", "A.txt"} {
-			if _, err := w.Create(name); err != nil {
-				panic(err)
-			}
-		}
-	}
-	for name, entries := range map[string][]func(*zip.Writer){
-		"data that can't be read, then story.json":        {corrupt, story},
-		"other names equal but for case, then story.json": {twins, story},
-	} {
-		var buf bytes.Buffer
-		w := zip.NewWriter(&buf)
-		for _, write := range entries {
-			write(w)
-		}
-		if err := w.Close(); err != nil {
+	var buf bytes.Buffer
+	w := zip.NewWriter(&buf)
+	for _, name := range []string{"a.txt", "A.txt"} {
+		if _, err := w.Create(name); err != nil {
 			t.Fatal(err)
 		}
-		_, diags, err := troupe.ReadPackage(bytes.NewReader(buf.Bytes()), int64(buf.Len()))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err := compareCodes(diags, []string{"UNREADABLE", "UNSUPPORTED_VERSION"}); err != nil {
-			t.Errorf("%s: %v", name, err)
-		}
+	}
+	f, err := w.Create("story.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.Write([]byte(`{"troupe":"0.16","kind":"story"}`)); err != nil {
+		t.Fatal(err)
+	}
+	if err := w.Close(); err != nil {
+		t.Fatal(err)
+	}
+	_, diags, err := troupe.ReadPackage(bytes.NewReader(buf.Bytes()), int64(buf.Len()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := compareCodes(diags, []string{"UNREADABLE", "UNSUPPORTED_VERSION"}); err != nil {
+		t.Error(err)
 	}
 }
 
