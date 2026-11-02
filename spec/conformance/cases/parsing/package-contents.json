@@ -1,16 +1,17 @@
 {
-  "description": "Package contents and paths (Format 12.2, 12.3, 15.3): package paths appear only in a package, a data: URI's media type is lowercase, and every path a package's story or sessions reference is a file of the package, or it is UNREADABLE; an exact duplicate name and compression methods other than store and deflate are UNREADABLE; a file with a path segment over 255 bytes isn't part of the package; sessions belong to the package only in their folder",
+  "description": "Package contents and paths (Format 12.2, 12.3, 15.3): package paths appear only in a package, a data: URI's media type is lowercase, and every path a package's story or sessions reference is a file of the package, or it is UNREADABLE; an exact duplicate name and compression methods other than store and deflate are UNREADABLE, and neither entry of a duplicate name is a document; a file with a path segment over 255 bytes isn't part of the package; sessions belong to the package only in their folder",
   "tests": [
     {
       "type": "parse",
       "name": "two entries with the same name",
       "kind": "package",
-      "base64": "UEsDBBQAAAAIAAAAS12QkNGAIgAAACAAAAAKAAAAc3RvcnkuanNvbqtWKinKLy1IVbJSMtAzNFXSUcrOzEtRslIqLskvqlSqBQBQSwMEFAAAAAgAAABLXZCQ0YAiAAAAIAAAAAoAAABzdG9yeS5qc29uq1YqKcovLUhVslIy0DM0VdJRys7MS1GyUiouyS+qVKoFAFBLAQIUAxQAAAAIAAAAS12QkNGAIgAAACAAAAAKAAAAAAAAAAAAAACAgQAAAABzdG9yeS5qc29uUEsBAhQDFAAAAAgAAABLXZCQ0YAiAAAAIAAAAAoAAAAAAAAAAAAAAICBSgAAAHN0b3J5Lmpzb25QSwUGAAAAAAIAAgBwAAAAlAAAAAAA",
+      "base64": "UEsDBBQAAAAIAAAAIQDyTVdqIgAAACAAAAAKAAAAc3RvcnkuanNvbqtWKinKLy1IVbJSMtAzNFPSUcrOzEtRslIqLskvqlSqBQBQSwMEFAAAAAgAAAAhAPJNV2oiAAAAIAAAAAoAAABzdG9yeS5qc29uq1YqKcovLUhVslIy0DM0U9JRys7MS1GyUiouyS+qVKoFAFBLAQIUAxQAAAAIAAAAIQDyTVdqIgAAACAAAAAKAAAAAAAAAAAAAACAgQAAAABzdG9yeS5qc29uUEsBAhQDFAAAAAgAAAAhAPJNV2oiAAAAIAAAAAoAAAAAAAAAAAAAAICBSgAAAHN0b3J5Lmpzb25QSwUGAAAAAAIAAgBwAAAAlAAAAAAA",
       "expect": {
         "codes": [
           "UNREADABLE"
         ]
-      }
+      },
+      "note": "Both are 0.16 stories, so reading either one, first or last, would add UNSUPPORTED_VERSION; neither entry is a document."
     },
     {
       "type": "parse",

@@ -1,5 +1,5 @@
 {
-  "description": "Packages (Format 12.3, 15.2, 15.3): story.json at the root, sessions anywhere under sessions/, subfolders included, which a story reader may leave unread, and a story.json or session of another version makes the package UNSUPPORTED_VERSION, without this version's checks of what it references; absolute paths, .. segments, backslashes, names equal when compared case-insensitively, encryption and symbolic links are UNREADABLE; a directory entry (a name ending in /) and an unreferenced file outside the path grammar aren't part of the package",
+  "description": "Packages (Format 12.3, 15.2, 15.3): story.json at the root, sessions anywhere under sessions/, subfolders included, which a story reader may leave unread, and a story.json or session of another version makes the package UNSUPPORTED_VERSION, without this version's checks of what it references; absolute paths, .. segments, backslashes, names equal when compared case-insensitively, encryption and symbolic links are UNREADABLE, and an entry that breaks Format 12.3 is no document, so its version isn't judged; a directory entry (a name ending in /) and an unreferenced file outside the path grammar aren't part of the package",
   "tests": [
     {
       "type": "parse",
@@ -124,27 +124,29 @@
       "type": "parse",
       "name": "names that differ only in case",
       "kind": "package",
-      "base64": "UEsDBBQAAAAIAAAAS12QkNGAIgAAACAAAAAKAAAAc3RvcnkuanNvbqtWKinKLy1IVbJSMtAzNFXSUcrOzEtRslIqLskvqlSqBQBQSwMEFAAAAAgAAABLXZCQ0YAiAAAAIAAAAAoAAABTdG9yeS5qc29uq1YqKcovLUhVslIy0DM0VdJRys7MS1GyUiouyS+qVKoFAFBLAQIUAxQAAAAIAAAAS12QkNGAIgAAACAAAAAKAAAAAAAAAAAAAACAgQAAAABzdG9yeS5qc29uUEsBAhQDFAAAAAgAAABLXZCQ0YAiAAAAIAAAAAoAAAAAAAAAAAAAAICBSgAAAFN0b3J5Lmpzb25QSwUGAAAAAAIAAgBwAAAAlAAAAAAA",
+      "base64": "UEsDBBQAAAAIAAAAIQDyTVdqIgAAACAAAAAKAAAAc3RvcnkuanNvbqtWKinKLy1IVbJSMtAzNFPSUcrOzEtRslIqLskvqlSqBQBQSwMEFAAAAAgAAAAhAPJNV2oiAAAAIAAAAAoAAABTdG9yeS5qc29uq1YqKcovLUhVslIy0DM0U9JRys7MS1GyUiouyS+qVKoFAFBLAQIUAxQAAAAIAAAAIQDyTVdqIgAAACAAAAAKAAAAAAAAAAAAAACAgQAAAABzdG9yeS5qc29uUEsBAhQDFAAAAAgAAAAhAPJNV2oiAAAAIAAAAAoAAAAAAAAAAAAAAICBSgAAAFN0b3J5Lmpzb25QSwUGAAAAAAIAAgBwAAAAlAAAAAAA",
       "expect": {
         "codes": [
           "UNREADABLE"
         ]
-      }
+      },
+      "note": "Both are 0.16 stories, but neither entry is a document, so the package is UNREADABLE only."
     },
     {
       "type": "parse",
       "name": "an encrypted entry",
       "kind": "package",
-      "base64": "UEsDBBQAAQAIAAAAS12QkNGAIgAAACAAAAAKAAAAc3RvcnkuanNvbqtWKinKLy1IVbJSMtAzNFXSUcrOzEtRslIqLskvqlSqBQBQSwECFAMUAAEACAAAAEtdkJDRgCIAAAAgAAAACgAAAAAAAAAAAAAAgIEAAAAAc3RvcnkuanNvblBLBQYAAAAAAQABADgAAABKAAAAAAA=",
+      "base64": "UEsDBBQAAQAIAAAAIQDyTVdqIgAAACAAAAAKAAAAc3RvcnkuanNvbqtWKinKLy1IVbJSMtAzNFPSUcrOzEtRslIqLskvqlSqBQBQSwECFAMUAAEACAAAACEA8k1XaiIAAAAgAAAACgAAAAAAAAAAAAAAgIEAAAAAc3RvcnkuanNvblBLBQYAAAAAAQABADgAAABKAAAAAAA=",
       "expect": {
         "codes": [
           "UNREADABLE"
         ]
-      }
+      },
+      "note": "The entry's data is a plain 0.16 story, but an encrypted entry is no document, so the package is UNREADABLE only."
     },
     {
       "type": "parse",
-      "name": "a symbolic link",
+      "name": "an unreferenced symbolic link",
       "kind": "package",
       "base64": "UEsDBBQAAAAIAAAAS12QkNGAIgAAACAAAAAKAAAAc3RvcnkuanNvbqtWKinKLy1IVbJSMtAzNFXSUcrOzEtRslIqLskvqlSqBQBQSwMEFAAAAAgAAABLXQq5HykNAAAACwAAAAoAAABtZWRpYS9saW5r008tSdYvSCwuLk8BAFBLAQIUAxQAAAAIAAAAS12QkNGAIgAAACAAAAAKAAAAAAAAAAAAAACAgQAAAABzdG9yeS5qc29uUEsBAhQDFAAAAAgAAABLXQq5HykNAAAACwAAAAoAAAAAAAAAAAAAAP+hSgAAAG1lZGlhL2xpbmtQSwUGAAAAAAIAAgBwAAAAfwAAAAAA",
       "expect": {
@@ -152,6 +154,18 @@
           "UNREADABLE"
         ]
       }
+    },
+    {
+      "type": "parse",
+      "name": "a symbolic link named story.json",
+      "kind": "package",
+      "base64": "UEsDBBQAAAAIAAAAIQDyTVdqIgAAACAAAAAKAAAAc3RvcnkuanNvbqtWKinKLy1IVbJSMtAzNFPSUcrOzEtRslIqLskvqlSqBQBQSwECFAMUAAAACAAAACEA8k1XaiIAAAAgAAAACgAAAAAAAAAAAAAA/6EAAAAAc3RvcnkuanNvblBLBQYAAAAAAQABADgAAABKAAAAAAA=",
+      "expect": {
+        "codes": [
+          "UNREADABLE"
+        ]
+      },
+      "note": "story.json is a symbolic link whose target reads as a 0.16 story; an entry that breaks Format 12.3 is no document, so the package is UNREADABLE only."
     },
     {
       "type": "parse",

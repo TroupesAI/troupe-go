@@ -128,8 +128,8 @@ func (rd *reader) pkg(src *source, size int64) *Package {
 		names[asciiLower(f.Name)]++
 	}
 	// An entry that breaks section 12.3, every entry of a name another
-	// shares included, isn't read as a document: its data is a link, is
-	// encrypted, or may not be the file its name gives.
+	// shares included, is no document, so it is never judged by version
+	// (Format 15.3).
 	files, broken := map[string]*zip.File{}, map[*zip.File]bool{}
 	seen := map[string]bool{}
 	for _, f := range zr.File {

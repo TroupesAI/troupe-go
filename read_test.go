@@ -208,22 +208,18 @@ func TestReadPackageStory(t *testing.T) {
 	}
 }
 
-// A package's codes don't depend on the order of its entries, and an entry
-// that breaks section 12.3, such as one of two named story.json, is no
-// document (Format 15.3).
+// A package's story.json is judged whatever other entries break, so its
+// codes don't depend on the order of its entries (Format 15.3).
 func TestReadPackageWhole(t *testing.T) {
-	storyOf := func(version string) func(*zip.Writer) {
-		return func(w *zip.Writer) {
-			f, err := w.Create("story.json")
-			if err != nil {
-				panic(err)
-			}
-			if _, err := f.Write([]byte(`{"troupe":"` + version + `","kind":"story"}`)); err != nil {
-				panic(err)
-			}
+	story := func(w *zip.Writer) {
+		f, err := w.Create("story.json")
+		if err != nil {
+			panic(err)
+		}
+		if _, err := f.Write([]byte(`{"troupe":"0.16","kind":"story"}`)); err != nil {
+			panic(err)
 		}
 	}
-	story := storyOf("0.16")
 	corrupt := func(w *zip.Writer) {
 		h := &zip.FileHeader{Name: "a.png", Method: zip.Store, CRC32: 1, CompressedSize64: 3, UncompressedSize64: 3}
 		f, err := w.CreateRaw(h)
@@ -241,18 +237,13 @@ func TestReadPackageWhole(t *testing.T) {
 			}
 		}
 	}
-	for name, c := range map[string]struct {
-		entries []func(*zip.Writer)
-		codes   []string
-	}{
-		"data that can't be read, then story.json": {[]func(*zip.Writer){corrupt, story}, []string{"UNREADABLE", "UNSUPPORTED_VERSION"}},
-		"names equal but for case":                 {[]func(*zip.Writer){twins, story}, []string{"UNREADABLE", "UNSUPPORTED_VERSION"}},
-		"two story.json, the first 0.16":           {[]func(*zip.Writer){story, storyOf("0.15")}, []string{"UNREADABLE"}},
-		"two story.json, the second 0.16":          {[]func(*zip.Writer){storyOf("0.15"), story}, []string{"UNREADABLE"}},
+	for name, entries := range map[string][]func(*zip.Writer){
+		"data that can't be read, then story.json":        {corrupt, story},
+		"other names equal but for case, then story.json": {twins, story},
 	} {
 		var buf bytes.Buffer
 		w := zip.NewWriter(&buf)
-		for _, write := range c.entries {
+		for _, write := range entries {
 			write(w)
 		}
 		if err := w.Close(); err != nil {
@@ -262,7 +253,7 @@ func TestReadPackageWhole(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := compareCodes(diags, c.codes); err != nil {
+		if err := compareCodes(diags, []string{"UNREADABLE", "UNSUPPORTED_VERSION"}); err != nil {
 			t.Errorf("%s: %v", name, err)
 		}
 	}
