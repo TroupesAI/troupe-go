@@ -49,6 +49,10 @@ func (p *Package) Open(path string) (io.ReadCloser, error) {
 // is UNREADABLE, or its story.json UNREADABLE or UNSUPPORTED_VERSION, and its
 // diagnostics are then only those. Package.Open and Package.ReadSessions read
 // r again.
+//
+// Before it judges the limit on entries (Format 14), it parses the archive's
+// central directory, which takes memory proportional to size, so a caller
+// accepting archives from others caps size.
 func ReadPackage(r io.ReaderAt, size int64) (*Package, []Diagnostic, error) {
 	src := &source{r: r}
 	var rd reader
@@ -109,6 +113,8 @@ func (rd *reader) pkg(src *source, size int64) *Package {
 		rd.report(Diagnostic{Code: CodeUnreadable})
 		return nil
 	}
+	// After the parse, since archive/zip checks the count an archive states
+	// only modulo 65,536.
 	if len(zr.File) > maxZipEntries {
 		rd.report(Diagnostic{Code: CodeUnreadable})
 		return nil
