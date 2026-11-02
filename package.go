@@ -208,7 +208,8 @@ func isSession(name string) bool {
 // deflated.
 func validEntry(f *zip.File) bool {
 	name := f.Name
-	absolute := strings.HasPrefix(name, "/") || len(name) >= 2 && name[1] == ':'
+	drive := len(name) >= 2 && name[1] == ':' && ('A' <= name[0] && name[0] <= 'Z' || 'a' <= name[0] && name[0] <= 'z')
+	absolute := strings.HasPrefix(name, "/") || drive
 	return !absolute &&
 		!strings.Contains(name, `\`) &&
 		!strings.Contains("/"+name+"/", "/../") &&

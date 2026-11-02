@@ -259,6 +259,25 @@ func TestReadPackageWhole(t *testing.T) {
 	}
 }
 
+// A ZIP name starting with a drive letter is absolute, which breaks section
+// 12.3, while another name with a colon is only outside the path grammar,
+// and no file of the package.
+func TestReadDriveLetter(t *testing.T) {
+	for name, unreadable := range map[string]bool{"C:x": true, "c:x": true, "1:x": false, "-:x": false} {
+		diags, err := pkg(func(w *zip.Writer) {
+			if _, err := w.Create(name); err != nil {
+				panic(err)
+			}
+		})()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := len(diags) > 0; got != unreadable {
+			t.Errorf("%s: diagnostics %q", name, locations(diags))
+		}
+	}
+}
+
 // Reading stops at each limit of Format 14 that the conformance suite has no
 // case for, so hostile input can't make it do unbounded work, and a package
 // fails at an entry whose data doesn't match its checksum, which Package.Open
