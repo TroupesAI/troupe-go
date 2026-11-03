@@ -74,7 +74,7 @@ func (pl *Play) CheckChanges(before State, changes []Change) []Diagnostic {
 	for j := range changes {
 		ch := &changes[j]
 		p := ptr("", "changes", j, "set")
-		c.set(sc, place{}, p, ch.Set, sc.variable)
+		c.set(place{}, p, ch.Set, sc.variable)
 		c.rules(sc, s, p, ch, steps)
 		c.mapLimit(sc, place{}, p, ch.Set, sc.apply(s, ch.Set, nil, owned))
 	}
@@ -622,7 +622,7 @@ func (c *checker) openings(sc *scope) {
 	initial := sc.initial()
 	for j, o := range sc.scenario.Openings {
 		p := ptr("", "scenarios", sc.index, "openings", j, "set")
-		c.set(sc, inStory, p, o.Set, sc.openingVariable)
+		c.set(inStory, p, o.Set, sc.openingVariable)
 		c.mapLimit(sc, inStory, p, o.Set, sc.apply(initial.clone(), o.Set, nil, map[string]bool{}))
 	}
 }
@@ -648,7 +648,7 @@ func (c *checker) messages(sc *scope) {
 			c.report(CodeUnknownOpening, inMessage(i, m), "/opening")
 		}
 		for j, ch := range m.Changes {
-			c.set(sc, inMessage(i, m), ptr("", "changes", j, "set"), ch.Set, sc.variable)
+			c.set(inMessage(i, m), ptr("", "changes", j, "set"), ch.Set, sc.variable)
 		}
 	}
 	// The state along each path, for the "*" map limit. Each message's
@@ -693,7 +693,7 @@ func (c *checker) messages(sc *scope) {
 // change, at p, with variable resolving its state keys (Format 8.5). Unknown
 // locations and characters in values are only UNKNOWN_LOCATION and
 // UNKNOWN_CHARACTER (Format 15.3).
-func (c *checker) set(sc *scope, at place, p jsontext.Pointer, set map[string]jsontext.Value, variable func(string) (*binding, string, bool)) {
+func (c *checker) set(at place, p jsontext.Pointer, set map[string]jsontext.Value, variable func(string) (*binding, string, bool)) {
 	for key, val := range set {
 		kp := ptr(p, key)
 		switch key {
