@@ -10,7 +10,10 @@ import (
 	"strings"
 )
 
-// stored is a State as MarshalJSON writes it.
+// stored is a State as MarshalJSON writes it. A field Apply needs that an
+// earlier release didn't write is a pointer, written even when empty, as
+// Appeared is, and UnmarshalState wraps ErrStateFormat when it is nil, since
+// a default would be silently wrong.
 type stored struct {
 	Troupe string `json:"troupe"`
 	// Values holds every state key the state holds, as All yields it, with its
@@ -23,9 +26,7 @@ type stored struct {
 	ParentAt  string                    `json:"parentAt,omitempty"`
 	Entries   []Entry                   `json:"entries,omitempty"`
 	Activated map[string]int            `json:"activated,omitempty"`
-	// Appeared is always written, so a state stored before it is told
-	// apart.
-	Appeared *[]string `json:"appeared"`
+	Appeared  *[]string                 `json:"appeared"`
 }
 
 // ErrStateFormat is what UnmarshalState's error wraps for a state stored in a

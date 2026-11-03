@@ -10,7 +10,8 @@ import (
 
 // Play is a story's scenario as a session plays it, or played on its own.
 // The states it gives are its own: a method that takes a State takes one this
-// play gave.
+// play gave. Every method about a message other than StateAt takes the state
+// before it first, so a caller always passes the parent's state.
 type Play struct {
 	scope    *scope
 	messages []Message

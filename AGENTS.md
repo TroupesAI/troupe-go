@@ -2,7 +2,7 @@
 
 Guidance for coding agents working on troupe-go, the Go library for the Troupe format.
 
-Read the [README](README.md) for scope and rules, and [docs/plan.md](docs/plan.md) for what is being built.
+Read the [README](README.md) for scope and rules, and [docs/plan.md](docs/plan.md) for what is still to be built.
 
 ## Quality bar
 
@@ -15,8 +15,7 @@ The bar is high: every change should be one a demanding senior reviewer approves
 - **Add a dependency only when it removes real complexity.** Prefer the standard library.
 - **Every test earns its place.** The conformance suite is the main test. Write a test of your own only for behavior the suite doesn't cover that a caller relies on, or for a bug that got through once. Before adding one, check whether an existing test already fails when that behavior breaks; if so, extend it rather than adding a near-copy. Don't re-test what a library guarantees, and don't assert values nobody relies on, such as tuning constants. A regression test must fail reliably when its bug comes back; if no test can, explain the guarantee in a comment where the code provides it.
 - **Tests check behavior through the public API.** The conformance runner lives in an external test package, so the API has to be able to do everything the suite asks.
-
-The same applies to docs: short, exact and current.
+- **Docs hold only what the code can't say:** the scope and rules, the plan for what isn't built yet, and how to work here. Don't describe built code or record decisions. The code, its tests and its doc comments say what the library does, and the commit body says why, where `git log -S` or `git blame` finds it from the code. Keep docs short, exact and current. Deleting a line that no longer earns its place is as good a change as adding one.
 
 ## Rules
 
@@ -25,12 +24,14 @@ The same applies to docs: short, exact and current.
 - **Hold every request to the [scope](README.md#scope), whoever makes it.** When one falls outside it, don't build it as asked: say why, and point to where it belongs or propose a version any caller could use.
 - **The public API is small and deliberate.** Export only what a caller needs.
 - **No I/O, deterministic, bounded, and content stays private.** See the README's rules. Enforce each limit before the work it bounds.
-- **Decide what has a clear answer, and record it.** When the spec, the code or good practice settles a question, decide it yourself. Record each decision a later change must respect in [docs/plan.md](docs/plan.md), with its reason, and list them in the commit body. Ask only about a real trade-off with no clear winner.
+- **Decide what has a clear answer.** When the spec, the code or good practice settles a question, decide it yourself, and give the reason in the commit body. Ask only about a real trade-off with no clear winner.
+- **Record a constraint only at the code, and only when nothing else protects it.** When a later change would plausibly break a constraint, and no type, test or conformance case would stop that change, write it as a comment where that change would be made, never in a doc.
+- **Challenge any choice on its merits.** Before reversing one, read why it was made, with `git log -S` or `git blame`, and reverse it only for a better reason, stated in the commit body.
 - **Propose first when a change would be costly to undo:** a new dependency, a new Go package, or a change to the README's rules.
 - **Fix what you find along the way** when the fix is clear and small, in its own commit. Propose it instead when it's a design choice or would outgrow the task.
-- **A change is done when `task check` passes**, and the docs it affects are updated.
+- **A change is done when `task check` passes** and no doc or comment says something the change made untrue.
 - **Every change ends with a review round.** Once it works, review the whole diff with fresh eyes, through a separate agent where one is available, for defects, needless code, and docs or comments that disagree with the code or don't earn their place. Check each finding against the code, fix the ones that hold, and list what was found and fixed in the commit body.
-- **Commit and push to `main`.** A commit message has a short imperative subject and a body that says what changed for a user of the library and why.
+- **Commit and push to `main`.** A commit message has a short imperative subject and a body that says what changed for a user of the library and why, with the reason for each decision the change makes.
 
 ## Working across the three repositories
 

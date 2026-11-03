@@ -498,8 +498,10 @@ func (c *testCase) readSession() (*troupe.Session, []troupe.Diagnostic, error) {
 	return s, diags, nil
 }
 
-// readPackage reads the package whose story.json the case names, and the
-// session of it the case names (conformance README section 1).
+// readPackage reads the package whose story.json the case names, zipped from
+// its directory, and the session of it the case names: a story.json is a
+// package's, and a session beside it one of its sessions (conformance README
+// section 1).
 func (c *testCase) readPackage() (*troupe.Story, *troupe.Session, []troupe.Diagnostic, error) {
 	dir := path.Dir(c.file(c.StoryFile))
 	files, err := fs.Sub(spec, dir)

@@ -18,8 +18,9 @@ type state struct {
 	opening  string // the path's opening; "" for none
 	at       string // the message's at, and its parent's; "" for none
 	parentAt string
-	// appeared holds the characters present in the state at a message on
-	// the path (Format 6.1).
+	// appeared holds every character present in the state at a message on
+	// the path (Format 6.1), not only spoilers, so a stored state stays right
+	// when the story marks another member spoiler.
 	appeared []string
 	// values holds each variable in use by its full name: a value from
 	// value, or for a keyed variable a map[string]any of them by key.

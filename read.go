@@ -241,7 +241,8 @@ func (rd *reader) document(tree any, data []byte, line int, k docKind, v any) bo
 		rd.report(d)
 	}
 	// A document with a missing or other kind isn't one its form holds, and
-	// the limits are those of its kind (Format 15.3).
+	// the limits are those of its kind (Format 15.3). A message has no kind,
+	// so one that isn't an object is only SCHEMA.
 	if k.kind != "" && doc["kind"] != k.kind {
 		report(CodeUnreadable, "")
 		return false

@@ -1,4 +1,6 @@
-// Package macro parses text with macros (Format 9).
+// Package macro parses text with macros (Format 9). It holds the author-ID
+// grammar (Format 2.3), since state paths are made of author IDs, and package
+// troupe checks IDs and "*" keys with it.
 package macro
 
 import (
