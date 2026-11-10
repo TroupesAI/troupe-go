@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"maps"
 	"math/rand/v2"
 	"os"
 	"path"
@@ -240,7 +239,7 @@ func runState(c *testCase, tc test, expect map[string]jsontext.Value) error {
 			return err
 		}
 	}
-	flat := maps.Collect(state.All())
+	flat := values(state)
 	for key, want := range expect {
 		got, ok := flat[key]
 		if !ok {

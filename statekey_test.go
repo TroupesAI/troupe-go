@@ -61,19 +61,50 @@ func TestStateKeysDraft(t *testing.T) {
 	}
 }
 
-// keys returns the play's state keys, each with its variable's ID, its owner
-// and its key, when it has them.
+// A state gives each state key it holds as StateKeys does, with its variable,
+// its owner and its key, and a "*" map's keys, which StateKeys can't list, in
+// code point order.
+func TestStateAll(t *testing.T) {
+	play, s := readPlay(t, `{"troupe":"0.15","kind":"story",
+		"characters":[{"id":"a","name":"Ann","description":"Ann.","variables":[{"id":"loot","type":"int","per":"*","description":"L."}]}],
+		"scenarios":[{"id":"s","cast":[{},{"character":"a"}],
+			"variables":[{"id":"bell","type":"int","description":"B."},{"id":"trust","type":"int","per":"cast","description":"T."}]}]}`,
+		`{"troupe":"0.15","kind":"session","scenario":"s"}`,
+		// Three keys, set in reverse order: Go ranges over a small map from a
+		// random key around, which gives two keys in order half the time, but
+		// never the reverse of three.
+		`{"id":"1","from":"player","content":[{"text":"x"}],"changes":[{"by":"player","set":{"state.a.loot.gem":2,"state.a.loot.coin":1,"state.a.loot.axe":3}}]}`)
+	var got []string
+	for k := range play.Apply(play.Initial(), &s.Messages[0]).All() {
+		got = append(got, describe(k))
+	}
+	want := []string{
+		"scene.location", "scene.present", "state.bell bell s", "state.trust.a trust s a",
+		"state.a.loot.axe loot a axe", "state.a.loot.coin loot a coin", "state.a.loot.gem loot a gem",
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("the state holds %q, want %q", got, want)
+	}
+}
+
+// keys returns the play's state keys, as describe gives them.
 func keys(play *troupe.Play) []string {
 	var out []string
 	for _, k := range play.StateKeys() {
-		s := k.Name
-		if k.Variable != nil {
-			s += " " + k.Variable.ID + " " + k.Owner
-		}
-		if k.Key != "" {
-			s += " " + k.Key
-		}
-		out = append(out, s)
+		out = append(out, describe(k))
 	}
 	return out
+}
+
+// describe returns a state key's name with its variable's ID, its owner and
+// its key, when it has them.
+func describe(k troupe.StateKey) string {
+	s := k.Name
+	if k.Variable != nil {
+		s += " " + k.Variable.ID + " " + k.Owner
+	}
+	if k.Key != "" {
+		s += " " + k.Key
+	}
+	return s
 }

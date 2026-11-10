@@ -208,24 +208,24 @@ func (s State) Get(key string) (any, bool) {
 	return copyValue(x), ok
 }
 
-// All yields every state key the state holds with its value, as Get gives
-// them: scene.location and scene.present, then each variable in use, the
+// All yields every state key the state holds, with its value as Get gives
+// it: scene.location and scene.present, then each variable in use, the
 // scenario's, its worlds' and its characters', with a keyed variable's keys
-// in their order: the cast's, the list's, or for a "*" map, code point order
-// (Format 8.3).
-func (s State) All() iter.Seq2[string, any] {
-	return func(yield func(string, any) bool) {
+// in their order: the cast's, the list's, or for a "*" map, those it holds,
+// in code point order (Format 8.3).
+func (s State) All() iter.Seq2[StateKey, any] {
+	return func(yield func(StateKey, any) bool) {
 		if s.s == nil {
 			return
 		}
-		if !yield("scene.location", s.s.location) || !yield("scene.present", slices.Clone(s.s.present)) {
+		if !yield(StateKey{Name: "scene.location"}, s.s.location) || !yield(StateKey{Name: "scene.present"}, slices.Clone(s.s.present)) {
 			return
 		}
 		for _, b := range s.scope.bindings {
 			x := s.s.values[b.name]
 			m, keyed := x.(map[string]any)
 			if !keyed {
-				if !yield(b.name, copyValue(x)) {
+				if !yield(StateKey{Name: b.name, Variable: b.v, Owner: b.owner}, copyValue(x)) {
 					return
 				}
 				continue
@@ -235,7 +235,7 @@ func (s State) All() iter.Seq2[string, any] {
 				keys = slices.Sorted(maps.Keys(m))
 			}
 			for _, k := range keys {
-				if !yield(b.name+"."+k, copyValue(m[k])) {
+				if !yield(StateKey{Name: b.name + "." + k, Key: k, Variable: b.v, Owner: b.owner}, copyValue(m[k])) {
 					return
 				}
 			}

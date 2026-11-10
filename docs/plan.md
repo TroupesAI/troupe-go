@@ -17,5 +17,6 @@ The platform's API (its architecture is in `docs/stack.md` of the platform repos
 - **Start a session** from an opening.
 - **Prepare each generation:** the state at the evaluation point, the active entries, macros rendered for the character being written for, and what each character knows. A path can be 100,000 messages long, so the state at a message must be computable from its parent's state and that message's changes. Replaying the whole path for every message won't do.
 - **Record a message**, after checking the changes a player or model proposes.
+- **Show the state** at a message to the people playing: each state key it holds, with its variable and its value.
 - **Edit** a stored story.json as people type, though a draft may not conform yet: check the ID of each object added, rename an ID with every reference to it, and offer the state keys an opening's `set` can write, each with its variable. The platform applies the editor's JSON Patches itself, then reads and checks the result.
 - **Export** a package with its images and sessions.

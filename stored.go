@@ -64,7 +64,7 @@ func (s State) MarshalJSON() ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		v.Values[key] = raw
+		v.Values[key.Name] = raw
 	}
 	data, err := json.Marshal(v, json.Deterministic(true))
 	if err != nil {

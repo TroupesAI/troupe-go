@@ -5,7 +5,6 @@ import (
 	"encoding/json/jsontext"
 	"encoding/json/v2"
 	"errors"
-	"maps"
 	"math/rand/v2"
 	"reflect"
 	"slices"
@@ -49,7 +48,7 @@ func TestStoreState(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got, want := maps.Collect(restored.All()), maps.Collect(before.All()); !reflect.DeepEqual(got, want) {
+		if got, want := values(restored), values(before); !reflect.DeepEqual(got, want) {
 			t.Errorf("before message %s, restored %v, want %v", m.ID, got, want)
 		}
 		recent := []troupe.Message{m}

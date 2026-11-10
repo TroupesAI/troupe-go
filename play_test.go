@@ -2,7 +2,6 @@ package troupe_test
 
 import (
 	"fmt"
-	"maps"
 	"reflect"
 	"strings"
 	"sync"
@@ -61,9 +60,9 @@ func TestPlayApply(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		got := maps.Collect(states[m.ID].All())
-		if !reflect.DeepEqual(got, maps.Collect(want.All())) {
-			t.Errorf("message %s: Apply gives %v, StateAt %v", m.ID, got, maps.Collect(want.All()))
+		got := values(states[m.ID])
+		if !reflect.DeepEqual(got, values(want)) {
+			t.Errorf("message %s: Apply gives %v, StateAt %v", m.ID, got, values(want))
 		}
 		for key, x := range got {
 			if key != "scene.location" && key != "scene.present" && !strings.HasPrefix(key, "state.") {
@@ -88,6 +87,15 @@ func TestPlayApply(t *testing.T) {
 	if got, _ := states["1"].Get("state.tags"); !reflect.DeepEqual(got, []string{"a"}) {
 		t.Errorf("state.tags is %v after changing what Get and All return", got)
 	}
+}
+
+// values returns the state's values by state key.
+func values(s troupe.State) map[string]any {
+	out := map[string]any{}
+	for key, x := range s.All() {
+		out[key.Name] = x
+	}
+	return out
 }
 
 // Within gives scene.within as locations: the scene's location, then each
