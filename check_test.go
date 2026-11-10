@@ -153,6 +153,27 @@ func TestCheckChanges(t *testing.T) {
 	}
 }
 
+// A state key that ends in a dot is unknown, even when its variable's list
+// holds "", which only SCHEMA reports. Taken for the variable's own state key,
+// its value would replace the variable's keys, and the next change to one
+// would panic.
+func TestCheckEmptyKey(t *testing.T) {
+	st, _, err := troupe.ReadStory(strings.NewReader(`{"troupe":"0.15","kind":"story",
+		"scenarios":[{"id":"s","variables":[{"id":"side","type":"bool","per":["watch",""],"description":"d"}]}]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s, _, err := troupe.ReadSession(strings.NewReader(`{"troupe":"0.15","kind":"session","scenario":"s"}
+{"id":"1","from":"player","content":[{"text":"x"}],"changes":[{"by":"player","set":{"state.side.":true}},{"by":"player","set":{"state.side.watch":true}}]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []troupe.Diagnostic{{Code: troupe.CodeUnknownStateKey, Line: 2, Message: "1", Pointer: "/changes/0/set/state.side."}}
+	if got := troupe.Check(st, s); !slices.Equal(got, want) {
+		t.Errorf("Check = %v, want %v", got, want)
+	}
+}
+
 // Check undoes a message's changes latest first before judging its sibling,
 // so a key the message removes and sets again is put back as it was.
 func TestCheckUndoOrder(t *testing.T) {

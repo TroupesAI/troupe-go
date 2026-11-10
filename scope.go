@@ -247,7 +247,9 @@ func (sc *scope) lookup(key string, cast []string) (*binding, string, bool) {
 		return b, "", !b.v.Per.keyed()
 	}
 	i := strings.LastIndexByte(key, '.')
-	if i < 0 {
+	// "" is no key, though a draft's cast or list may hold it (SCHEMA):
+	// callers take it for a variable that isn't keyed.
+	if i < 0 || i == len(key)-1 {
 		return nil, "", false
 	}
 	b, ok := sc.byName[key[:i]]
