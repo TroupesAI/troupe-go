@@ -20,7 +20,7 @@ func TestStateKeysSession(t *testing.T) {
 			"variables":[{"id":"trust","type":"int","per":"cast","description":"T."},
 				{"id":"side","type":"bool","per":["watch","guild"],"description":"S."}]}]}`
 	play, _ := readPlay(t, story)
-	want := []string{"scene.location", "scene.present", "state.trust.k trust s", "state.trust.a trust s", "state.side.watch side s", "state.side.guild side s"}
+	want := []string{"scene.location", "scene.present", "state.trust.k trust s k", "state.trust.a trust s a", "state.side.watch side s watch", "state.side.guild side s guild"}
 	if got := keys(play); !slices.Equal(got, want) {
 		t.Errorf("on its own, the state keys are %q, want %q", got, want)
 	}
@@ -32,8 +32,8 @@ func TestStateKeysSession(t *testing.T) {
 			`"players":["p","k"],"worlds":[{"id":"h","name":"H","variables":[{"id":"rain","type":"bool","description":"R."}]}]}`)
 	want = []string{
 		"scene.location", "scene.present",
-		"state.trust.p trust s", "state.trust.k trust s", "state.trust.a trust s", "state.trust.j trust s",
-		"state.side.watch side s", "state.side.guild side s",
+		"state.trust.p trust s p", "state.trust.k trust s k", "state.trust.a trust s a", "state.trust.j trust s j",
+		"state.side.watch side s watch", "state.side.guild side s guild",
 		"state.h.rain rain h", "state.p.luck luck p",
 	}
 	if got := keys(play); !slices.Equal(got, want) {
@@ -55,19 +55,23 @@ func TestStateKeysDraft(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"scene.location", "scene.present", "state.trust.k trust s", "state.side.watch side s"}
+	want := []string{"scene.location", "scene.present", "state.trust.k trust s k", "state.side.watch side s watch"}
 	if got := keys(play); !slices.Equal(got, want) {
 		t.Errorf("the state keys are %q, want %q", got, want)
 	}
 }
 
-// keys returns the play's state keys, each with its variable's ID and owner.
+// keys returns the play's state keys, each with its variable's ID, its owner
+// and its key, when it has them.
 func keys(play *troupe.Play) []string {
 	var out []string
 	for _, k := range play.StateKeys() {
 		s := k.Name
 		if k.Variable != nil {
 			s += " " + k.Variable.ID + " " + k.Owner
+		}
+		if k.Key != "" {
+			s += " " + k.Key
 		}
 		out = append(out, s)
 	}
