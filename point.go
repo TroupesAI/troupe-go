@@ -21,6 +21,10 @@ type Point struct {
 	play  *Play
 	state *state
 	char  string
+	// within is scene.within at the point (Format 10.1). Walking a long
+	// chain costs far more than a condition's reading of it, so PointAt walks
+	// it once for them all.
+	within []string
 	// scanned holds the scanned text of each message of the path to the
 	// point that isn't hidden and has content, the latest last: the text
 	// parts that whoever the message being written is for knows, line
@@ -67,6 +71,9 @@ func (pl *Play) PointAt(before State, recent []Message, char string) *Point {
 			texts = append(texts, keywords.Text(text))
 		}
 		p.scanned = append(p.scanned, texts)
+	}
+	for _, l := range p.State().Within() {
+		p.within = append(p.within, l.ID)
 	}
 	return p
 }
@@ -237,7 +244,7 @@ func (a activation) ResolveName(name string) (any, bool) {
 	case "scene.present":
 		return s.present, true
 	case "scene.within":
-		return sc.within(s.location), true
+		return p.within, true
 	case "round":
 		return int64(s.round), true
 	case "elapsed":
@@ -292,14 +299,4 @@ func elapsed(parent, at string) int64 {
 		s--
 	}
 	return s
-}
-
-// within returns a location and its ancestors, innermost first; none for no
-// location (Format 10.1).
-func (sc *scope) within(id string) []string {
-	out := []string{}
-	for l := sc.all.locations[id]; l != nil && !slices.Contains(out, l.ID); l = sc.all.locations[l.Parent] {
-		out = append(out, l.ID)
-	}
-	return out
 }

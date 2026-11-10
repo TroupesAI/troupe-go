@@ -90,6 +90,39 @@ func TestPlayApply(t *testing.T) {
 	}
 }
 
+// Within gives scene.within as locations: the scene's location, then each
+// parent, in whichever world of the story or the session it is, in use or not.
+// A condition at the state reads the same chain, and an empty one before the
+// scene has a location. The chain holds every location, the longest there can
+// be, so the count that ends a cycle's walk must let that many through.
+func TestWithin(t *testing.T) {
+	play, s := readPlay(t, `{"troupe":"0.15","kind":"story",
+		"worlds":[
+			{"id":"city","name":"City","locations":[{"id":"docks","name":"The docks"},{"id":"pier","name":"Pier 9","parent":"docks"}]},
+			{"id":"sea","name":"Sea","locations":[{"id":"ship","name":"The Gull","parent":"pier"}]}],
+		"scenarios":[{"id":"s","worlds":["city"]}]}`,
+		`{"troupe":"0.15","kind":"session","scenario":"s","worlds":[{"id":"below","name":"Below","locations":[{"id":"hold","name":"The hold","parent":"ship"}]}]}`,
+		`{"id":"1","from":"player","content":[{"text":"x"}],"changes":[{"by":"player","set":{"scene.location":"hold"}}]}`)
+	for _, c := range []struct {
+		state       troupe.State
+		names, expr string
+	}{
+		{play.Initial(), "", "scene.within == []"},
+		{play.Apply(play.Initial(), &s.Messages[0]), "The hold, The Gull, Pier 9, The docks", "scene.within == ['hold', 'ship', 'pier', 'docks']"},
+	} {
+		var names []string
+		for _, l := range c.state.Within() {
+			names = append(names, l.Name)
+		}
+		if got := strings.Join(names, ", "); got != c.names {
+			t.Errorf("the scene is within %q, want %q", got, c.names)
+		}
+		if ok, err := play.PointAt(c.state, nil, "").Eval(c.expr, "s", 4); err != nil || !ok {
+			t.Errorf("%s is %v, %v", c.expr, ok, err)
+		}
+	}
+}
+
 // One read story serves plays of different sessions at once: the package
 // only reads it.
 func TestSharedStory(t *testing.T) {

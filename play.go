@@ -243,6 +243,26 @@ func (s State) All() iter.Seq2[string, any] {
 	}
 }
 
+// Within returns the scene's location, then its ancestors, innermost first,
+// as scene.within lists them (Format 8.5, 10.1): locations of the story or
+// session, whether or not their worlds are in use. There are none when the
+// scene has no location.
+func (s State) Within() []*Location {
+	if s.s == nil {
+		return nil
+	}
+	locations := s.scope.all.locations
+	var out []*Location
+	// A chain holds each location once, so the count cuts short only the walk
+	// of a cycle, which fails Check. Searching the chain for each parent
+	// would end it too, but is quadratic in the chain's length, which Format
+	// 14 doesn't bound.
+	for l := locations[s.s.location]; l != nil && len(out) < len(locations); l = locations[l.Parent] {
+		out = append(out, l)
+	}
+	return out
+}
+
 // copyValue returns x, with a set copied, so callers can't change the state.
 func copyValue(x any) any {
 	if s, ok := x.([]string); ok {
