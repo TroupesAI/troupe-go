@@ -22,6 +22,10 @@ type scope struct {
 	// marked player included. In a session, it is the cast, since a root
 	// leaves out the state keys of the seats no player fills (Format 11.1).
 	openingCast []string
+	// castKeys and openingKeys are index(cast) and index(openingCast). The
+	// default cast is every story character (Format 6.1), which Format 14
+	// bounds only by the story's size.
+	castKeys, openingKeys map[string]int
 	// members are the cast's members, in cast order. Without a session,
 	// they are the scenario's as written, seats included.
 	members    []castMember
@@ -143,6 +147,7 @@ func newScope(st *Story, s *Session, i int) *scope {
 		inUse = sc.cast
 	}
 	sc.openingCast = inUse
+	sc.castKeys, sc.openingKeys = index(sc.cast), index(inUse)
 
 	var worldIDs []string
 	if scenario.Worlds != nil {
@@ -232,17 +237,17 @@ func sessionCast(members []CastMember, h *SessionHeader) (cast []castMember, joi
 // 8.5): a full name (Format 8.2), followed by a key the variable allows when
 // it is keyed (Format 8.3).
 func (sc *scope) variable(key string) (*binding, string, bool) {
-	return sc.lookup(key, sc.cast)
+	return sc.lookup(key, sc.castKeys)
 }
 
 // openingVariable is variable for a state key of an opening's set, where a
 // "cast" variable has the keys of openingCast (Format 8.5).
 func (sc *scope) openingVariable(key string) (*binding, string, bool) {
-	return sc.lookup(key, sc.openingCast)
+	return sc.lookup(key, sc.openingKeys)
 }
 
 // lookup is variable, with cast as a "cast" variable's keys.
-func (sc *scope) lookup(key string, cast []string) (*binding, string, bool) {
+func (sc *scope) lookup(key string, cast map[string]int) (*binding, string, bool) {
 	if b, ok := sc.byName[key]; ok {
 		return b, "", !b.v.Per.keyed()
 	}
@@ -270,10 +275,11 @@ func (sc *scope) keys(v *Variable) []string {
 
 // allows reports whether a keyed variable has the key k, with cast as a
 // "cast" variable's keys (Format 8.3).
-func allows(b *binding, k string, cast []string) bool {
+func allows(b *binding, k string, cast map[string]int) bool {
 	switch {
 	case b.v.Per.Cast:
-		return slices.Contains(cast, k)
+		_, ok := cast[k]
+		return ok
 	case b.v.Per.Any:
 		return isKey(k)
 	default:
