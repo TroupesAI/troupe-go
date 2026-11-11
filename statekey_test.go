@@ -41,13 +41,16 @@ func TestStateKeysSession(t *testing.T) {
 	}
 }
 
-// A draft's cast or list that holds a key twice gives it once.
+// A draft gives each state key once, with the variable it writes: a key its
+// cast or list holds twice, once; "" and a key with a dot, not at all; and a
+// key whose state key is another variable's full name, as that variable's.
 func TestStateKeysDraft(t *testing.T) {
 	st, _, err := troupe.ReadStory(strings.NewReader(`{"troupe":"0.15","kind":"story",
-		"characters":[{"id":"k","name":"Kai","description":"Kai."}],
+		"characters":[{"id":"k","name":"Kai","description":"Kai.","variables":[{"id":"nerve","type":"int","description":"N."}]}],
 		"scenarios":[{"id":"s","cast":[{"character":"k"},{"character":"k"}],
 			"variables":[{"id":"trust","type":"int","per":"cast","description":"T."},
-				{"id":"side","type":"bool","per":["watch","watch"],"description":"S."}]}]}`))
+				{"id":"side","type":"bool","per":["watch","watch","","a.b"],"description":"S."},
+				{"id":"k","type":"bool","per":["nerve","calm"],"description":"K."}]}]}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +58,7 @@ func TestStateKeysDraft(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"scene.location", "scene.present", "state.trust.k trust s k", "state.side.watch side s watch"}
+	want := []string{"scene.location", "scene.present", "state.trust.k trust s k", "state.side.watch side s watch", "state.k.calm k s calm", "state.k.nerve nerve k"}
 	if got := keys(play); !slices.Equal(got, want) {
 		t.Errorf("the state keys are %q, want %q", got, want)
 	}

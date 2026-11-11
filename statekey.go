@@ -32,7 +32,8 @@ type StateKey struct {
 // leaves them out of a session where no player fills the seat (Format 11.1).
 //
 // It offers what is valid, and Check still judges what is written: for a
-// draft that fails Check, it gives the state keys of what reads, each once.
+// draft that doesn't conform, it gives the state keys of what reads, each
+// once and with the variable it writes.
 func (pl *Play) StateKeys() []StateKey {
 	sc := pl.scope
 	out := []StateKey{{Name: "scene.location"}, {Name: "scene.present"}}
@@ -43,17 +44,19 @@ func (pl *Play) StateKeys() []StateKey {
 		case b.v.Per.Any:
 			out = append(out, StateKey{Name: b.name, Key: "*", Variable: b.v, Owner: b.owner})
 		default:
-			// A draft's cast or list may hold a key twice (DUPLICATE_ID,
-			// SCHEMA).
+			// A draft's cast or list may hold a key twice, or one a change
+			// doesn't write here: "", one with a dot, or one whose state key
+			// is another variable's full name (DUPLICATE_ID, SCHEMA).
 			seen := map[string]bool{}
 			keys := b.v.Per.List
 			if b.v.Per.Cast {
 				keys = sc.openingCast
 			}
 			for _, k := range keys {
-				if !seen[k] {
+				name := b.name + "." + k
+				if to, _, ok := sc.openingVariable(name); ok && to == b && !seen[k] {
 					seen[k] = true
-					out = append(out, StateKey{Name: b.name + "." + k, Key: k, Variable: b.v, Owner: b.owner})
+					out = append(out, StateKey{Name: name, Key: k, Variable: b.v, Owner: b.owner})
 				}
 			}
 		}
