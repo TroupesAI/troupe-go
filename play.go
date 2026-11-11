@@ -26,7 +26,7 @@ type Play struct {
 // serves to compute states with Apply.
 //
 // It fails when st has no scenario, or s's scenario isn't one of st's. st and
-// s are documents that pass Check; the results for others are only bounded,
+// s are documents that conform; the results for others are only bounded,
 // since the spec gives them no meaning (Format 15.1).
 func NewPlay(st *Story, s *Session) (*Play, error) {
 	if s == nil {
