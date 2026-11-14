@@ -9,8 +9,7 @@ import (
 // retrieval would activate it (Format 7.2).
 type ActiveEntry struct {
 	// Owner is the entry's owner: a character, world or scenario ID, or
-	// "session" for a session entry. Render and Eval take it as the owner,
-	// and the entry's reference is Owner, "/" and its ID (Format 2.4).
+	// "session" for a session entry. Render and Eval take it as the owner.
 	Owner string
 	Entry Entry
 	// Kept reports whether the entry's sticky keeps it active from a message
@@ -19,8 +18,17 @@ type ActiveEntry struct {
 	Kept bool
 }
 
-func (a *ActiveEntry) ref() string {
+// Ref returns the entry's reference: its owner, "/" and its ID (Format 2.4).
+func (a *ActiveEntry) Ref() string {
 	return a.Owner + "/" + a.Entry.ID
+}
+
+// Priority returns the entry's priority, 50 when it has none (Format 7).
+func (a *ActiveEntry) Priority() int {
+	if a.Entry.Priority == nil {
+		return 50
+	}
+	return *a.Entry.Priority
 }
 
 // group names the entry's group among every owner's.
@@ -37,22 +45,22 @@ func (a *ActiveEntry) group() string {
 //
 // An entry with keywords activates when one matches its scanned text, a
 // retrievable one when retrieved names its reference, one with both by either,
-// and one with neither always, while its when holds. retrieved are the
-// references of the entries the caller retrieved, of those Retrievable gives;
-// any other reference changes nothing. The rounds of the messages that record
-// an entry in activated time it: sticky keeps it active, and once and cooldown
-// keep it from activating again. Of the entries that would activate, group
-// keeps one of each owner's group, of the highest priority, chosen by weight
-// among equals, where an entry sticky keeps wins against equals that aren't
-// kept, and then chance lets each through, so a chosen entry that fails it
-// leaves its group empty. r draws for weight and chance, so activation is
+// and one with neither always, while its when holds. retrieved holds the Ref
+// of each entry the caller retrieved, of those Retrievable gives; any other
+// reference changes nothing. The rounds of the messages that record an entry
+// in activated time it: sticky keeps it active, and once and cooldown keep it
+// from activating again. Of the entries that would activate, group keeps one
+// of each owner's group, of the highest priority, chosen by weight among
+// equals, where an entry sticky keeps wins against equals that aren't kept,
+// and then chance lets each through, so a chosen entry that fails it leaves
+// its group empty. r draws for weight and chance, so activation is
 // reproducible from the caller's source.
 //
 // Which active entries reach the model is the caller's to choose, by their
-// priority, and where each goes by its position or depth (Format 7.3). The
-// message being written records those that reach it in activated, apart from
-// those Kept; one whose text renders as nothing or only whitespace reaches
-// nothing (Format 11.4).
+// Priority, and where each goes by its position or depth (Format 7.3). The
+// message being written records the Ref of those that reach it in activated,
+// apart from those Kept; one whose text renders as nothing or only whitespace
+// reaches nothing (Format 11.4).
 func (p *Point) Active(retrieved []string, r *rand.Rand) []ActiveEntry {
 	wanted := make(map[string]bool, len(retrieved))
 	for _, ref := range retrieved {
@@ -60,7 +68,7 @@ func (p *Point) Active(retrieved []string, r *rand.Rand) []ActiveEntry {
 	}
 	var active []ActiveEntry
 	for _, a := range p.inUse() {
-		if p.activates(&a, wanted[a.ref()]) {
+		if p.activates(&a, wanted[a.Ref()]) {
 			active = append(active, a)
 		}
 	}
@@ -75,7 +83,7 @@ func (p *Point) Active(retrieved []string, r *rand.Rand) []ActiveEntry {
 // otherwise, and that can win their group, since no entry of it active without
 // retrieval has a higher priority, or an equal one and is kept (Format 7.2).
 // chance is drawn only once they are retrieved. The caller retrieves those
-// that are relevant, by their title or text, and passes their references to
+// that are relevant, by their title or text, and passes each one's Ref to
 // Active.
 func (p *Point) Retrievable() []ActiveEntry {
 	var out []ActiveEntry
@@ -137,7 +145,7 @@ func (p *Point) activates(a *ActiveEntry, retrieved bool) bool {
 	// An entry recorded at a message of round t with sticky s stays active
 	// through round t + s, and with cooldown c can't activate again through
 	// round t + s + c.
-	if t, ok := p.state.activated[a.ref()]; ok {
+	if t, ok := p.state.activated[a.Ref()]; ok {
 		round, end := int64(p.state.round), int64(t)+e.Sticky
 		switch {
 		case e.Sticky > 0 && round <= end:
@@ -224,19 +232,11 @@ func compete(active []ActiveEntry, r *rand.Rand) []ActiveEntry {
 // rank orders the entries of a group before weight chooses among equals: by
 // priority, and an entry kept above one that isn't.
 func rank(a *ActiveEntry) int {
-	r := 2 * priority(&a.Entry)
+	r := 2 * a.Priority()
 	if a.Kept {
 		r++
 	}
 	return r
-}
-
-// priority returns e's priority, 50 when it has none.
-func priority(e *Entry) int {
-	if e.Priority == nil {
-		return 50
-	}
-	return *e.Priority
 }
 
 // weight returns e's weight, 1 when it has none.

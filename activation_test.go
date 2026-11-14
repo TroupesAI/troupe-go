@@ -129,7 +129,7 @@ func TestActiveStickyInGroup(t *testing.T) {
 // A retrieved entry activates under every rule of activation, so it can push a
 // lower-priority entry with keywords out of its group, and only an entry that
 // retrieving would activate and that can win its group is offered (Format
-// 7.2).
+// 7.2). A caller chooses among entries by priority, 50 for one without.
 func TestActiveRetrieved(t *testing.T) {
 	play, s := readPlay(t, `{"troupe":"0.15","kind":"story","scenarios":[{"id":"s","entries":[
 		{"id":"keyword","text":"t","keywords":["rope"],"group":"g","priority":40},
@@ -145,8 +145,12 @@ func TestActiveRetrieved(t *testing.T) {
 	if got := refs(p.Retrievable()); !slices.Equal(got, []string{"s/retrieved", "s/equal"}) {
 		t.Errorf("retrievable: %v, want s/retrieved and s/equal", got)
 	}
-	if got := refs(p.Active(nil, r)); !slices.Equal(got, []string{"s/keyword", "s/both"}) {
-		t.Errorf("without retrieval: %v, want s/keyword and s/both", got)
+	active := p.Active(nil, r)
+	if got := refs(active); !slices.Equal(got, []string{"s/keyword", "s/both"}) {
+		t.Fatalf("without retrieval: %v, want s/keyword and s/both", got)
+	}
+	if keyword, both := active[0].Priority(), active[1].Priority(); keyword != 40 || both != 50 {
+		t.Errorf("the priorities are %d and %d, want 40 and 50", keyword, both)
 	}
 	if got := refs(p.Active([]string{"s/retrieved", "s/equal", "s/weak", "s/barred", "s/unmatched"}, r)); !slices.Equal(got, []string{"s/retrieved", "s/both"}) {
 		t.Errorf("retrieved: %v, want s/retrieved and s/both", got)
@@ -183,7 +187,7 @@ func readPlay(t *testing.T, story string, session ...string) (*troupe.Play, *tro
 func refs(active []troupe.ActiveEntry) []string {
 	var out []string
 	for _, a := range active {
-		ref := a.Owner + "/" + a.Entry.ID
+		ref := a.Ref()
 		if a.Kept {
 			ref += " kept"
 		}

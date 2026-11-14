@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand/v2"
+	"slices"
 	"strings"
 
 	"github.com/TroupesAI/troupe-go"
@@ -117,9 +118,9 @@ func ExamplePoint_Active() {
 	// Message 2 is written for Kai, after the root, which the scan reaches.
 	reply := troupe.Message{ID: "2", Parent: "1", From: "model", Char: "kai", Content: []troupe.Part{{Text: "Kai grips the ledge."}}}
 	for _, a := range play.PointAt(play.Initial(), []troupe.Message{root}, "kai").Active(nil, r) {
-		fmt.Println(a.Owner+"/"+a.Entry.ID, a.Kept)
+		fmt.Println(a.Ref(), a.Kept)
 		if !a.Kept {
-			reply.Activated = append(reply.Activated, a.Owner+"/"+a.Entry.ID)
+			reply.Activated = append(reply.Activated, a.Ref())
 		}
 	}
 
@@ -130,7 +131,7 @@ func ExamplePoint_Active() {
 		log.Fatal(err)
 	}
 	for _, a := range play.PointAt(before, []troupe.Message{reply}, "kai").Active(nil, r) {
-		fmt.Println(a.Owner+"/"+a.Entry.ID, a.Kept)
+		fmt.Println(a.Ref(), a.Kept)
 	}
 	// Output:
 	// Rain on the roof. ["kai","mara"]
@@ -244,4 +245,57 @@ func ExamplePlay_StateKeys() {
 	// state.trust.kai int heist
 	// state.loot.<any ID> int heist
 	// state.kai.nerve int kai
+}
+
+// A panel shows players the state one value at a time, as a macro renders
+// it, without the characters still hidden from them.
+func ExamplePlay_RenderValue() {
+	st, _, err := troupe.ReadStory(strings.NewReader(`{"troupe": "0.15", "kind": "story",
+		"characters": [
+			{"id": "kai", "name": "Kai", "description": "A thief."},
+			{"id": "ghost", "name": "The Ghost", "description": "A rival."}],
+		"worlds": [{"id": "city", "name": "The City", "locations": [{"id": "vault", "name": "The Vault"}]}],
+		"scenarios": [{"id": "heist", "cast": [{}, {"character": "kai"}, {"character": "ghost", "spoiler": true}],
+			"variables": [
+				{"id": "target", "type": "string", "initial": "vault", "description": "Where the loot is."},
+				{"id": "suspects", "type": "set", "initial": ["kai", "ghost"], "description": "Whom the watch suspects."},
+				{"id": "trust", "type": "int", "per": "cast", "description": "Trust in the player."},
+				{"id": "guard", "type": "enum", "values": ["low", "high"], "labels": {"low": "dozing"},
+					"per": ["night_watch"], "description": "How alert each watch is."}]}]}`))
+	if err != nil {
+		log.Fatal(err)
+	}
+	play, err := troupe.NewScenarioPlay(st, "heist")
+	if err != nil {
+		log.Fatal(err)
+	}
+	state := play.Initial()
+	hidden := state.Spoilers()
+	show := func(k troupe.StateKey, x any) {
+		if id, ok := x.(string); ok && slices.Contains(hidden, id) {
+			return
+		}
+		name := k.Variable.ID
+		if k.Key != "" {
+			name += ", " + play.RenderKey(k.Key)
+		}
+		fmt.Println(name+":", play.RenderValue(k.Variable, x))
+	}
+	for k, x := range state.All() {
+		if k.Variable == nil || slices.Contains(hidden, k.Key) {
+			continue
+		}
+		if members, ok := x.([]string); ok {
+			for _, member := range members {
+				show(k, member)
+			}
+		} else {
+			show(k, x)
+		}
+	}
+	// Output:
+	// target: The Vault
+	// suspects: Kai
+	// trust, Kai: 0
+	// guard, night watch: dozing
 }

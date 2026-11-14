@@ -124,6 +124,27 @@ func Escape(text string) string {
 // escaper escapes in one left-to-right pass, so {{{ is \{{{.
 var escaper = strings.NewReplacer(`\`, `\\`, "{{", `\{{`)
 
+// RenderValue returns x, a value of the variable v, as a macro shows it
+// (Format 9): its label, else the name of the character it is the ID of, else
+// that of the location, else as written, with a number in decimal. x is a
+// value as State.Get gives it, or one member of a set; a whole set renders as
+// its members joined by ", ".
+//
+// A character's name shows even while the character is a spoiler
+// (State.Spoilers), so a caller showing players a value checks it against
+// them first. v isn't nil: the scene's values have no variable, so
+// State.Within names its location, and Cast its characters.
+func (pl *Play) RenderValue(v *Variable, x any) string {
+	return pl.scope.render(v, x)
+}
+
+// RenderKey returns key, a keyed variable's key as StateKey.Key gives it, as
+// a macro shows it (Format 9): the name of the character it is the ID of,
+// spoiler or not, else the key with its underscores as spaces.
+func (pl *Play) RenderKey(key string) string {
+	return pl.scope.renderKey(key)
+}
+
 // renderAt renders the part of a variable's value x that the path's segments
 // below the variable name: x itself, or a keyed variable's key, where char
 // and player mean the macros' characters (Format 9). It renders as nothing when
@@ -179,8 +200,7 @@ func (sc *scope) render(v *Variable, x any) string {
 
 // renderMap renders a keyed variable's value as "Name: value" pairs, in the
 // order of its keys: the cast's, the list's, or code point order for a "*"
-// map (Format 8.3). A key that is a character ID shows the character's name,
-// and any other its underscores as spaces.
+// map (Format 8.3).
 func (sc *scope) renderMap(v *Variable, m map[string]any) string {
 	keys := sc.keys(v)
 	if v.Per.Any {
@@ -188,13 +208,16 @@ func (sc *scope) renderMap(v *Variable, m map[string]any) string {
 	}
 	pairs := make([]string, 0, len(keys))
 	for _, k := range keys {
-		name := strings.ReplaceAll(k, "_", " ")
-		if c := sc.all.characters[k]; c != nil {
-			name = c.Name
-		}
-		pairs = append(pairs, name+": "+sc.render(v, m[k]))
+		pairs = append(pairs, sc.renderKey(k)+": "+sc.render(v, m[k]))
 	}
 	return strings.Join(pairs, ", ")
+}
+
+func (sc *scope) renderKey(k string) string {
+	if c := sc.all.characters[k]; c != nil {
+		return c.Name
+	}
+	return strings.ReplaceAll(k, "_", " ")
 }
 
 // word renders a string value: its label, else the name of the character it
