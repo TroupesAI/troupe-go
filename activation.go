@@ -1,6 +1,7 @@
 package troupe
 
 import (
+	"cmp"
 	"math/rand/v2"
 	"slices"
 )
@@ -31,6 +32,15 @@ func (a *ActiveEntry) Priority() int {
 	return *a.Entry.Priority
 }
 
+// Position returns the entry's position, "context" when it has none, or ""
+// when its depth places it inside the history instead (Format 7.3).
+func (a *ActiveEntry) Position() string {
+	if a.Entry.Depth != nil {
+		return ""
+	}
+	return cmp.Or(a.Entry.Position, "context")
+}
+
 // group names the entry's group among every owner's.
 func (a *ActiveEntry) group() string {
 	return a.Owner + "/" + a.Entry.Group
@@ -57,10 +67,10 @@ func (a *ActiveEntry) group() string {
 // reproducible from the caller's source.
 //
 // Which active entries reach the model is the caller's to choose, by their
-// Priority, and where each goes by its position or depth (Format 7.3). The
-// message being written records the Ref of those that reach it in activated,
-// apart from those Kept; one whose text renders as nothing or only whitespace
-// reaches nothing (Format 11.4).
+// Priority, and where each goes by its Position, or by Entry.Depth (Format
+// 7.3). The message being written records the Ref of those that reach it in
+// activated, apart from those Kept; one whose text renders as nothing or only
+// whitespace reaches nothing (Format 11.4).
 func (p *Point) Active(retrieved []string, r *rand.Rand) []ActiveEntry {
 	wanted := make(map[string]bool, len(retrieved))
 	for _, ref := range retrieved {

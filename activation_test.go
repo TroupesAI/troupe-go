@@ -1,6 +1,7 @@
 package troupe_test
 
 import (
+	"fmt"
 	"math/rand/v2"
 	"slices"
 	"strings"
@@ -129,7 +130,7 @@ func TestActiveStickyInGroup(t *testing.T) {
 // A retrieved entry activates under every rule of activation, so it can push a
 // lower-priority entry with keywords out of its group, and only an entry that
 // retrieving would activate and that can win its group is offered (Format
-// 7.2). A caller chooses among entries by priority, 50 for one without.
+// 7.2).
 func TestActiveRetrieved(t *testing.T) {
 	play, s := readPlay(t, `{"troupe":"0.15","kind":"story","scenarios":[{"id":"s","entries":[
 		{"id":"keyword","text":"t","keywords":["rope"],"group":"g","priority":40},
@@ -145,15 +146,29 @@ func TestActiveRetrieved(t *testing.T) {
 	if got := refs(p.Retrievable()); !slices.Equal(got, []string{"s/retrieved", "s/equal"}) {
 		t.Errorf("retrievable: %v, want s/retrieved and s/equal", got)
 	}
-	active := p.Active(nil, r)
-	if got := refs(active); !slices.Equal(got, []string{"s/keyword", "s/both"}) {
-		t.Fatalf("without retrieval: %v, want s/keyword and s/both", got)
-	}
-	if keyword, both := active[0].Priority(), active[1].Priority(); keyword != 40 || both != 50 {
-		t.Errorf("the priorities are %d and %d, want 40 and 50", keyword, both)
+	if got := refs(p.Active(nil, r)); !slices.Equal(got, []string{"s/keyword", "s/both"}) {
+		t.Errorf("without retrieval: %v, want s/keyword and s/both", got)
 	}
 	if got := refs(p.Active([]string{"s/retrieved", "s/equal", "s/weak", "s/barred", "s/unmatched"}, r)); !slices.Equal(got, []string{"s/retrieved", "s/both"}) {
 		t.Errorf("retrieved: %v, want s/retrieved and s/both", got)
+	}
+}
+
+// A caller chooses among active entries by priority and places each by its
+// position: 50 and context for an entry without them, and no position for one
+// with a depth (Format 7, 7.3).
+func TestActivePlacement(t *testing.T) {
+	play, _ := readPlay(t, `{"troupe":"0.15","kind":"story","scenarios":[{"id":"s","entries":[
+		{"id":"plain","text":"t"},
+		{"id":"rule","text":"t","priority":40,"position":"system"},
+		{"id":"deep","text":"t","depth":0}]}]}`)
+	r := rand.New(rand.NewPCG(1, 2)) //nolint:gosec // G404: a seeded source makes the test reproducible
+	var got []string
+	for _, a := range play.PointAt(play.Initial(), nil, "").Active(nil, r) {
+		got = append(got, fmt.Sprintf("%s %d %q", a.Ref(), a.Priority(), a.Position()))
+	}
+	if want := []string{`s/plain 50 "context"`, `s/rule 40 "system"`, `s/deep 50 ""`}; !slices.Equal(got, want) {
+		t.Errorf("%v, want %v", got, want)
 	}
 }
 
