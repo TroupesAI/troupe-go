@@ -135,7 +135,7 @@ type Variable struct {
 	ID          string            `json:"id"`
 	Type        string            `json:"type"` // "bool", "int", "string", "enum" or "set"
 	Values      []string          `json:"values,omitempty"`
-	Labels      map[string]string `json:"labels,omitempty"`
+	Labels      map[string]string `json:"labels,omitempty"` // display names by value; a bool's by "true" and "false"
 	Min         *int64            `json:"min,omitzero"`
 	Max         *int64            `json:"max,omitzero"`
 	Initial     jsontext.Value    `json:"initial,omitzero"` // nil for the type's default
