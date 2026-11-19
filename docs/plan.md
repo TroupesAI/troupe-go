@@ -6,7 +6,7 @@ What troupe-go still has to build, and what the platform needs from it, which th
 
 What remains is what the platform needs and the suite doesn't test. Build each item when the platform asks for it, with tests of our own:
 
-- Writing sessions and packages back, keeping every `ext` and a package's other files (Format 12.3, 13), with a session's file fields, so packages with sessions can be imported and exported. A session's file fields are its lines': image parts, and the header's avatars and location images. Each line is one JSON value, so `SessionHeader` and `Message` can each give theirs as `Story.FileFields` does, and `ReplaceFileFields` already replaces them.
+- Writing a session from the typed model, for exporting the chats people play on the platform, which comes after its launch.
 - Revisit how states hold session entries once the platform adds them, or if stored states grow too large. Every stored state holds the entries' text, up to 10,000 (Format 14), and `Apply` copies them for each message that adds, replaces or removes one, so replaying 100,000 such messages over 10,000 entries takes seconds.
 
 ## What the platform needs

@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"cmp"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"slices"
@@ -258,6 +259,88 @@ func (s *source) ReadAt(p []byte, off int64) (int, error) {
 	n, err := s.r.ReadAt(p, off)
 	if err != nil && !errors.Is(err, io.EOF) {
 		s.once.Do(func() { s.err = err })
+	}
+	return n, err
+}
+
+// PackageWriter writes a package, a ZIP archive whose layout, names and
+// limits follow Format 12.3 and 14. It writes each file as given, so the
+// documents it holds conform only when the caller's do, and the caller
+// creates story.json, its sessions and every file a path in them names
+// (Format 12.3). A caller that rewrites a package also creates the files
+// nothing names, which a writer keeps.
+type PackageWriter struct {
+	zw       *zip.Writer
+	names    map[string]bool // in ASCII lowercase
+	story    bool            // whether story.json is created
+	unpacked int64
+	err      error // the first failure, after which nothing written is a package
+}
+
+// NewPackageWriter returns a PackageWriter that writes to w.
+func NewPackageWriter(w io.Writer) *PackageWriter {
+	return &PackageWriter{zw: zip.NewWriter(w), names: map[string]bool{}}
+}
+
+// Create adds the package's file at path, such as "story.json",
+// "sessions/a.troupe-session.jsonl" or "images/a.webp", and returns a writer
+// for its content until the next Create or Close. Its error is for a path that
+// isn't a package path, or equals another file's ignoring ASCII case, for a
+// file past the package's 10,000, or the writer's.
+func (pw *PackageWriter) Create(path string) (io.Writer, error) {
+	folded := asciiLower(path)
+	switch {
+	case pw.err != nil:
+		return nil, pw.err
+	case !isPackageFile(path):
+		return nil, fmt.Errorf("troupe: %q isn't a package path", path)
+	case pw.names[folded]:
+		return nil, fmt.Errorf("troupe: %q names a file already created", path)
+	case len(pw.names) == maxZipEntries:
+		return nil, errors.New("troupe: the package is over its limit of files")
+	}
+	w, err := pw.zw.Create(path)
+	if err != nil {
+		pw.err = err
+		return nil, err
+	}
+	pw.names[folded] = true
+	pw.story = pw.story || path == "story.json"
+	return &packageFile{pw, w}, nil
+}
+
+// Close finishes the package, after which Create fails. Its error is for a
+// package without story.json, for one past its unpacked size, or the
+// writer's.
+func (pw *PackageWriter) Close() error {
+	switch {
+	case pw.err != nil:
+		return pw.err
+	case !pw.story:
+		return errors.New("troupe: the package has no story.json")
+	}
+	pw.err = errors.New("troupe: the package is closed")
+	return pw.zw.Close()
+}
+
+// packageFile writes a file's content, counting it toward the package's
+// unpacked size, which it fails past (Format 14).
+type packageFile struct {
+	pw *PackageWriter
+	w  io.Writer
+}
+
+func (f *packageFile) Write(p []byte) (int, error) {
+	if f.pw.err != nil {
+		return 0, f.pw.err
+	}
+	if f.pw.unpacked += int64(len(p)); f.pw.unpacked > maxUnpackedSize {
+		f.pw.err = errors.New("troupe: the package is over its unpacked size")
+		return 0, f.pw.err
+	}
+	n, err := f.w.Write(p)
+	if err != nil {
+		f.pw.err = err
 	}
 	return n, err
 }

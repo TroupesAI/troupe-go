@@ -8,7 +8,8 @@
 // its images, and ReadPackageStory reads its story.json stored apart from it.
 // Story.FileFields and Session.FileFields yield the fields that hold a file,
 // and ReplaceFileFields and ReplaceSessionFileFields set or remove them in a
-// story's JSON or a session's lines, keeping every other byte.
+// story's JSON or a session's lines, keeping every other byte. PackageWriter
+// writes a package.
 //
 // For an editor, Story.CheckID checks the ID of an object being added, and
 // Story.RenameID makes the JSON Patch that renames one with every reference
