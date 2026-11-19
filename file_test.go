@@ -1,8 +1,10 @@
 package troupe_test
 
 import (
+	"io"
 	"reflect"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/TroupesAI/troupe-go"
@@ -35,12 +37,14 @@ func TestFileFields(t *testing.T) {
 }
 
 // ReplaceFileFields fails, rather than writing a document that doesn't
-// conform, for a pointer that names no string, or a value that holds no file.
+// conform, for a pointer that names no field that holds a file, or a value
+// that holds no file.
 func TestReplaceFileFieldsErrors(t *testing.T) {
-	doc := []byte(`{"cover":"a.png","characters":[{"avatar":"b.png"}]}`)
+	doc := []byte(`{"name":"Heist","cover":"a.png","characters":[{"avatar":"b.png"}]}`)
 	for _, values := range []map[string]string{
 		{"/cover": "c.png", "/avatar": "c.png"},
 		{"/characters": "c.png"},
+		{"/name": ""},
 		{"/cover": "http://x.test/c.png"},
 		{"/cover": "data:image/svg+xml;base64,R0lG"},
 	} {
@@ -51,6 +55,53 @@ func TestReplaceFileFieldsErrors(t *testing.T) {
 	for _, doc := range []string{`{"cover":"a.png"`, `{"cover":"a.png"} {"cover":"b.png"}`} {
 		if _, err := troupe.ReplaceFileFields([]byte(doc), map[string]string{"/cover": "c.png"}); err == nil {
 			t.Errorf("%s: no error", doc)
+		}
+	}
+}
+
+// A value of "" removes its field with the comma that separated it: an image
+// part whole, and an opening's content when no part is left, so the story
+// still conforms.
+func TestReplaceFileFieldsRemoves(t *testing.T) {
+	doc := `{"cover": "a.png", "characters": [{"id": "kai", "avatar": "b.png", "ext": {"x.y": 1}}],
+ "scenarios": [{"id": "s", "openings": [
+  {"id": "o", "content": [{"type": "image", "src": "c.png"}, {"type": "image", "src": "d.png"}, {"text": "Hi."}, {"type": "image", "src": "e.png"}]},
+  {"id": "p", "content": [{"type": "image", "src": "f.png", "ext": {"x.y": 2}}], "ext": {}}]}]}`
+	values := map[string]string{
+		"/cover":                                "",
+		"/characters/0/avatar":                  "",
+		"/scenarios/0/openings/0/content/0/src": "",
+		"/scenarios/0/openings/0/content/1/src": "",
+		"/scenarios/0/openings/0/content/3/src": "https://x.test/e.png",
+		"/scenarios/0/openings/1/content/0/src": "",
+	}
+	want := `{"characters": [{"id": "kai", "ext": {"x.y": 1}}],
+ "scenarios": [{"id": "s", "openings": [
+  {"id": "o", "content": [{"text": "Hi."}, {"type": "image", "src": "https://x.test/e.png"}]},
+  {"id": "p", "ext": {}}]}]}`
+	got, err := troupe.ReplaceFileFields([]byte(doc), values)
+	if err != nil || string(got) != want {
+		t.Errorf("got %s, %v\nwant %s", got, err, want)
+	}
+}
+
+// ReplaceSessionFileFields fails for a line the session hasn't, a pointer of
+// no field on its line, and a player's or a model's message left without
+// content, which no session may hold (Format 11).
+func TestReplaceSessionFileFieldsErrors(t *testing.T) {
+	session := `{"troupe":"0.15","kind":"session","scenario":"s","characters":[{"id":"mara","name":"Mara","avatar":"a.png"}]}
+{"id":"1","from":"player","content":[{"type":"image","src":"b.png"}]}
+{"id":"2","parent":"1","from":"model","content":[{"type":"image","src":"c.png"},{"type":"image","src":"d.png"}]}
+`
+	for _, values := range []map[int]map[string]string{
+		{4: {"/content/0/src": ""}},
+		{0: {"/characters/0/avatar": ""}},
+		{1: {"/content/0/src": ""}},
+		{2: {"/characters/0/avatar": ""}},
+		{3: {"/content/0/src": "", "/content/1/src": ""}},
+	} {
+		if err := troupe.ReplaceSessionFileFields(io.Discard, strings.NewReader(session), values); err == nil {
+			t.Errorf("%v: no error", values)
 		}
 	}
 }

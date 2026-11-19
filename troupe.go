@@ -6,8 +6,9 @@
 // reading leaves. A document with any diagnostic doesn't conform, and serves
 // only to report them. Package.Open streams a package's other files, such as
 // its images, and ReadPackageStory reads its story.json stored apart from it.
-// Story.FileFields yields the fields that hold a file, and ReplaceFileFields
-// sets them in a document's JSON, keeping every other byte.
+// Story.FileFields and Session.FileFields yield the fields that hold a file,
+// and ReplaceFileFields and ReplaceSessionFileFields set or remove them in a
+// story's JSON or a session's lines, keeping every other byte.
 //
 // For an editor, Story.CheckID checks the ID of an object being added, and
 // Story.RenameID makes the JSON Patch that renames one with every reference

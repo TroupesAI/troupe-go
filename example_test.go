@@ -299,3 +299,33 @@ func ExamplePlay_RenderValue() {
 	// trust, Kai: 0
 	// guard, night watch: dozing
 }
+
+// An export without pictures removes every field that holds a file from a
+// session, keeping its other bytes and its lines' endings.
+func ExampleReplaceSessionFileFields() {
+	session := "{\"troupe\":\"0.15\",\"kind\":\"session\",\"scenario\":\"s\",\"characters\":[{\"id\":\"mara\",\"name\":\"Mara\",\"avatar\":\"https://x.test/mara.png\"}]}\r\n" +
+		"{\"id\":\"1\",\"opening\":\"o\",\"from\":\"system\",\"content\":[{\"type\":\"image\",\"src\":\"https://x.test/map.png\"}]}\r\n" +
+		"{\"id\":\"2\",\"parent\":\"1\",\"from\":\"player\",\"content\":[{\"text\":\"Look.\"},{\"type\":\"image\",\"src\":\"https://x.test/key.png\",\"ext\":{\"x.y\":1}}]}"
+	s, _, err := troupe.ReadSession(strings.NewReader(session))
+	if err != nil {
+		log.Fatal(err)
+	}
+	values := map[int]map[string]string{}
+	for f := range s.FileFields() {
+		fmt.Println(f.Line, f.Pointer, f.URL)
+		if values[f.Line] == nil {
+			values[f.Line] = map[string]string{}
+		}
+		values[f.Line][f.Pointer] = ""
+	}
+	var out strings.Builder
+	if err := troupe.ReplaceSessionFileFields(&out, strings.NewReader(session), values); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%q\n", out.String())
+	// Output:
+	// 1 /characters/0/avatar https://x.test/mara.png
+	// 2 /content/0/src https://x.test/map.png
+	// 3 /content/1/src https://x.test/key.png
+	// "{\"troupe\":\"0.15\",\"kind\":\"session\",\"scenario\":\"s\",\"characters\":[{\"id\":\"mara\",\"name\":\"Mara\"}]}\r\n{\"id\":\"1\",\"opening\":\"o\",\"from\":\"system\",\"content\":[]}\r\n{\"id\":\"2\",\"parent\":\"1\",\"from\":\"player\",\"content\":[{\"text\":\"Look.\"}]}"
+}
