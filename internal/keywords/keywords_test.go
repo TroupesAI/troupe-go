@@ -1,6 +1,9 @@
 package keywords
 
-import "testing"
+import (
+	"testing"
+	"unicode"
+)
 
 // A regex keyword means what it means in ECMAScript with the u flag (Format
 // 14), on the scanned text, whose every line break is \n (Format 7.2). Where
@@ -78,8 +81,46 @@ func TestMatchRegexKeyword(t *testing.T) {
 			t.Errorf("%s: %v", tt.keyword, err)
 			continue
 		}
-		if got := k.Match(Text(tt.text)); got != tt.want {
+		if got := k.Match(NewText(tt.text)); got != tt.want {
 			t.Errorf("%s on %q: %v, want %v", tt.keyword, tt.text, got, tt.want)
+		}
+	}
+}
+
+// A plain keyword that isn't one word, such as one holding a space or a
+// hyphen, matches as a whole too, ignoring case, however case folding
+// changes its length in bytes.
+func TestMatchPlainKeyword(t *testing.T) {
+	tests := []struct {
+		keyword, text string
+		want          bool
+	}{
+		{"storm lantern", "The STORM LANTERN, lit.", true},
+		{"storm lantern", "two storm lanterns", false},
+		{"storm lantern", "a brainstorm lantern", false},
+		{"k-9", "\u212a-9 barks", true},
+		{"k-9", "\u212a-90", false},
+	}
+	for _, tt := range tests {
+		k, err := Compile(tt.keyword)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := k.Match(NewText(tt.text)); got != tt.want {
+			t.Errorf("%s on %q: %v, want %v", tt.keyword, tt.text, got, tt.want)
+		}
+	}
+}
+
+// A keyword that is one word matches the words of the folded text, which are
+// those of the text only while no characters case folding relates are one a
+// letter, mark or number and the other not. Unicode could break that.
+func TestFoldKeepsWords(t *testing.T) {
+	for r := range rune(unicode.MaxRune + 1) {
+		for f := unicode.SimpleFold(r); f != r; f = unicode.SimpleFold(f) {
+			if isWord(f) != isWord(r) {
+				t.Errorf("%U folds with %U", r, f)
+			}
 		}
 	}
 }

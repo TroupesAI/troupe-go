@@ -27,9 +27,9 @@ type Point struct {
 	within []string
 	// scanned holds the scanned text of each message of the path to the
 	// point that isn't hidden and has content, the latest last: the text
-	// parts that whoever the message being written is for knows, line
-	// breaks written as \n (Format 7.2).
-	scanned [][]string
+	// parts that whoever the message being written is for knows (Format
+	// 7.2).
+	scanned [][]keywords.Text
 }
 
 // PointAt returns the evaluation point at the last of recent, for a message
@@ -59,7 +59,7 @@ func (pl *Play) PointAt(before State, recent []Message, char string) *Point {
 		// A root's picks are chosen already (Format 11.1), so any source
 		// will do.
 		parts := pl.renderParts(State{pl.scope, p.state}, m, rand.New(rand.NewPCG(0, 0))) //nolint:gosec // G404: see above
-		texts := []string{}
+		texts := []keywords.Text{}
 		for j, part := range parts {
 			if part.Type == "image" || !slices.Contains(known[j], knower) {
 				continue
@@ -68,7 +68,7 @@ func (pl *Play) PointAt(before State, recent []Message, char string) *Point {
 			if part.Speaker != "" {
 				text = pl.scope.characterName(part.Speaker) + ": " + text
 			}
-			texts = append(texts, keywords.Text(text))
+			texts = append(texts, keywords.NewText(text))
 		}
 		p.scanned = append(p.scanned, texts)
 	}
