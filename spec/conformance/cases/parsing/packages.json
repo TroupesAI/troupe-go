@@ -1,5 +1,5 @@
 {
-  "description": "Packages (Format 12.3, 15.2, 15.3): story.json at the root, sessions anywhere under sessions/, subfolders included, which a story reader may leave unread, and a story.json or session of another version makes the package UNSUPPORTED_VERSION, without this version's checks of what it references; absolute paths, .. segments, backslashes, names equal when compared case-insensitively, encryption, symbolic links and data that fails its CRC-32 are UNREADABLE, and an entry that breaks Format 12.3 is no document, so its version isn't judged, though the other documents' versions still are; a directory entry (a name ending in /) and an unreferenced file outside the path grammar aren't part of the package",
+  "description": "Packages (Format 12.3, 15.2, 15.3): story.json at the root, sessions anywhere under sessions/, subfolders included, which a story reader may leave unread, and a story.json or session of another version makes the package UNSUPPORTED_VERSION, without this version's checks of what it references; absolute paths, .. segments, backslashes, names that, compared case-insensitively, are equal or where one followed by / starts the other, encryption, symbolic links and data that fails its CRC-32 are UNREADABLE, and an entry that breaks Format 12.3 is no document, so its version isn't judged, though the other documents' versions still are; a directory entry (a name ending in /) and an unreferenced file outside the path grammar aren't part of the package",
   "tests": [
     {
       "type": "parse",
@@ -62,10 +62,11 @@
       "type": "parse",
       "name": "a directory entry isn't part of the package",
       "kind": "package",
-      "base64": "UEsDBBQAAAAAAAAAS10AAAAAAAAAAAAAAAAJAAAAc2Vzc2lvbnMvUEsDBBQAAAAIAAAAS117Aw1VOAAAADkAAAAKAAAAc3RvcnkuanNvbqtWKinKLy1IVbJSMtAzNFXSUcrOzEtRslIqLskvqlTSUSpOTs1LLMrML1ayiq5WygRLKdXG1gIAUEsBAhQDFAAAAAAAAABLXQAAAAAAAAAAAAAAAAkAAAAAAAAAAAAAAMBBAAAAAHNlc3Npb25zL1BLAQIUAxQAAAAIAAAAS117Aw1VOAAAADkAAAAKAAAAAAAAAAAAAACAgScAAABzdG9yeS5qc29uUEsFBgAAAAACAAIAbwAAAIcAAAAAAA==",
+      "base64": "UEsDBBQAAAAAAAAAS10AAAAAAAAAAAAAAAAGAAAAbWVkaWEvUEsDBBQAAAAIAAAAS12DFtyMAwAAAAEAAAALAAAAbWVkaWEvYS5wbmerAABQSwMEFAAAAAgAAABLXZCQ0YAiAAAAIAAAAAoAAABzdG9yeS5qc29uq1YqKcovLUhVslIy0DM0VdJRys7MS1GyUiouyS+qVKoFAFBLAQIUAxQAAAAAAAAAS10AAAAAAAAAAAAAAAAGAAAAAAAAAAAAEADtQQAAAABtZWRpYS9QSwECFAMUAAAACAAAAEtdgxbcjAMAAAABAAAACwAAAAAAAAAAAAAApIEkAAAAbWVkaWEvYS5wbmdQSwECFAMUAAAACAAAAEtdkJDRgCIAAAAgAAAACgAAAAAAAAAAAAAApIFQAAAAc3RvcnkuanNvblBLBQYAAAAAAwADAKUAAACaAAAAAAA=",
       "expect": {
         "codes": []
-      }
+      },
+      "note": "media/ followed by / is media//, which starts no other name, so media/ can be beside media/a.png (Format 12.3)."
     },
     {
       "type": "parse",
@@ -131,6 +132,18 @@
         ]
       },
       "note": "Both are 0.16 stories, but neither entry is a document, so the package is UNREADABLE only."
+    },
+    {
+      "type": "parse",
+      "name": "story.json beside a file in a folder of its name, in another case",
+      "kind": "package",
+      "base64": "UEsDBBQAAAAIAAAAS13yTVdqIgAAACAAAAAKAAAAc3RvcnkuanNvbqtWKinKLy1IVbJSMtAzNFPSUcrOzEtRslIqLskvqlSqBQBQSwMEFAAAAAgAAABLXYMW3IwDAAAAAQAAABAAAABTVE9SWS5KU09OL2EucG5nqwAAUEsBAhQDFAAAAAgAAABLXfJNV2oiAAAAIAAAAAoAAAAAAAAAAAAAAKSBAAAAAHN0b3J5Lmpzb25QSwECFAMUAAAACAAAAEtdgxbcjAMAAAABAAAAEAAAAAAAAAAAAAAApIFKAAAAU1RPUlkuSlNPTi9hLnBuZ1BLBQYAAAAAAgACAHYAAAB7AAAAAAA=",
+      "expect": {
+        "codes": [
+          "UNREADABLE"
+        ]
+      },
+      "note": "story.json followed by / starts STORY.JSON/a.png, compared case-insensitively, so neither is a document: the 0.16 story.json isn't judged, and the package is UNREADABLE only."
     },
     {
       "type": "parse",

@@ -56,8 +56,8 @@ func TestPackageWriter(t *testing.T) {
 }
 
 // PackageWriter refuses what would make no package: a name that isn't a
-// package path or that another file's equals ignoring ASCII case, a package
-// without story.json, and one past its limits (Format 12.3, 14).
+// package path or that clashes with another file's, a package without
+// story.json, and one past its limits (Format 12.3, 14).
 func TestPackageWriterErrors(t *testing.T) {
 	t.Parallel() // writing 512 MiB takes seconds under the race detector
 	pw := troupe.NewPackageWriter(io.Discard)
@@ -67,11 +67,20 @@ func TestPackageWriterErrors(t *testing.T) {
 	if _, err := pw.Create("Story.json"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := pw.Create("story.JSON"); err == nil {
-		t.Error("Create of a name equal ignoring case: no error")
-	}
 	if err := pw.Close(); err == nil {
 		t.Error("Close without story.json: no error")
+	}
+
+	for _, path := range []string{"Images/A/b.png", "images", "IMAGES/A", "images/a/b.png/c"} {
+		pw := troupe.NewPackageWriter(io.Discard)
+		for _, p := range []string{"story.json", "images/a/b.png", path} {
+			if _, err := pw.Create(p); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err := pw.Close(); err == nil {
+			t.Errorf("Close with %q beside images/a/b.png: no error", path)
+		}
 	}
 
 	pw = troupe.NewPackageWriter(io.Discard)

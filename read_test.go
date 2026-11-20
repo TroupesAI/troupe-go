@@ -257,6 +257,30 @@ func TestReadDriveLetter(t *testing.T) {
 	}
 }
 
+// Every entry of a clash is reported, whatever the entries' order: two names
+// where one followed by / starts the other, compared ASCII
+// case-insensitively, but not a name that only sorts between them (Format
+// 12.3).
+func TestReadClashes(t *testing.T) {
+	diags, err := pkg(func(w *zip.Writer) {
+		for _, name := range []string{"x/Y/z", "x/y-z", "X/y"} {
+			if _, err := w.Create(name); err != nil {
+				panic(err)
+			}
+		}
+	})()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var files []string
+	for _, d := range diags {
+		files = append(files, d.File)
+	}
+	if want := []string{"X/y", "x/Y/z"}; !reflect.DeepEqual(files, want) {
+		t.Errorf("got %v, want %v", files, want)
+	}
+}
+
 // Reading stops at each limit of Format 14 that the conformance suite has no
 // case for, so hostile input can't make it do unbounded work, and a package
 // fails at an entry whose data doesn't match its checksum, which Package.Open

@@ -13,7 +13,7 @@ In scope: everything the [spec](https://github.com/TroupesAI/troupe/blob/main/sp
 - The state at a message (Format 8.6).
 - Macros (Format 9) and conditions in CEL (Format 10).
 - Entry activation (Format 7.2) and knowledge (Format 7.4, 11.5).
-- Writing: roots made from openings (Format 11.1), escaping (Format 9), files written back with every `ext` unchanged (Format 13), and IDs checked as Format 2.3 requires and renamed with their references.
+- Writing: roots made from openings (Format 11.1), escaping (Format 9), files written back with the `ext` of everything they keep as given (Format 13), and IDs checked as Format 2.3 requires and renamed with their references.
 
 Out of scope: everything the spec leaves to apps (Format 1.1). That includes prompt assembly, choosing which active entries reach a model, model calls, storage and UI.
 
