@@ -251,17 +251,17 @@ func (sc *scope) lookup(key string, cast map[string]int) (*binding, string, bool
 	if b, ok := sc.byName[key]; ok {
 		return b, "", !b.v.Per.keyed()
 	}
-	i := strings.LastIndexByte(key, '.')
+	name, k, ok := strings.CutLast(key, ".")
 	// "" is no key, though a draft's cast or list may hold it (SCHEMA):
 	// callers take it for a variable that isn't keyed.
-	if i < 0 || i == len(key)-1 {
+	if !ok || k == "" {
 		return nil, "", false
 	}
-	b, ok := sc.byName[key[:i]]
-	if !ok || !b.v.Per.keyed() || !allows(b, key[i+1:], cast) {
+	b, ok := sc.byName[name]
+	if !ok || !b.v.Per.keyed() || !allows(b, k, cast) {
 		return nil, "", false
 	}
-	return b, key[i+1:], true
+	return b, k, true
 }
 
 // keys returns the keys of a "cast" or list variable, in order; nil for a

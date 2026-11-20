@@ -60,11 +60,11 @@ func (sc *scope) seatKey(key, id string) bool {
 	if strings.HasPrefix(key, "state."+id+".") {
 		return true
 	}
-	i := strings.LastIndexByte(key, '.')
-	if i < 0 || key[i+1:] != id {
+	name, k, ok := strings.CutLast(key, ".")
+	if !ok || k != id {
 		return false
 	}
-	b, ok := sc.byName[key[:i]]
+	b, ok := sc.byName[name]
 	return ok && b.v.Per.Cast
 }
 

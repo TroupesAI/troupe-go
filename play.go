@@ -196,15 +196,15 @@ func (s State) Get(key string) (any, bool) {
 		}
 		return nil, false
 	}
-	i := strings.LastIndexByte(key, '.')
-	if i < 0 {
-		return nil, false
-	}
-	m, ok := s.s.values[key[:i]].(map[string]any)
+	name, k, ok := strings.CutLast(key, ".")
 	if !ok {
 		return nil, false
 	}
-	x, ok := m[key[i+1:]]
+	m, ok := s.s.values[name].(map[string]any)
+	if !ok {
+		return nil, false
+	}
+	x, ok := m[k]
 	return copyValue(x), ok
 }
 
