@@ -70,6 +70,9 @@ func TestPackageWriterErrors(t *testing.T) {
 	if err := pw.Close(); err == nil {
 		t.Error("Close without story.json: no error")
 	}
+	if _, err := pw.Create("story.json"); err == nil {
+		t.Error("Create after a failed Close: no error")
+	}
 
 	for _, path := range []string{"Images/A/b.png", "images", "IMAGES/A", "images/a/b.png/c"} {
 		pw := troupe.NewPackageWriter(io.Discard)

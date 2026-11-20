@@ -221,11 +221,11 @@ func validEntry(f *zip.File) bool {
 		(f.Method == zip.Store || f.Method == zip.Deflate)
 }
 
-// clashes returns, in ASCII lowercase, the names that clash: compared ASCII
-// case-insensitively, equal to another, or followed by / starting another, or
-// started by another so (Format 12.3). It sorts the names and scans each
-// folder once, since looking up each name's folders would take time
-// quadratic in a name of many segments.
+// clashes returns, in ASCII lowercase, the names that clash with another
+// (Format 12.3): compared ASCII case-insensitively, the two are equal, or one
+// followed by / starts the other. It sorts the names and scans each folder
+// once, since looking up each name's folders would take time quadratic in a
+// name of many segments.
 func clashes(names []string) map[string]bool {
 	folded := make([]string, len(names))
 	for i, name := range names {
@@ -306,7 +306,7 @@ type PackageWriter struct {
 	paths    []string
 	story    bool // whether story.json is created
 	unpacked int64
-	err      error // the first failure, after which nothing written is a package
+	err      error // the first failure, after which nothing written is a package, or that Close ran
 }
 
 // NewPackageWriter returns a PackageWriter that writes to w.
@@ -343,10 +343,11 @@ func (pw *PackageWriter) Create(path string) (io.Writer, error) {
 // case-insensitively, are equal, or where one followed by / starts the other
 // (Format 12.3), for a package past its unpacked size, or the writer's.
 func (pw *PackageWriter) Close() error {
-	switch {
-	case pw.err != nil:
+	if pw.err != nil {
 		return pw.err
-	case !pw.story:
+	}
+	pw.err = errors.New("troupe: the package is closed")
+	if !pw.story {
 		return errors.New("troupe: the package has no story.json")
 	}
 	clash := clashes(pw.paths)
@@ -355,7 +356,6 @@ func (pw *PackageWriter) Close() error {
 			return fmt.Errorf("troupe: %q clashes with another file's path", path)
 		}
 	}
-	pw.err = errors.New("troupe: the package is closed")
 	return pw.zw.Close()
 }
 
