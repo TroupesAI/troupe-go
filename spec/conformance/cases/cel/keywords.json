@@ -1,6 +1,6 @@
 {
   "description": "Keyword matching through hit() (Format 7.2, 10.1, 11.4, 11.5): whole words, so no letter, mark or number (Unicode L, M, N) right before or after a match; case compared by Unicode simple case folding; keywords in Han, Hiragana and the other listed scripts match anywhere; regex keywords, with every line break in the scanned text written as \\n; the speaker's name; knowledge, hidden messages and scanDepth decide what is scanned",
-  "note": "Each root is its own path, so each test scans one message unless it says otherwise. r4 writes café as e followed by U+0301. In r6, Ί (U+038A) folds to ί (U+03AF) and Σ and ς both fold to σ; ß and İ have no simple folding. r13 separates a and b with CRLF, and r14 with U+2028, so /^b/m matches in both; /a.b/s matches r13 only because its CRLF is one \\n.",
+  "note": "Each root is its own path, so each test scans one message unless it says otherwise. r4 writes café as e followed by U+0301. In r6, Ί (U+038A) folds to ί (U+03AF) and Σ and ς both fold to σ; ß and İ have no simple folding. r13 separates a and b with CRLF, and r14 with U+2028, so /^b/m matches in both; /a.b/s matches r13 only because its CRLF is one \\n. In r16 storm and lantern stand whole, but with a comma between them. r17 and r18 write K as the Kelvin sign (U+212A), three bytes in UTF-8, which folds to k, one byte.",
   "story": {
     "kind": "story",
     "characters": [
@@ -191,6 +191,46 @@
         ]
       },
       {
+        "id": "r15",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "The storm lantern is lit."
+          }
+        ]
+      },
+      {
+        "id": "r16",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "After the storm, lantern oil fills a brainstorm lantern."
+          }
+        ]
+      },
+      {
+        "id": "r17",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "\u212A-9 barks."
+          }
+        ]
+      },
+      {
+        "id": "r18",
+        "from": "player",
+        "content": [
+          {
+            "speaker": "p",
+            "text": "Two \u212A-9s bark."
+          }
+        ]
+      },
+      {
         "id": "c1",
         "parent": "r12",
         "from": "player",
@@ -292,6 +332,20 @@
     },
     {
       "type": "cel",
+      "name": "a keyword holding a space matches as a whole",
+      "at": "r15",
+      "expr": "hit('storm lantern')",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "but not after a letter, nor as separate words",
+      "at": "r16",
+      "expr": "hit('storm lantern')",
+      "expect": false
+    },
+    {
+      "type": "cel",
       "name": "a combining mark continues the word",
       "at": "r4",
       "expr": "hit('cafe')",
@@ -323,6 +377,20 @@
       "name": "simple case folding leaves a capital dotted I alone",
       "at": "r8",
       "expr": "hit('istanbul')",
+      "expect": false
+    },
+    {
+      "type": "cel",
+      "name": "a keyword holding punctuation matches where folding changes its length in bytes",
+      "at": "r17",
+      "expr": "hit('k-9')",
+      "expect": true
+    },
+    {
+      "type": "cel",
+      "name": "and still not before a letter",
+      "at": "r18",
+      "expr": "hit('k-9')",
       "expect": false
     },
     {
