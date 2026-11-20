@@ -303,7 +303,7 @@ func ExamplePlay_RenderValue() {
 // An export without pictures removes every field that holds a file from a
 // session, keeping its other bytes and its lines' endings.
 func ExampleReplaceSessionFileFields() {
-	session := "{\"troupe\":\"0.15\",\"kind\":\"session\",\"scenario\":\"s\",\"characters\":[{\"id\":\"mara\",\"name\":\"Mara\",\"avatar\":\"https://x.test/mara.png\"}]}\r\n" +
+	session := "{\"troupe\":\"0.15\",\"kind\":\"session\",\"scenario\":\"s\",\"characters\":[{\"id\":\"mara\",\"name\":\"Mara\",\"description\":\"A smuggler.\",\"avatar\":\"https://x.test/mara.png\"}]}\r\n" +
 		"{\"id\":\"1\",\"opening\":\"o\",\"from\":\"system\",\"content\":[{\"type\":\"image\",\"src\":\"https://x.test/map.png\"}]}\r\n" +
 		"{\"id\":\"2\",\"parent\":\"1\",\"from\":\"player\",\"content\":[{\"text\":\"Look.\"},{\"type\":\"image\",\"src\":\"https://x.test/key.png\",\"ext\":{\"x.y\":1}}]}"
 	s, _, err := troupe.ReadSession(strings.NewReader(session))
@@ -327,5 +327,28 @@ func ExampleReplaceSessionFileFields() {
 	// 1 /characters/0/avatar https://x.test/mara.png
 	// 2 /content/0/src https://x.test/map.png
 	// 3 /content/1/src https://x.test/key.png
-	// "{\"troupe\":\"0.15\",\"kind\":\"session\",\"scenario\":\"s\",\"characters\":[{\"id\":\"mara\",\"name\":\"Mara\"}]}\r\n{\"id\":\"1\",\"opening\":\"o\",\"from\":\"system\",\"content\":[]}\r\n{\"id\":\"2\",\"parent\":\"1\",\"from\":\"player\",\"content\":[{\"text\":\"Look.\"}]}"
+	// "{\"troupe\":\"0.15\",\"kind\":\"session\",\"scenario\":\"s\",\"characters\":[{\"id\":\"mara\",\"name\":\"Mara\",\"description\":\"A smuggler.\"}]}\r\n{\"id\":\"1\",\"opening\":\"o\",\"from\":\"system\",\"content\":[]}\r\n{\"id\":\"2\",\"parent\":\"1\",\"from\":\"player\",\"content\":[{\"text\":\"Look.\"}]}"
+}
+
+// A package's session, stored apart from its ZIP, reads back given the paths
+// of the package's files.
+func ExampleReadPackageSession() {
+	session := `{"troupe": "0.15", "kind": "session", "scenario": "s", "characters": [{"id": "mara", "name": "Mara", "description": "A smuggler.", "avatar": "images/mara.webp"}]}`
+	_, diags, err := troupe.ReadPackageSession(strings.NewReader(session), "sessions/a.troupe-session.jsonl", []string{"images/mara.webp"})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(len(diags))
+
+	// Without that file, the path names nothing.
+	_, diags, err = troupe.ReadPackageSession(strings.NewReader(session), "sessions/a.troupe-session.jsonl", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, d := range diags {
+		fmt.Println(d.Code, d.File, d.Location())
+	}
+	// Output:
+	// 0
+	// UNREADABLE sessions/a.troupe-session.jsonl header/characters/0/avatar
 }

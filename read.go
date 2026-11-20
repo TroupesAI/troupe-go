@@ -46,6 +46,23 @@ func ReadPackageStory(r io.Reader, files []string) (*Story, []Diagnostic, error)
 	return st, rd.diagnostics(), nil
 }
 
+// ReadPackageSession reads the session at path as a package holds it,
+// without the package. Files are the paths of the package's files, as
+// ReadPackageStory takes them, and its package paths must name one of them,
+// story.json or path (Format 12.2, 12.3). Its results are those ReadSessions
+// gives for that session, so every diagnostic's File is path.
+func ReadPackageSession(r io.Reader, path string, files []string) (*Session, []Diagnostic, error) {
+	rd := reader{file: path, files: map[string]bool{"story.json": true, path: true}}
+	for _, f := range files {
+		rd.files[f] = true
+	}
+	s, err := rd.session(r)
+	if err != nil {
+		return nil, nil, err
+	}
+	return s, rd.diagnostics(), nil
+}
+
 // ReadSession reads a session file, line by line (Format 11). Its results are
 // those of ReadStory, for the whole file: the session is nil when any line is
 // UNREADABLE, or its header UNSUPPORTED_VERSION, and its diagnostics are then
