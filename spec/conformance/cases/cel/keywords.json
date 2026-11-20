@@ -196,7 +196,7 @@
         "content": [
           {
             "speaker": "p",
-            "text": "The storm lantern is lit."
+            "text": "A brainstorm lantern, then the storm lantern."
           }
         ]
       },
@@ -332,7 +332,7 @@
     },
     {
       "type": "cel",
-      "name": "a keyword holding a space matches as a whole",
+      "name": "a keyword holding a space matches wherever it stands whole",
       "at": "r15",
       "expr": "hit('storm lantern')",
       "expect": true

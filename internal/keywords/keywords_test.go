@@ -87,18 +87,6 @@ func TestMatchRegexKeyword(t *testing.T) {
 	}
 }
 
-// A plain keyword that isn't one word matches where the text holds it whole,
-// though the text holds it inside a word first.
-func TestMatchPlainKeywordLater(t *testing.T) {
-	k, err := Compile("storm lantern")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !k.Match(NewText("a brainstorm lantern, then the storm lantern")) {
-		t.Error("no match after one inside a word")
-	}
-}
-
 // A keyword that is one word matches the words of the folded text, which are
 // those of the text only while no characters case folding relates are one a
 // letter, mark or number and the other not. Unicode could break that.
